@@ -10,6 +10,7 @@ import ProgressBar from '@/components/ProgressBar';
 import PlayerProfileForm from '@/components/player/PlayerProfileForm';
 import UpdateProfileForm from '@/components/player/UpdateProfileForm';
 import MilestoneTimeline from '@/components/player/MilestoneTimeline';
+import ArchiveProfileModal from '@/components/player/ArchiveProfileModal';
 import OnboardingTour from '@/components/ui/OnboardingTour';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import { playerTourSteps, PLAYER_TOUR_ID } from '@/lib/tourSteps';
@@ -64,6 +65,7 @@ function PlayerDashboardContent() {
 
   /** True while we're waiting for on-chain confirmation of a just-registered profile */
   const [isPendingConfirmation, setIsPendingConfirmation] = useState(false);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
 
   const isRegistered = !!player;
 
@@ -318,15 +320,22 @@ function PlayerDashboardContent() {
                 <h2 className="text-xl font-semibold text-white">
                   {player.vitals.name}
                 </h2>
-                {isPendingConfirmation && (
-                  <span
-                    aria-hidden="true"
-                    className="inline-flex items-center gap-1.5 rounded-full border border-yellow-500/40 bg-yellow-500/10 px-2.5 py-1 text-xs font-medium text-yellow-300"
-                  >
-                    <InlineSpinner />
-                    Pending
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  {player.archived && (
+                    <span className="inline-flex items-center rounded-full border border-yellow-500/40 bg-yellow-500/10 px-2.5 py-1 text-xs font-medium text-yellow-300">
+                      Archived
+                    </span>
+                  )}
+                  {isPendingConfirmation && (
+                    <span
+                      aria-hidden="true"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-yellow-500/40 bg-yellow-500/10 px-2.5 py-1 text-xs font-medium text-yellow-300"
+                    >
+                      <InlineSpinner />
+                      Pending
+                    </span>
+                  )}
+                </div>
               </div>
               <p className="text-gray-400 text-sm">
                 {player.vitals.position} ┬╖ {player.vitals.region}
@@ -334,6 +343,12 @@ function PlayerDashboardContent() {
               <div data-tour="progress-section">
                 <ProgressBar level={player.progressLevel} />
               </div>
+              <button
+                onClick={() => setShowArchiveModal(true)}
+                className="text-xs text-gray-400 hover:text-gray-300 transition self-start px-2 py-1.5 rounded hover:bg-gray-800/50"
+              >
+                {player.archived ? 'Restore profile' : 'Archive profile'}
+              </button>
             </div>
 
             <div
@@ -357,6 +372,16 @@ function PlayerDashboardContent() {
           </div>
         ) : null}
       </div>
+
+      <ArchiveProfileModal
+        player={player}
+        isOpen={showArchiveModal}
+        onClose={() => setShowArchiveModal(false)}
+        onSuccess={(updated) => {
+          optimisticUpdate(updated);
+          refetch();
+        }}
+      />
     </div>
     </PullToRefresh>
   );

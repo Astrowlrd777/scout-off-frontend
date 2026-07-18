@@ -83,6 +83,8 @@ export default function PlayerProfile() {
   if (!player)
     return <p className="text-center text-gray-400 mt-20">Player not found.</p>;
 
+  const isArchived = player.archived ?? false;
+
   return (
     <div className="max-w-2xl mx-auto flex flex-col gap-8">
       {/* Back to Scout Dashboard */}
@@ -92,6 +94,16 @@ export default function PlayerProfile() {
       >
         {t('back_to_scout_dashboard')}
       </Link>
+
+      {/* Archived Profile Banner */}
+      {isArchived && (
+        <div className="rounded-xl border border-yellow-500/40 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-300">
+          <p className="font-semibold">This profile is currently private</p>
+          <p className="text-xs text-yellow-300/80 mt-1">
+            The player has archived their profile and it's not visible in search results.
+          </p>
+        </div>
+      )}
 
       {/* Header */}
       <div className="bg-brand-card border border-gray-800 rounded-xl p-6 flex gap-6 items-start">
@@ -170,7 +182,7 @@ export default function PlayerProfile() {
       />
 
       {/* Pay to contact */}
-      {publicKey && (
+      {publicKey && !isArchived && (
         <>
           <button
             onClick={() => setConfirmOpen(true)}
@@ -205,7 +217,7 @@ export default function PlayerProfile() {
       )}
 
       {/* Trial offer */}
-      {publicKey && id && (
+      {publicKey && id && !isArchived && (
         <>
           {canLogTrialOffer ? (
             <div className="bg-brand-card border border-gray-800 rounded-xl p-6">
