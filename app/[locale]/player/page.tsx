@@ -5,11 +5,14 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useRequireWallet } from '@/hooks/useRequireWallet';
 import { usePlayer } from '@/hooks/usePlayer';
+import { useOnboardingTour } from '@/hooks/useOnboardingTour';
 import ProgressBar from '@/components/ProgressBar';
 import PlayerProfileForm from '@/components/player/PlayerProfileForm';
 import UpdateProfileForm from '@/components/player/UpdateProfileForm';
 import MilestoneTimeline from '@/components/player/MilestoneTimeline';
+import OnboardingTour from '@/components/ui/OnboardingTour';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
+import { playerTourSteps, PLAYER_TOUR_ID } from '@/lib/tourSteps';
 import type { Player, PlayerVitals } from '@/types';
 import PullToRefresh from '@/components/ui/PullToRefresh';
 
@@ -52,6 +55,8 @@ function PlayerDashboardContent() {
   const { player, loading, isValidating, refetch, optimisticUpdate } = usePlayer(publicKey);
   const t = useTranslations('player_dashboard');
   const router = useRouter();
+
+  const tour = useOnboardingTour(PLAYER_TOUR_ID, playerTourSteps, publicKey);
 
   const [successPlayerId, setSuccessPlayerId] = useState<string | null>(null);
   const [redirectCountdown, setRedirectCountdown] = useState(3);
@@ -185,6 +190,17 @@ function PlayerDashboardContent() {
 
   return (
     <PullToRefresh onRefresh={refetch} isLoading={isValidating}>
+      <OnboardingTour
+        isVisible={tour.isVisible}
+        currentStep={tour.currentStep}
+        currentStepData={tour.currentStepData}
+        steps={tour.steps}
+        onNext={tour.nextStep}
+        onPrev={tour.prevStep}
+        onDismiss={tour.dismissTour}
+        onSkip={tour.skipTour}
+        onComplete={tour.completeTour}
+      />
       <div className="max-w-2xl mx-auto flex flex-col gap-8">
       <h1 className="text-3xl font-bold text-white">{t('title')}</h1>
 
@@ -227,6 +243,7 @@ function PlayerDashboardContent() {
         id="tabpanel-register"
         aria-labelledby="tab-register"
         hidden={activeTab !== 'register'}
+        data-tour="registration-section"
       >
         {activeTab === 'register' && (
           <div className="bg-brand-card border border-gray-800 rounded-xl p-6">
@@ -314,10 +331,15 @@ function PlayerDashboardContent() {
               <p className="text-gray-400 text-sm">
                 {player.vitals.position} ┬╖ {player.vitals.region}
               </p>
-              <ProgressBar level={player.progressLevel} />
+              <div data-tour="progress-section">
+                <ProgressBar level={player.progressLevel} />
+              </div>
             </div>
 
-            <div className="bg-brand-card border border-gray-800 rounded-xl p-6">
+            <div
+              className="bg-brand-card border border-gray-800 rounded-xl p-6"
+              data-tour="milestones-section"
+            >
               <h3 className="font-semibold text-white mb-6">
                 {t('milestones')}
               </h3>

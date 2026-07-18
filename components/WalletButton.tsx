@@ -159,7 +159,10 @@ export default function WalletButton({
   if (publicKey) {
     return (
       <>
-        <div className="flex items-center gap-1 text-sm bg-brand-card border border-brand-green text-brand-green px-3 py-2 rounded-lg">
+        <div
+          className="flex items-center gap-1 text-sm bg-brand-card border border-brand-green text-brand-green px-3 py-2 rounded-lg"
+          data-tour="wallet-button"
+        >
           <button
             onClick={() => setDisconnectOpen(true)}
             title={t('disconnect')}
@@ -215,6 +218,7 @@ export default function WalletButton({
         onClick={connect}
         disabled={isConnecting}
         aria-pressed={false}
+        data-tour="wallet-button"
         className="text-sm bg-brand-green text-black font-semibold px-4 py-2 rounded-lg hover:opacity-90 transition disabled:opacity-50"
       >
         {isConnecting ? t('connecting') : t('connect')}
