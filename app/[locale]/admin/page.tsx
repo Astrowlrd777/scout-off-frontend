@@ -19,6 +19,7 @@ import {
   buildUnpauseContract,
   getContractPaused,
 } from '@/lib/contract';
+import { formatXlm } from '@/lib/formatXlm';
 import {
   fetchActivityEvents,
   type ActivityEvent,
@@ -299,7 +300,9 @@ function AdminDashboardContent() {
         <h2 className="text-lg font-semibold text-white">Platform Fees</h2>
         <p className="text-sm text-gray-400">
           Accumulated:{' '}
-          <span className="text-white font-medium">{fees ?? 0} XLM</span>
+          <span className="text-white font-medium">
+            {formatXlm(fees ?? 0)} XLM
+          </span>
         </p>
         <button
           disabled={!fees || fees <= 0 || paused}
@@ -307,7 +310,7 @@ function AdminDashboardContent() {
             setDialog({
               action: 'withdraw',
               label: 'Withdraw Fees',
-              message: `Withdraw ${fees} XLM to your wallet?`,
+              message: `Withdraw ${formatXlm(fees ?? 0)} XLM to your wallet?`,
             })
           }
           title={paused ? 'Contract is currently paused' : undefined}

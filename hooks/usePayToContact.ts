@@ -8,6 +8,7 @@ import {
   PLATFORM_CONTACT_FEE_XLM,
 } from '@/lib/contract';
 import { parseContractError } from '@/lib/contractErrorMessage';
+import { formatXlm } from '@/lib/formatXlm';
 
 export function usePayToContact() {
   const { publicKey, signAndSubmit, xlmBalance, refreshBalance } = useWallet();
@@ -45,7 +46,7 @@ export function usePayToContact() {
         const balance = parseFloat(xlmBalance ?? '0');
         if (balance < PLATFORM_CONTACT_FEE_XLM) {
           fail(
-            `Insufficient XLM. You need at least ${PLATFORM_CONTACT_FEE_XLM} XLM to contact this player.`,
+            `Insufficient XLM. You need at least ${formatXlm(PLATFORM_CONTACT_FEE_XLM)} XLM to contact this player.`,
           );
           return;
         }

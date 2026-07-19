@@ -8,6 +8,7 @@ import { usePlayer } from '@/hooks/usePlayer';
 import { usePayToContact } from '@/hooks/usePayToContact';
 import { useSubscription } from '@/hooks/useSubscription';
 import { PLATFORM_CONTACT_FEE_XLM } from '@/lib/contract';
+import { formatXlm } from '@/lib/formatXlm';
 import ProgressBar from '@/components/ProgressBar';
 import PlayerProfileSkeleton from '@/components/PlayerProfileSkeleton';
 import PlayerStatsCard from '@/components/player/PlayerStatsCard';
@@ -191,14 +192,14 @@ export default function PlayerProfile() {
           >
             {contacting
               ? 'Processing…'
-              : `Pay to Contact (${PLATFORM_CONTACT_FEE_XLM} XLM)`}
+              : `Pay to Contact (${formatXlm(PLATFORM_CONTACT_FEE_XLM)} XLM)`}
           </button>
           {contactTxStatus && (
             <TransactionStatus
               status={contactTxStatus}
               feePaid={
                 contactTxStatus === 'success'
-                  ? String(PLATFORM_CONTACT_FEE_XLM)
+                  ? formatXlm(PLATFORM_CONTACT_FEE_XLM)
                   : undefined
               }
               onHide={() => setContactTxStatus(null)}
@@ -209,7 +210,7 @@ export default function PlayerProfile() {
             onConfirm={handleConfirm}
             onCancel={() => setConfirmOpen(false)}
             title="Contact Player"
-            message={`Unlock contact details for ${player.vitals.name}? Fee: ${PLATFORM_CONTACT_FEE_XLM} XLM will be deducted from your wallet.`}
+            message={`Unlock contact details for ${player.vitals.name}? Fee: ${formatXlm(PLATFORM_CONTACT_FEE_XLM)} XLM will be deducted from your wallet.`}
             confirmLabel="Confirm"
             loading={contacting}
           />

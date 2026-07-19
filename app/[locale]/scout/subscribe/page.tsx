@@ -9,12 +9,13 @@ import type { TxStatus } from '@/components/ui/TransactionStatus';
 import useIsPaused from '@/hooks/useIsPaused';
 import { useSubscription } from '@/hooks/useSubscription';
 import { redeemReferralCode } from '@/lib/api';
+import { formatXlm } from '@/lib/formatXlm';
 import type { SubscriptionTier } from '@/types';
 
 const TIERS: Array<{
   tier: SubscriptionTier;
   title: string;
-  price: string;
+  priceXlm: number;
   description: string;
   features: string[];
   recommended?: boolean;
@@ -22,7 +23,7 @@ const TIERS: Array<{
   {
     tier: 'basic',
     title: 'Basic',
-    price: '5 XLM',
+    priceXlm: 5,
     description:
       'Get started with essential scout access and basic player contact capabilities.',
     features: [
@@ -34,7 +35,7 @@ const TIERS: Array<{
   {
     tier: 'pro',
     title: 'Pro',
-    price: '12 XLM',
+    priceXlm: 12,
     description:
       'Recommended for active scouts who want priority access and advanced scouting tools.',
     features: [
@@ -141,8 +142,7 @@ function SubscribeContent() {
         redeemReferralCode(referralCode).catch(() => {});
       }
       const plan = TIERS.find((p) => p.tier === tier);
-      // price is like "5 XLM" — strip the " XLM" suffix for feePaid
-      setFeePaid(plan ? plan.price.replace(' XLM', '') : undefined);
+      setFeePaid(plan ? formatXlm(plan.priceXlm) : undefined);
       setSuccessMessage(`Subscribed to ${tier} successfully`);
       setTxStatus('success');
       redirectTimer.current = window.setTimeout(() => {
@@ -289,7 +289,7 @@ function SubscribeContent() {
                     {plan.title}
                   </p>
                   <p className="text-4xl font-bold text-white mt-3">
-                    {plan.price}
+                    {formatXlm(plan.priceXlm)} XLM
                   </p>
                 </div>
                 <div className="flex flex-col items-end gap-2">

@@ -161,7 +161,7 @@ describe('usePayToContact — balance gate', () => {
     );
     expect(show).toHaveBeenCalledWith(
       expect.objectContaining({
-        message: expect.stringContaining('1 XLM'),
+        message: expect.stringContaining('1.00 XLM'),
       }),
     );
     expect(result.current.error).toMatch(/insufficient xlm/i);

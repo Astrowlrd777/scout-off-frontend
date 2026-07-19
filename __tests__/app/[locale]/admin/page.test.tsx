@@ -199,7 +199,7 @@ describe('AdminDashboard page', () => {
       await screen.findByRole('heading', { name: 'Admin Dashboard' }),
     ).toBeInTheDocument();
     expect(screen.getByText('Active')).toBeInTheDocument();
-    expect(screen.getByText(/42 XLM/)).toBeInTheDocument();
+    expect(screen.getByText(/42\.00 XLM/)).toBeInTheDocument();
     expect(screen.getByText('Validators (1)')).toBeInTheDocument();
     expect(screen.getByText(VALID_VALIDATOR_ADDRESS)).toBeInTheDocument();
   });
@@ -400,7 +400,7 @@ describe('AdminDashboard page', () => {
     mockSignAndSubmit.mockResolvedValue({ hash: 'withdraw-hash' });
 
     render(<AdminDashboard />);
-    await screen.findByText(/100 XLM/);
+    await screen.findByText(/100\.00 XLM/);
 
     fireEvent.click(screen.getByRole('button', { name: 'Withdraw Fees' }));
     fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
@@ -421,7 +421,7 @@ describe('AdminDashboard page', () => {
     mockSignAndSubmit.mockRejectedValue(new Error('signing failed'));
 
     render(<AdminDashboard />);
-    await screen.findByText(/100 XLM/);
+    await screen.findByText(/100\.00 XLM/);
 
     fireEvent.click(screen.getByRole('button', { name: 'Withdraw Fees' }));
     fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
