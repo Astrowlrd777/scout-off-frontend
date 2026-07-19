@@ -34,6 +34,15 @@ jobs:
             if (missing.length) { console.error('Missing icons:', missing.join(', ')); process.exit(1); }
             console.log('All', manifest.icons.length, 'manifest icons present.');
           "
+      - name: Guard against committed .data/ artifacts
+        run: |
+          tracked=$(git ls-files -- '.data/' '.data/**')
+          if [ -n "$tracked" ]; then
+            echo "Tracked files found under .data/ (should be gitignored, dev-only referral store artifacts):"
+            echo "$tracked"
+            exit 1
+          fi
+          echo "No tracked files under .data/."
 
   coverage:
     runs-on: ubuntu-latest
