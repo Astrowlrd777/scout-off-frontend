@@ -114,6 +114,11 @@ export default function ReferralPanel() {
                     setCopiedIndex(i);
                     setTimeout(() => setCopiedIndex(null), 2000);
                   }}
+                  aria-label={
+                    copiedIndex === i
+                      ? `Copied invite link for code ${ref.code}`
+                      : `Copy invite link for code ${ref.code}`
+                  }
                   className="shrink-0 rounded px-2 py-1 text-xs font-medium transition bg-gray-700 text-gray-300 hover:bg-gray-600"
                 >
                   {copiedIndex === i ? 'Copied!' : 'Copy'}
