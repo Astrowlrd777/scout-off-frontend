@@ -123,7 +123,9 @@
     "english_notice": "This changelog is currently available in English only.",
     "added": "Added",
     "improved": "Improved",
-    "fixed": "Fixed"
+    "fixed": "Fixed",
+    "empty_title": "Changelog unavailable",
+    "empty_description": "We couldn't load the changelog right now. Please check back later."
   },
   "progress_levels": {
     "level0": "Unverified",

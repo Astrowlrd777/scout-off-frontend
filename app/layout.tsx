@@ -62,7 +62,8 @@ export default async function RootLayout({
           href="/icons/icon-16x16.png"
         />
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#0f172a" />
+        {/* Keep in sync with brand.dark in tailwind.config.ts, --bg in app/globals.css, and theme_color/background_color in public/manifest.json */}
+        <meta name="theme-color" content="#0a0f1e" />
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
       <body>

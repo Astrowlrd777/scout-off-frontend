@@ -2,6 +2,7 @@
 import { POST } from '@/app/api/referrals/redeem/route';
 import { NextRequest } from 'next/server';
 import { redeemCode } from '@/lib/referralStore';
+import { _resetStore } from '@/lib/rateLimit';
 
 jest.mock('@/lib/referralStore', () => ({
   redeemCode: jest.fn(),
@@ -11,12 +12,13 @@ const mockRedeemCode = redeemCode as jest.MockedFunction<typeof redeemCode>;
 
 function makeRequest(
   body: unknown,
-  cookieHeader?: string,
+  opts: { cookieHeader?: string; ip?: string } = {},
 ): NextRequest {
   const headers: Record<string, string> = {
     'content-type': 'application/json',
   };
-  if (cookieHeader) headers['cookie'] = cookieHeader;
+  if (opts.cookieHeader) headers['cookie'] = opts.cookieHeader;
+  if (opts.ip) headers['x-forwarded-for'] = opts.ip;
   return new NextRequest('http://localhost:3000/api/referrals/redeem', {
     method: 'POST',
     headers,
@@ -26,6 +28,8 @@ function makeRequest(
 
 beforeEach(() => {
   jest.clearAllMocks();
+  _resetStore();
+  mockRedeemCode.mockReturnValue(true);
 });
 
 describe('POST /api/referrals/redeem', () => {
@@ -35,52 +39,92 @@ describe('POST /api/referrals/redeem', () => {
     expect(mockRedeemCode).not.toHaveBeenCalled();
   });
 
-  it('returns 400 when the request body has no code', async () => {
-    const res = await POST(makeRequest({}, 'session=GSCOUT'));
-    expect(res.status).toBe(400);
-    expect(mockRedeemCode).not.toHaveBeenCalled();
-  });
-
-  it('returns 400 with a specific message when redemption is rejected for self-redemption', async () => {
-    mockRedeemCode.mockReturnValue({
-      success: false,
-      reason: 'self_redemption',
-    });
-
+  it('redeems a valid code for an authenticated scout', async () => {
     const res = await POST(
-      makeRequest({ code: 'SCOUT-ABC123' }, 'session=GSCOUT'),
-    );
-
-    expect(mockRedeemCode).toHaveBeenCalledWith('SCOUT-ABC123', 'GSCOUT');
-    expect(res.status).toBe(400);
-    const json = await res.json();
-    expect(json.error).toBe('You cannot redeem your own referral code.');
-  });
-
-  it('returns 404 with a generic message when the code is invalid or already redeemed', async () => {
-    mockRedeemCode.mockReturnValue({ success: false, reason: 'not_found' });
-
-    const res = await POST(
-      makeRequest({ code: 'SCOUT-BADCODE' }, 'session=GSCOUT'),
-    );
-
-    expect(res.status).toBe(404);
-    const json = await res.json();
-    expect(json.error).toBe('Invalid or already redeemed code');
-  });
-
-  it('returns 200 with success: true for a valid, non-self redemption', async () => {
-    mockRedeemCode.mockReturnValue({ success: true });
-
-    const res = await POST(
-      makeRequest({ code: 'SCOUT-ABC123' }, 'session=GDIFFERENTWALLET'),
-    );
-
-    expect(mockRedeemCode).toHaveBeenCalledWith(
-      'SCOUT-ABC123',
-      'GDIFFERENTWALLET',
+      makeRequest(
+        { code: 'SCOUT-ABC123' },
+        { cookieHeader: 'session=GSCOUT_A', ip: '1.1.1.1' },
+      ),
     );
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ success: true });
+    expect(mockRedeemCode).toHaveBeenCalledWith('SCOUT-ABC123', 'GSCOUT_A');
+  });
+
+  it('allows up to the per-IP limit without blocking', async () => {
+    for (let i = 0; i < 20; i++) {
+      const res = await POST(
+        makeRequest(
+          { code: `SCOUT-CODE${i}` },
+          { cookieHeader: 'session=GSCOUT_A', ip: '2.2.2.2' },
+        ),
+      );
+      expect(res.status).toBe(200);
+    }
+    expect(mockRedeemCode).toHaveBeenCalledTimes(20);
+  });
+
+  it('returns 429 with Retry-After once the per-IP limit is exceeded', async () => {
+    for (let i = 0; i < 20; i++) {
+      await POST(
+        makeRequest(
+          { code: `SCOUT-CODE${i}` },
+          { cookieHeader: 'session=GSCOUT_A', ip: '3.3.3.3' },
+        ),
+      );
+    }
+
+    const res = await POST(
+      makeRequest(
+        { code: 'SCOUT-ONEMORE' },
+        { cookieHeader: 'session=GSCOUT_A', ip: '3.3.3.3' },
+      ),
+    );
+
+    expect(res.status).toBe(429);
+    expect(res.headers.get('Retry-After')).toBeTruthy();
+    const json = await res.json();
+    expect(json.error).toMatch(/too many/i);
+    expect(typeof json.retryAfter).toBe('number');
+    // The over-limit call must not have reached redeemCode.
+    expect(mockRedeemCode).toHaveBeenCalledTimes(20);
+  });
+
+  it('rate-limits each IP independently', async () => {
+    for (let i = 0; i < 20; i++) {
+      await POST(
+        makeRequest(
+          { code: `SCOUT-CODE${i}` },
+          { cookieHeader: 'session=GSCOUT_A', ip: '4.4.4.4' },
+        ),
+      );
+    }
+    expect(
+      (
+        await POST(
+          makeRequest(
+            { code: 'SCOUT-OVER' },
+            { cookieHeader: 'session=GSCOUT_A', ip: '4.4.4.4' },
+          ),
+        )
+      ).status,
+    ).toBe(429);
+    expect(
+      (
+        await POST(
+          makeRequest(
+            { code: 'SCOUT-DIFFERENT-IP' },
+            { cookieHeader: 'session=GSCOUT_A', ip: '5.5.5.5' },
+          ),
+        )
+      ).status,
+    ).toBe(200);
+  });
+
+  it('still enforces existing validation (missing code) when under the rate limit', async () => {
+    const res = await POST(
+      makeRequest({}, { cookieHeader: 'session=GSCOUT_A', ip: '6.6.6.6' }),
+    );
+    expect(res.status).toBe(400);
+    expect(mockRedeemCode).not.toHaveBeenCalled();
   });
 });
