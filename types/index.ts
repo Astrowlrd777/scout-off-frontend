@@ -43,6 +43,8 @@ export interface Player {
   milestones: Milestone[];
   createdAt: number;
   archived?: boolean; // Off-chain archive flag; defaults to false
+  backupWallet?: string; // Optional recovery/backup wallet address
+  backupWalletVerifiedAt?: number; // Timestamp when backup was verified with primary wallet signature
 }
 
 // ── Validator ────────────────────────────────────────────────────────────────────

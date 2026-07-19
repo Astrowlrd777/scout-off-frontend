@@ -22,6 +22,15 @@ export const archivePlayerProfile = (playerId: string): Promise<Player> =>
 export const unarchivePlayerProfile = (playerId: string): Promise<Player> =>
   api.post(`/players/${playerId}/unarchive`).then((r) => r.data);
 
+export const linkBackupWallet = (playerId: string, backupWallet: string, signature: string): Promise<Player> =>
+  api.post(`/players/${playerId}/backup-wallet/link`, { backupWallet, signature }).then((r) => r.data);
+
+export const removeBackupWallet = (playerId: string): Promise<Player> =>
+  api.post(`/players/${playerId}/backup-wallet/remove`).then((r) => r.data);
+
+export const claimAccountWithBackupWallet = (primaryWallet: string, backupWallet: string): Promise<{ playerId: string; wallet: string }> =>
+  api.post('/players/recovery/claim', { primaryWallet, backupWallet }).then((r) => r.data);
+
 // Scouts
 export const fetchScoutProfile = (scoutId: string) =>
   api.get(`/scouts/${scoutId}`).then((r) => r.data);
