@@ -119,8 +119,11 @@ jest.mock('@/lib/contract', () => ({
 }));
 
 const mockFetchActivityEvents = jest.fn();
+const mockGetReferralOverview = jest.fn();
 jest.mock('@/lib/api', () => ({
   fetchActivityEvents: (...args: unknown[]) => mockFetchActivityEvents(...args),
+  getReferralOverview: (...args: unknown[]) =>
+    mockGetReferralOverview(...args),
 }));
 
 jest.mock('@/lib/contractErrorMessage', () => ({
@@ -138,6 +141,10 @@ function defaultActivity() {
   return { events: [], total: 0 };
 }
 
+function defaultReferralOverview() {
+  return { totalCodes: 0, totalSuccessfulReferrals: 0, topReferrers: [] };
+}
+
 describe('AdminDashboard page', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -146,6 +153,7 @@ describe('AdminDashboard page', () => {
     mockGetPlatformFees.mockResolvedValue(0);
     mockGetContractPaused.mockResolvedValue(false);
     mockFetchActivityEvents.mockResolvedValue(defaultActivity());
+    mockGetReferralOverview.mockResolvedValue(defaultReferralOverview());
   });
 
   it('renders nothing when no wallet is connected', () => {
@@ -311,6 +319,51 @@ describe('AdminDashboard page', () => {
     await waitFor(() => {
       expect(mockFetchActivityEvents).toHaveBeenLastCalledWith(2, 20);
     });
+  });
+
+  it('shows a toast when the referral overview fails to load', async () => {
+    mockPublicKey = ADMIN_ADDRESS;
+    mockGetReferralOverview.mockRejectedValue(new Error('referrals down'));
+
+    render(<AdminDashboard />);
+
+    await waitFor(() => {
+      expect(mockShow).toHaveBeenCalledWith({
+        message: 'Failed to load referral program data.',
+        variant: 'error',
+      });
+    });
+  });
+
+  it('shows the empty state for the referral program when there is no activity', async () => {
+    mockPublicKey = ADMIN_ADDRESS;
+    render(<AdminDashboard />);
+    expect(
+      await screen.findByText('No referral activity yet'),
+    ).toBeInTheDocument();
+  });
+
+  it('renders referral program totals and top referrers', async () => {
+    mockPublicKey = ADMIN_ADDRESS;
+    mockGetReferralOverview.mockResolvedValue({
+      totalCodes: 12,
+      totalSuccessfulReferrals: 5,
+      topReferrers: [
+        {
+          scoutWallet: VALID_VALIDATOR_ADDRESS,
+          totalCodes: 8,
+          successfulReferrals: 4,
+        },
+      ],
+    });
+
+    render(<AdminDashboard />);
+
+    expect(await screen.findByText('Referral Program')).toBeInTheDocument();
+    expect(screen.getByText('12')).toBeInTheDocument();
+    expect(screen.getByText('5')).toBeInTheDocument();
+    expect(screen.getByText(VALID_VALIDATOR_ADDRESS)).toBeInTheDocument();
+    expect(screen.getByText('4 referrals · 8 codes')).toBeInTheDocument();
   });
 
   it('adds a validator through the confirm dialog flow', async () => {

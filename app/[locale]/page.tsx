@@ -7,6 +7,7 @@ import {
   ShieldCheck,
   Users,
   TrendingUp,
+  Radio,
 } from 'lucide-react';
 
 // ── Feature card data ─────────────────────────────────────────────────────────
@@ -170,6 +171,13 @@ export default async function HomePage({
             >
               <BookOpen size={15} />
               {t('changelog')}
+            </Link>
+            <Link
+              href={`/${locale}/status`}
+              className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm transition"
+            >
+              <Radio size={15} />
+              {t('status')}
             </Link>
           </nav>
         </div>

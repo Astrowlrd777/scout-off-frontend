@@ -2,7 +2,7 @@
 import { useState, useCallback } from 'react';
 import useSWR, { mutate as globalMutate } from 'swr';
 import { filterPlayers } from '@/lib/contract';
-import { searchPlayersByName } from '@/lib/api';
+import { searchPlayersByName, SearchRateLimitedError } from '@/lib/api';
 import type { Player, PlayerFilter } from '@/types';
 
 /**
@@ -66,6 +66,9 @@ export function useScout() {
     players: data ?? [],
     loading: isValidating,
     error: error?.message ?? null,
+    isRateLimited: error instanceof SearchRateLimitedError,
+    retryAfterSec:
+      error instanceof SearchRateLimitedError ? error.retryAfterSec : null,
     search,
     searchByName,
     refetch: () => mutate(),

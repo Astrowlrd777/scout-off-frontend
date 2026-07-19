@@ -26,7 +26,8 @@ Stellar Network
     ▼
 ┌─────────────────────────────┐
 │  Event Listener / Poller    │  Polls ledger-by-ledger; tracks last
-│  (ledgerTracker.ts)         │  indexed sequence + network head
+│  (eventPoller.ts)           │  indexed sequence + network head
+│  updates ledgerTracker.ts   │  via ledgerTracker.ts
 └────────────┬────────────────┘
              │  decoded EventType
              ▼
@@ -119,6 +120,12 @@ cp ../../.env.example ../../.env.local
 ## Indexed Event Schema
 
 The indexer processes seven event types emitted by the ScoutOff contract. All events carry a `ledger` sequence number and `timestamp` (Unix seconds) sourced from the Soroban event envelope.
+
+`eventPoller.ts`'s `decodeEvent` assumes the common Soroban convention —
+`topic[0]` is a Symbol equal to the event name, `value` is a Map/struct
+holding the other fields below — since no Rust contract source lives in
+this repository to confirm the wire format against. If the deployed
+contract encodes events differently, only `decodeEvent` needs to change.
 
 ### `player_registered`
 
@@ -380,4 +387,5 @@ npx jest packages/indexer --coverage
 Test files live in:
 
 - `src/__tests__/server.test.ts` — HTTP server endpoint tests
+- `src/__tests__/eventPoller.test.ts` — event decoding, poll-cycle ledger advancement, and RPC/decode error handling, against a mocked RPC client
 - `src/metrics/__tests__/` — `IndexerMetrics` unit tests (singleton, counters, sliding window, p95, health flag)

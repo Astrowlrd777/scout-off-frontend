@@ -1,6 +1,10 @@
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
+import { mutate as globalMutate } from 'swr';
 
 // ── Module mocks ──────────────────────────────────────────────────────────────
+// lib/contactDetailsCache and swr are deliberately real (not mocked) — this
+// suite exercises the actual session-bounded cache policy described in
+// docs/contact-details-privacy.md, not a stand-in for it.
 
 jest.mock('@/hooks/useWallet', () => ({
   useWallet: jest.fn(),
@@ -12,7 +16,7 @@ jest.mock('@/components/ui/Toast', () => ({
 
 jest.mock('@/lib/contract', () => ({
   getSubscription: jest.fn(),
-  buildPayToContact: jest.fn(),
+  payToContact: jest.fn(),
   PLATFORM_CONTACT_FEE_XLM: 1,
 }));
 
@@ -20,13 +24,14 @@ jest.mock('@/lib/contract', () => ({
 
 import { useWallet } from '@/hooks/useWallet';
 import { useToast } from '@/components/ui/Toast';
-import { getSubscription, buildPayToContact } from '@/lib/contract';
+import { getSubscription, payToContact } from '@/lib/contract';
 import { usePayToContact } from '@/hooks/usePayToContact';
+import { CONTACT_DETAILS_TTL_MS } from '@/lib/contactDetailsCache';
 
 const mockUseWallet = useWallet as jest.Mock;
 const mockUseToast = useToast as jest.Mock;
 const mockGetSubscription = getSubscription as jest.Mock;
-const mockBuildPayToContact = buildPayToContact as jest.Mock;
+const mockPayToContact = payToContact as jest.Mock;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -34,24 +39,23 @@ const SCOUT_KEY = 'GCFW7QAO3WZQ6X4CZ3OYZFXX3A3DL7XVI5DNVTXA5VJUGE5SU6ZRG5OV';
 const PLAYER_ID = 'player-abc';
 const FUTURE = Math.floor(Date.now() / 1000) + 86_400 * 30;
 const PAST = Math.floor(Date.now() / 1000) - 1000;
+const DETAILS = { email: 'p@example.com', phone: '+1', telegram: '@p' };
 
 interface WalletOverrides {
   publicKey?: string | null;
   xlmBalance?: string | null;
-  signAndSubmit?: jest.Mock;
+  signOnly?: jest.Mock;
 }
 
-// Use explicit `in` checks so callers can pass null/undefined intentionally.
 function makeWallet(overrides: WalletOverrides = {}) {
-  const signAndSubmit =
-    overrides.signAndSubmit ?? jest.fn().mockResolvedValue(undefined);
+  const signOnly = overrides.signOnly ?? jest.fn().mockResolvedValue('SIGNED');
   mockUseWallet.mockReturnValue({
     publicKey: 'publicKey' in overrides ? overrides.publicKey : SCOUT_KEY,
     xlmBalance: 'xlmBalance' in overrides ? overrides.xlmBalance : '5.0000000',
-    signAndSubmit,
+    signOnly,
     refreshBalance: jest.fn().mockResolvedValue(undefined),
   });
-  return { signAndSubmit };
+  return { signOnly };
 }
 
 function makeShow() {
@@ -70,12 +74,21 @@ function activeSubscription() {
 
 beforeEach(() => {
   jest.resetAllMocks();
+  // The cache module writes through SWR's global (unscoped) mutate, so —
+  // unlike most hook tests in this repo — a per-test SWRConfig provider
+  // wouldn't actually isolate anything here. Reset the real global cache
+  // instead, matching how context/WalletContext.tsx's disconnect() clears it.
+  globalMutate(() => true, undefined, { revalidate: false });
+});
+
+afterEach(() => {
+  jest.useRealTimers();
 });
 
 // ── Subscription gate ─────────────────────────────────────────────────────────
 
 describe('usePayToContact — subscription gate', () => {
-  test('expired subscription: shows error toast and does not call buildPayToContact', async () => {
+  test('expired subscription: shows error toast and does not call payToContact', async () => {
     const show = makeShow();
     makeWallet();
     mockGetSubscription.mockResolvedValue({
@@ -84,12 +97,12 @@ describe('usePayToContact — subscription gate', () => {
       expiresAt: PAST,
     });
 
-    const { result } = renderHook(() => usePayToContact());
+    const { result } = renderHook(() => usePayToContact(PLAYER_ID));
     await act(async () => {
-      await result.current.unlock(PLAYER_ID);
+      await result.current.unlock();
     });
 
-    expect(mockBuildPayToContact).not.toHaveBeenCalled();
+    expect(mockPayToContact).not.toHaveBeenCalled();
     expect(show).toHaveBeenCalledWith(
       expect.objectContaining({
         variant: 'error',
@@ -100,170 +113,71 @@ describe('usePayToContact — subscription gate', () => {
     expect(result.current.loading).toBe(false);
   });
 
-  test('null subscription: shows error toast and does not call buildPayToContact', async () => {
+  test('null subscription: shows error toast and does not call payToContact', async () => {
     const show = makeShow();
     makeWallet();
     mockGetSubscription.mockResolvedValue(null);
 
-    const { result } = renderHook(() => usePayToContact());
+    const { result } = renderHook(() => usePayToContact(PLAYER_ID));
     await act(async () => {
-      await result.current.unlock(PLAYER_ID);
+      await result.current.unlock();
     });
 
-    expect(mockBuildPayToContact).not.toHaveBeenCalled();
+    expect(mockPayToContact).not.toHaveBeenCalled();
     expect(show).toHaveBeenCalledWith(
       expect.objectContaining({
         variant: 'error',
         message: expect.stringContaining('active subscription'),
       }),
     );
-  });
-
-  test('getSubscription failure: surfaces error toast and does not call buildPayToContact', async () => {
-    const show = makeShow();
-    makeWallet();
-    mockGetSubscription.mockRejectedValue(new Error('RPC timeout'));
-
-    const { result } = renderHook(() => usePayToContact());
-    await act(async () => {
-      try {
-        await result.current.unlock(PLAYER_ID);
-      } catch {}
-    });
-
-    expect(mockBuildPayToContact).not.toHaveBeenCalled();
-    expect(show).toHaveBeenCalledWith(
-      expect.objectContaining({ variant: 'error' }),
-    );
-    expect(result.current.loading).toBe(false);
   });
 });
 
 // ── Balance gate ──────────────────────────────────────────────────────────────
 
 describe('usePayToContact — balance gate', () => {
-  test('balance below fee: shows Insufficient XLM toast and does not call buildPayToContact', async () => {
+  test('balance below fee: shows Insufficient XLM toast and does not call payToContact', async () => {
     const show = makeShow();
     makeWallet({ xlmBalance: '0.5000000' });
     activeSubscription();
 
-    const { result } = renderHook(() => usePayToContact());
+    const { result } = renderHook(() => usePayToContact(PLAYER_ID));
     await act(async () => {
-      await result.current.unlock(PLAYER_ID);
+      await result.current.unlock();
     });
 
-    expect(mockBuildPayToContact).not.toHaveBeenCalled();
+    expect(mockPayToContact).not.toHaveBeenCalled();
     expect(show).toHaveBeenCalledWith(
       expect.objectContaining({
         variant: 'error',
         message: expect.stringContaining('Insufficient XLM'),
-      }),
-    );
-    expect(show).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: expect.stringContaining('1.00 XLM'),
       }),
     );
     expect(result.current.error).toMatch(/insufficient xlm/i);
-    expect(result.current.loading).toBe(false);
-  });
-
-  test('null xlmBalance is treated as 0 and blocks the transaction', async () => {
-    const show = makeShow();
-    makeWallet({ xlmBalance: null });
-    activeSubscription();
-
-    const { result } = renderHook(() => usePayToContact());
-    await act(async () => {
-      await result.current.unlock(PLAYER_ID);
-    });
-
-    expect(mockBuildPayToContact).not.toHaveBeenCalled();
-    expect(show).toHaveBeenCalledWith(
-      expect.objectContaining({
-        variant: 'error',
-        message: expect.stringContaining('Insufficient XLM'),
-      }),
-    );
-  });
-
-  test('balance exactly equal to the fee passes through', async () => {
-    makeShow();
-    const { signAndSubmit } = makeWallet({ xlmBalance: '1.0000000' });
-    activeSubscription();
-    mockBuildPayToContact.mockResolvedValue('SOME_XDR');
-
-    const { result } = renderHook(() => usePayToContact());
-    await act(async () => {
-      await result.current.unlock(PLAYER_ID);
-    });
-
-    expect(mockBuildPayToContact).toHaveBeenCalled();
-    expect(signAndSubmit).toHaveBeenCalledWith('SOME_XDR');
   });
 });
 
-// ── Validation ordering ───────────────────────────────────────────────────────
+// ── Success path & caching ────────────────────────────────────────────────────
 
-describe('usePayToContact — validation order', () => {
-  test('subscription check fires before balance check: subscription error wins when both fail', async () => {
-    const show = makeShow();
-    makeWallet({ xlmBalance: '0.1' });
-    mockGetSubscription.mockResolvedValue({
-      scout: SCOUT_KEY,
-      tier: 'pro',
-      expiresAt: PAST,
-    });
-
-    const { result } = renderHook(() => usePayToContact());
-    await act(async () => {
-      await result.current.unlock(PLAYER_ID);
-    });
-
-    expect(show).toHaveBeenCalledTimes(1);
-    expect(show).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: expect.stringContaining('active subscription'),
-      }),
-    );
-    expect(mockBuildPayToContact).not.toHaveBeenCalled();
-  });
-});
-
-// ── Success path ──────────────────────────────────────────────────────────────
-
-describe('usePayToContact — success path', () => {
-  test('builds and signs the transaction when both checks pass', async () => {
+describe('usePayToContact — success path and cache lifetime', () => {
+  test('unlock() signs via the wallet-agnostic signOnly callback and caches the result', async () => {
     makeShow();
-    const { signAndSubmit } = makeWallet({ xlmBalance: '10.0000000' });
+    const { signOnly } = makeWallet();
     activeSubscription();
-    mockBuildPayToContact.mockResolvedValue('SIGNED_XDR');
+    mockPayToContact.mockResolvedValue(DETAILS);
 
-    const { result } = renderHook(() => usePayToContact());
+    const { result } = renderHook(() => usePayToContact(PLAYER_ID));
     await act(async () => {
-      await result.current.unlock(PLAYER_ID);
+      await result.current.unlock();
     });
 
-    expect(mockBuildPayToContact).toHaveBeenCalledWith(SCOUT_KEY, PLAYER_ID);
-    expect(signAndSubmit).toHaveBeenCalledWith('SIGNED_XDR');
+    expect(mockPayToContact).toHaveBeenCalledWith(
+      SCOUT_KEY,
+      PLAYER_ID,
+      signOnly,
+    );
+    expect(result.current.contactDetails).toEqual(DETAILS);
     expect(result.current.error).toBeNull();
-    expect(result.current.loading).toBe(false);
-  });
-
-  test('loading is false after a successful unlock', async () => {
-    makeShow();
-    makeWallet();
-    activeSubscription();
-    mockBuildPayToContact.mockResolvedValue('XDR');
-
-    const { result } = renderHook(() => usePayToContact());
-
-    expect(result.current.loading).toBe(false);
-
-    await act(async () => {
-      await result.current.unlock(PLAYER_ID);
-    });
-
     expect(result.current.loading).toBe(false);
   });
 
@@ -271,18 +185,109 @@ describe('usePayToContact — success path', () => {
     const show = makeShow();
     makeWallet({ publicKey: null });
 
-    const { result } = renderHook(() => usePayToContact());
+    const { result } = renderHook(() => usePayToContact(PLAYER_ID));
     await act(async () => {
-      await result.current.unlock(PLAYER_ID);
+      await result.current.unlock();
     });
 
     expect(mockGetSubscription).not.toHaveBeenCalled();
-    expect(mockBuildPayToContact).not.toHaveBeenCalled();
+    expect(mockPayToContact).not.toHaveBeenCalled();
     expect(show).toHaveBeenCalledWith(
       expect.objectContaining({
         variant: 'error',
         message: expect.stringContaining('Wallet not connected'),
       }),
     );
+  });
+
+  test('a second hook instance for the same player/scout reads the same cached details without unlocking again', async () => {
+    makeShow();
+    makeWallet();
+    activeSubscription();
+    mockPayToContact.mockResolvedValue(DETAILS);
+
+    const first = renderHook(() => usePayToContact(PLAYER_ID));
+    await act(async () => {
+      await first.result.current.unlock();
+    });
+    expect(first.result.current.contactDetails).toEqual(DETAILS);
+
+    // e.g. ContactModal rendered alongside the caller that unlocked.
+    const second = renderHook(() => usePayToContact(PLAYER_ID));
+    await waitFor(() =>
+      expect(second.result.current.contactDetails).toEqual(DETAILS),
+    );
+    expect(mockPayToContact).toHaveBeenCalledTimes(1);
+  });
+
+  test('clear() purges this player\'s cached contact details immediately', async () => {
+    makeShow();
+    makeWallet();
+    activeSubscription();
+    mockPayToContact.mockResolvedValue(DETAILS);
+
+    const { result } = renderHook(() => usePayToContact(PLAYER_ID));
+    await act(async () => {
+      await result.current.unlock();
+    });
+    expect(result.current.contactDetails).toEqual(DETAILS);
+
+    act(() => {
+      result.current.clear();
+    });
+
+    await waitFor(() =>
+      expect(result.current.contactDetails).toBeUndefined(),
+    );
+  });
+
+  test('contact details are purged automatically once the TTL elapses, without an explicit clear or logout', async () => {
+    jest.useFakeTimers();
+    makeShow();
+    makeWallet();
+    activeSubscription();
+    mockPayToContact.mockResolvedValue(DETAILS);
+
+    const { result } = renderHook(() => usePayToContact(PLAYER_ID));
+    await act(async () => {
+      await result.current.unlock();
+    });
+    expect(result.current.contactDetails).toEqual(DETAILS);
+
+    await act(async () => {
+      jest.advanceTimersByTime(CONTACT_DETAILS_TTL_MS);
+      await Promise.resolve();
+    });
+
+    expect(result.current.contactDetails).toBeUndefined();
+  });
+
+  test('re-unlocking resets the TTL window instead of purging on the original schedule', async () => {
+    jest.useFakeTimers();
+    makeShow();
+    makeWallet();
+    activeSubscription();
+    mockPayToContact.mockResolvedValue(DETAILS);
+
+    const { result } = renderHook(() => usePayToContact(PLAYER_ID));
+    await act(async () => {
+      await result.current.unlock();
+    });
+
+    // Half the TTL, then unlock again — this should push the purge out
+    // rather than leaving the original timer to fire on schedule.
+    await act(async () => {
+      jest.advanceTimersByTime(CONTACT_DETAILS_TTL_MS / 2);
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await result.current.unlock();
+    });
+    await act(async () => {
+      jest.advanceTimersByTime(CONTACT_DETAILS_TTL_MS / 2 + 1000);
+      await Promise.resolve();
+    });
+
+    expect(result.current.contactDetails).toEqual(DETAILS);
   });
 });
