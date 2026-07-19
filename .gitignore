@@ -8,8 +8,16 @@ out/
 coverage/
 storybook-static/
 
+# Playwright E2E output (issue #673)
+/test-results/
+/playwright-report/
+/blob-report/
+
 # Kiro IDE directory
 .kiro/
 
 # Pull request description files
 pr-*.md
+
+# Local referral-store data (lib/referralStore.ts writes here in dev)
+.data/

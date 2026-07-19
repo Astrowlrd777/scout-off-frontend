@@ -42,6 +42,9 @@ export interface Player {
   progressLevel: ProgressLevel;
   milestones: Milestone[];
   createdAt: number;
+  archived?: boolean; // Off-chain archive flag; defaults to false
+  backupWallet?: string; // Optional recovery/backup wallet address
+  backupWalletVerifiedAt?: number; // Timestamp when backup was verified with primary wallet signature
 }
 
 // ── Validator ────────────────────────────────────────────────────────────────────
@@ -132,24 +135,16 @@ export interface ReferralStats {
   successfulReferrals: number;
 }
 
-// ── Fraud / abuse detection ────────────────────────────────────────────────────
-export type FraudFlagCategory = 'referral' | 'pay_to_contact';
+export interface TopReferrer {
+  scoutWallet: string;
+  totalCodes: number;
+  successfulReferrals: number;
+}
 
-export type FraudFlagSeverity = 'low' | 'medium' | 'high';
-
-export interface FraudFlag {
-  /** Stable id derived from category + heuristic + subject, so re-runs dedupe. */
-  id: string;
-  category: FraudFlagCategory;
-  /** Which heuristic in lib/fraudDetection.ts produced this flag. */
-  heuristic: string;
-  severity: FraudFlagSeverity;
-  /** Wallet(s) the flag is about, in the order most relevant to the heuristic. */
-  wallets: string[];
-  /** One-line, human-readable explanation for the admin panel. */
-  reason: string;
-  /** Structured numbers backing `reason`, shown expanded for investigation. */
-  evidence: Record<string, number | string | string[]>;
+export interface ReferralOverview {
+  totalCodes: number;
+  totalSuccessfulReferrals: number;
+  topReferrers: TopReferrer[];
 }
 
 // ── Contract call helpers ─────────────────────────────────────────────────────

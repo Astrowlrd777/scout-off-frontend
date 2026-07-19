@@ -16,6 +16,21 @@ export const searchPlayersByName = (name: string): Promise<Player[]> =>
 export const fetchPlayerComments = (playerId: string) =>
   api.get(`/players/${playerId}/comments`).then((r) => r.data);
 
+export const archivePlayerProfile = (playerId: string): Promise<Player> =>
+  api.post(`/players/${playerId}/archive`).then((r) => r.data);
+
+export const unarchivePlayerProfile = (playerId: string): Promise<Player> =>
+  api.post(`/players/${playerId}/unarchive`).then((r) => r.data);
+
+export const linkBackupWallet = (playerId: string, backupWallet: string, signature: string): Promise<Player> =>
+  api.post(`/players/${playerId}/backup-wallet/link`, { backupWallet, signature }).then((r) => r.data);
+
+export const removeBackupWallet = (playerId: string): Promise<Player> =>
+  api.post(`/players/${playerId}/backup-wallet/remove`).then((r) => r.data);
+
+export const claimAccountWithBackupWallet = (primaryWallet: string, backupWallet: string): Promise<{ playerId: string; wallet: string }> =>
+  api.post('/players/recovery/claim', { primaryWallet, backupWallet }).then((r) => r.data);
+
 // Scouts
 export const fetchScoutProfile = (scoutId: string) =>
   api.get(`/scouts/${scoutId}`).then((r) => r.data);
@@ -87,7 +102,7 @@ export const fetchValidatorMilestoneCount = async (
 };
 
 // Referrals
-import type { ReferralCode, ReferralStats } from '@/types';
+import type { ReferralCode, ReferralStats, ReferralOverview } from '@/types';
 
 export const generateReferralCode = async (): Promise<ReferralCode> => {
   const res = await fetch('/api/referrals/generate', { method: 'POST' });
@@ -101,6 +116,13 @@ export const getReferralStats = async (): Promise<ReferralStats> => {
   return res.json();
 };
 
+export const listReferralCodes = async (): Promise<ReferralCode[]> => {
+  const res = await fetch('/api/referrals/list');
+  if (!res.ok) throw new Error('Failed to fetch referral codes');
+  const data = await res.json();
+  return data.codes;
+};
+
 export const redeemReferralCode = async (code: string): Promise<boolean> => {
   const res = await fetch('/api/referrals/redeem', {
     method: 'POST',
@@ -110,15 +132,9 @@ export const redeemReferralCode = async (code: string): Promise<boolean> => {
   return res.ok;
 };
 
-// Fraud / abuse detection (admin only)
-import type { FraudFlag } from '@/types';
-
-export const fetchFraudFlags = async (): Promise<{
-  flags: FraudFlag[];
-  warnings: string[];
-}> => {
-  const res = await fetch('/api/admin/fraud-flags');
-  if (!res.ok) throw new Error('Failed to fetch fraud flags');
+export const getReferralOverview = async (): Promise<ReferralOverview> => {
+  const res = await fetch('/api/admin/referrals');
+  if (!res.ok) throw new Error('Failed to fetch referral overview');
   return res.json();
 };
 

@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { ArrowLeft, Sparkles } from 'lucide-react';
+import EmptyState from '@/components/ui/EmptyState';
 
 interface ChangelogPageProps {
   params: {
@@ -79,10 +80,14 @@ function parseChangelogMarkdown(markdown: string): ChangelogEntry[] {
   return entries;
 }
 
-function loadChangelogEntries() {
+function loadChangelogEntries(): ChangelogEntry[] {
   const changelogPath = path.join(process.cwd(), 'content', 'changelog.md');
-  const markdown = readFileSync(changelogPath, 'utf8');
-  return parseChangelogMarkdown(markdown);
+  try {
+    const markdown = readFileSync(changelogPath, 'utf8');
+    return parseChangelogMarkdown(markdown);
+  } catch {
+    return [];
+  }
 }
 
 export async function generateMetadata({
@@ -143,42 +148,49 @@ export default async function ChangelogPage({ params }: ChangelogPageProps) {
       </section>
 
       <section className="px-1 sm:px-0">
-        <div className="space-y-8">
-          {changelogEntries.map((entry) => (
-            <article
-              key={`${entry.date}-${entry.title}`}
-              className="rounded-2xl border border-gray-800 bg-brand-card/70 p-6 shadow-sm"
-            >
-              <div className="flex flex-col gap-3 border-b border-gray-800 pb-4 sm:flex-row sm:items-baseline sm:justify-between">
-                <h2 className="text-xl font-semibold text-white">
-                  <span>{entry.title}</span>
-                  <span className="ml-3 text-gray-400">-</span>
-                  <time className="ml-3 text-gray-400" dateTime={entry.date}>
-                    {entry.date}
-                  </time>
-                </h2>
-              </div>
+        {changelogEntries.length === 0 ? (
+          <EmptyState
+            title={t('empty_title')}
+            description={t('empty_description')}
+          />
+        ) : (
+          <div className="space-y-8">
+            {changelogEntries.map((entry) => (
+              <article
+                key={`${entry.date}-${entry.title}`}
+                className="rounded-2xl border border-gray-800 bg-brand-card/70 p-6 shadow-sm"
+              >
+                <div className="flex flex-col gap-3 border-b border-gray-800 pb-4 sm:flex-row sm:items-baseline sm:justify-between">
+                  <h2 className="text-xl font-semibold text-white">
+                    <span>{entry.title}</span>
+                    <span className="ml-3 text-gray-400">-</span>
+                    <time className="ml-3 text-gray-400" dateTime={entry.date}>
+                      {entry.date}
+                    </time>
+                  </h2>
+                </div>
 
-              <div className="mt-6 space-y-5">
-                {entry.sections.map((section) => (
-                  <div key={`${entry.date}-${section.type}`}>
-                    <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-gray-400">
-                      {t(section.type)}
-                    </h3>
-                    <ul className="mt-3 space-y-3 text-sm leading-7 text-gray-300">
-                      {section.items.map((item) => (
-                        <li key={item} className="flex gap-3">
-                          <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-brand-green" />
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </div>
-            </article>
-          ))}
-        </div>
+                <div className="mt-6 space-y-5">
+                  {entry.sections.map((section) => (
+                    <div key={`${entry.date}-${section.type}`}>
+                      <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-gray-400">
+                        {t(section.type)}
+                      </h3>
+                      <ul className="mt-3 space-y-3 text-sm leading-7 text-gray-300">
+                        {section.items.map((item) => (
+                          <li key={item} className="flex gap-3">
+                            <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-brand-green" />
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
