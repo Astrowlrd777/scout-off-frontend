@@ -11,7 +11,14 @@ const customJestConfig = {
   },
   // e2e/ holds Playwright specs (its own runner, see playwright.config.ts) —
   // Jest's default testMatch would otherwise pick up *.spec.ts under it too.
-  testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/e2e/'],
+  // server/ is a separate Node.js service with its own package.json and its
+  // own test runner (`node --test`, see server/package.json) — it isn't
+  // part of the Next.js app and shouldn't be swept up by this config.
+  testPathIgnorePatterns: [
+    '<rootDir>/node_modules/',
+    '<rootDir>/e2e/',
+    '<rootDir>/server/',
+  ],
   // Issue #108: enforce minimum coverage thresholds
   coverageThreshold: {
     global: {

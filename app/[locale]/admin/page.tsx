@@ -542,6 +542,8 @@ function AdminDashboardContent() {
         )}
       </section>
 
+      <FraudFlagsPanel />
+
       {dialog && (
         <ConfirmDialog
           isOpen

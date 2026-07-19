@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAllCodes } from '@/lib/referralStore';
-import { fetchActivityEvents, type ActivityEvent } from '@/lib/api';
+import {
+  fetchAllReferralCodes,
+  fetchActivityEvents,
+  type ActivityEvent,
+} from '@/lib/api';
 import { analyzeReferralAbuse, analyzePayToContactAbuse } from '@/lib/fraudDetection';
 import type { FraudFlag } from '@/types';
 
@@ -42,10 +45,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const referralFlags: FraudFlag[] = analyzeReferralAbuse(getAllCodes());
+  let referralFlags: FraudFlag[] = [];
+  const warnings: string[] = [];
+  try {
+    referralFlags = analyzeReferralAbuse(await fetchAllReferralCodes());
+  } catch {
+    warnings.push(
+      'Referral backend is unavailable — referral heuristics were skipped. Pay-to-contact heuristics below are unaffected.',
+    );
+  }
 
   let payToContactFlags: FraudFlag[] = [];
-  const warnings: string[] = [];
   try {
     const { events, truncated } = await fetchAllActivityEvents();
     payToContactFlags = analyzePayToContactAbuse(events);

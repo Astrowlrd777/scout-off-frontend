@@ -169,11 +169,20 @@ Run validation again:
 node scripts/validate-env.js
 ```
 
-### 8. Start the backend API (if available)
+### 8. Start the backend API
 
-The frontend expects a backend API at `NEXT_PUBLIC_API_URL` (default `http://localhost:4000`). If the backend API repository is available, start it in a separate terminal. The frontend will function without it for read-only operations; write operations (player registration, milestone approval) require the API for off-chain data.
+The frontend expects a backend API at `NEXT_PUBLIC_API_URL` (default `http://localhost:4000`). This lives in `server/` in this same repo — see `server/README.md` for details. Start it in a separate terminal:
 
-If you don't have the backend, you can still browse the UI and interact with the contract directly via the Stellar SDK calls in the frontend hooks.
+```bash
+cd server
+npm install
+cp .env.example .env
+npm start              # or `npm run dev` for auto-restart on file changes
+```
+
+The frontend will function without it for read-only operations; write operations (player registration, milestone approval, referrals) require the API for off-chain data. Off-chain, non-blockchain state (referral codes today; chat history and player/scout comments next, per the architecture diagram above) lives here — `server/README.md` documents the pattern to follow when adding the next such feature.
+
+If you don't have the backend running, you can still browse the UI and interact with the contract directly via the Stellar SDK calls in the frontend hooks.
 
 ### 9. Start the frontend
 
@@ -332,3 +341,4 @@ Net effect: the "You were referred" banner on `/scout/subscribe` renders based p
 - [CONTRIBUTING.md](CONTRIBUTING.md) — contribution workflow and branch conventions
 - [DEPLOYMENT.md](DEPLOYMENT.md) — production deployment notes (Vercel, analytics)
 - [e2e/README.md](e2e/README.md) — Playwright E2E suite and wallet-mocking harness
+- [docs/fraud-detection.md](docs/fraud-detection.md) — referral/pay-to-contact abuse heuristics and admin flag review

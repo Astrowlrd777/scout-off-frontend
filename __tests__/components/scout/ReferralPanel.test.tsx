@@ -14,6 +14,15 @@ jest.mock('@/lib/api', () => ({
   listReferralCodes: jest.fn(),
 }));
 
+// ReferralPanel reads the connected wallet directly via useWallet(), which
+// needs a WalletProvider ancestor — mock it so the panel can generate/load
+// codes for a fixed scout wallet without rendering a real provider.
+jest.mock('@/hooks/useWallet', () => ({
+  useWallet: () => ({
+    publicKey: 'GABC1234567890ABCDE1234567890ABCDE1234567890ABCDE123456',
+  }),
+}));
+
 const mockGenerateReferralCode = generateReferralCode as jest.MockedFunction<
   typeof generateReferralCode
 >;

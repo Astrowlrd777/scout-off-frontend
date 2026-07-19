@@ -102,39 +102,61 @@ export const fetchValidatorMilestoneCount = async (
 };
 
 // Referrals
-import type { ReferralCode, ReferralStats, ReferralOverview } from '@/types';
+//
+// Backed by the Node.js off-chain API (server/) — a real SQLite-backed
+// service, not a local Next.js route reading/writing a JSON file. Follows
+// the same shared-axios-client pattern as the chat helpers above.
+import type {
+  ReferralCode,
+  ReferralStats,
+  ReferralOverview,
+  FraudFlag,
+} from '@/types';
 
-export const generateReferralCode = async (): Promise<ReferralCode> => {
-  const res = await fetch('/api/referrals/generate', { method: 'POST' });
-  if (!res.ok) throw new Error('Failed to generate referral code');
-  return res.json();
-};
+export const generateReferralCode = (
+  scoutWallet: string,
+): Promise<ReferralCode> =>
+  api.post('/referrals/generate', { scoutWallet }).then((r) => r.data);
 
-export const getReferralStats = async (): Promise<ReferralStats> => {
-  const res = await fetch('/api/referrals/count');
-  if (!res.ok) throw new Error('Failed to fetch referral stats');
-  return res.json();
-};
+export const getReferralStats = (
+  scoutWallet: string,
+): Promise<ReferralStats> =>
+  api
+    .get(`/referrals/count/${encodeURIComponent(scoutWallet)}`)
+    .then((r) => r.data);
 
-export const listReferralCodes = async (): Promise<ReferralCode[]> => {
-  const res = await fetch('/api/referrals/list');
-  if (!res.ok) throw new Error('Failed to fetch referral codes');
-  const data = await res.json();
-  return data.codes;
-};
+export const listReferralCodes = (
+  scoutWallet: string,
+): Promise<ReferralCode[]> =>
+  api
+    .get(`/referrals/scout/${encodeURIComponent(scoutWallet)}`)
+    .then((r) => r.data);
 
-export const redeemReferralCode = async (code: string): Promise<boolean> => {
-  const res = await fetch('/api/referrals/redeem', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code }),
-  });
-  return res.ok;
-};
+export const redeemReferralCode = (
+  code: string,
+  usedBy: string,
+): Promise<boolean> =>
+  api
+    .post('/referrals/redeem', { code, usedBy })
+    .then(() => true)
+    .catch(() => false);
+
+export const fetchAllReferralCodes = (): Promise<ReferralCode[]> =>
+  api.get('/referrals/all').then((r) => r.data);
 
 export const getReferralOverview = async (): Promise<ReferralOverview> => {
   const res = await fetch('/api/admin/referrals');
   if (!res.ok) throw new Error('Failed to fetch referral overview');
+  return res.json();
+};
+
+// Fraud / abuse detection (admin only)
+export const fetchFraudFlags = async (): Promise<{
+  flags: FraudFlag[];
+  warnings: string[];
+}> => {
+  const res = await fetch('/api/admin/fraud-flags');
+  if (!res.ok) throw new Error('Failed to fetch fraud flags');
   return res.json();
 };
 
