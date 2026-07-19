@@ -67,11 +67,108 @@ describe('ReferralPanel invite URL format', () => {
   });
 });
 
+describe('ReferralPanel CSV export', () => {
+  it('exports all loaded codes as CSV from the visible export button, including codes hidden by pagination', async () => {
+    const codes = Array.from({ length: 6 }, (_, i) => makeCode(`CODE${i + 1}`));
+    const firstCode = codes[0].code;
+    const finalCode = codes[codes.length - 1].code;
+    const createObjectURLSpy = jest.fn(() => 'blob:referral-export');
+    const revokeObjectURLSpy = jest.fn();
+    const clickSpy = jest
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => {});
+    const originalCreateObjectURL = window.URL.createObjectURL;
+    const originalRevokeObjectURL = window.URL.revokeObjectURL;
+
+    try {
+      (
+        window.URL as typeof window.URL & {
+          createObjectURL?: typeof URL.createObjectURL;
+        }
+      ).createObjectURL = createObjectURLSpy as typeof URL.createObjectURL;
+      (
+        window.URL as typeof window.URL & {
+          revokeObjectURL?: typeof URL.revokeObjectURL;
+        }
+      ).revokeObjectURL = revokeObjectURLSpy as typeof URL.revokeObjectURL;
+
+      mockListReferralCodes.mockResolvedValueOnce(codes);
+      render(<ReferralPanel />);
+
+      const exportButton = await screen.findByRole('button', {
+        name: 'Export as CSV',
+      });
+
+      await waitFor(() => expect(exportButton).toBeEnabled());
+      expect(
+        screen.getByRole('button', {
+          name: `Copy invite link for code ${firstCode}`,
+        }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', {
+          name: `Copy invite link for code ${finalCode}`,
+        }),
+      ).not.toBeInTheDocument();
+
+      fireEvent.click(exportButton);
+
+      expect(createObjectURLSpy).toHaveBeenCalledTimes(1);
+      expect(revokeObjectURLSpy).toHaveBeenCalledTimes(1);
+      expect(clickSpy).toHaveBeenCalledTimes(1);
+
+      const blob = createObjectURLSpy.mock.calls[0][0] as Blob;
+      expect(blob).toBeInstanceOf(Blob);
+
+      const csvContent = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsText(blob);
+      });
+
+      expect(csvContent).toContain(
+        'code,invite URL,created date,redeemed status,redeemed date',
+      );
+      expect(csvContent).toContain(firstCode);
+      expect(csvContent).toContain(finalCode);
+    } finally {
+      clickSpy.mockRestore();
+
+      if (typeof originalCreateObjectURL === 'function') {
+        (
+          window.URL as typeof window.URL & {
+            createObjectURL?: typeof URL.createObjectURL;
+          }
+        ).createObjectURL = originalCreateObjectURL;
+      } else {
+        delete (
+          window.URL as typeof window.URL & {
+            createObjectURL?: typeof URL.createObjectURL;
+          }
+        ).createObjectURL;
+      }
+
+      if (typeof originalRevokeObjectURL === 'function') {
+        (
+          window.URL as typeof window.URL & {
+            revokeObjectURL?: typeof URL.revokeObjectURL;
+          }
+        ).revokeObjectURL = originalRevokeObjectURL;
+      } else {
+        delete (
+          window.URL as typeof window.URL & {
+            revokeObjectURL?: typeof URL.revokeObjectURL;
+          }
+        ).revokeObjectURL;
+      }
+    }
+  });
+});
+
 describe('ReferralPanel pagination', () => {
   it('loads a scout’s previously generated codes on mount', async () => {
-    mockListReferralCodes.mockResolvedValueOnce([
-      makeCode('EXISTINGCODE'),
-    ]);
+    mockListReferralCodes.mockResolvedValueOnce([makeCode('EXISTINGCODE')]);
     render(<ReferralPanel />);
 
     await waitFor(() =>
@@ -84,9 +181,7 @@ describe('ReferralPanel pagination', () => {
   });
 
   it('caps the visible list at 5 codes with a "Show more" control, revealing the rest on click', async () => {
-    const codes = Array.from({ length: 8 }, (_, i) =>
-      makeCode(`CODE${i + 1}`),
-    );
+    const codes = Array.from({ length: 8 }, (_, i) => makeCode(`CODE${i + 1}`));
     mockListReferralCodes.mockResolvedValueOnce(codes);
     render(<ReferralPanel />);
 
@@ -134,9 +229,7 @@ describe('ReferralPanel pagination', () => {
   });
 
   it('does not show a "Show more" control for 5 or fewer codes', async () => {
-    mockListReferralCodes.mockResolvedValueOnce([
-      makeCode('ONLYCODE'),
-    ]);
+    mockListReferralCodes.mockResolvedValueOnce([makeCode('ONLYCODE')]);
     render(<ReferralPanel />);
 
     await waitFor(() =>
