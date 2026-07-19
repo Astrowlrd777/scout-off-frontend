@@ -113,7 +113,8 @@
     "notice": "Cette page est un espace réservé. Aucun jeton ne peut encore être acheté et aucune interaction blockchain n'est disponible ici."
   },
   "footer": {
-    "changelog": "Journal des modifications"
+    "changelog": "Journal des modifications",
+    "status": "Statut"
   },
   "changelog": {
     "back_to_home": "Retour à l'accueil",
@@ -126,6 +127,22 @@
     "fixed": "Corrigé",
     "empty_title": "Journal des modifications indisponible",
     "empty_description": "Nous n'avons pas pu charger le journal des modifications. Veuillez réessayer plus tard."
+  },
+  "status": {
+    "back_to_home": "Retour à l'accueil",
+    "page_title": "État du système",
+    "page_description": "Vérifiez si un problème que vous rencontrez est une panne connue à l'échelle de la plateforme et consultez les incidents passés.",
+    "eyebrow": "État de la plateforme",
+    "dependencies_title": "Dépendances surveillées",
+    "dependency_frontend": "Frontend",
+    "dependency_backend": "API backend",
+    "dependency_rpc": "Soroban RPC / Horizon",
+    "live_status_title": "État en direct et historique des incidents",
+    "live_status_description": "L'état en temps réel et l'historique des incidents de ScoutOff sont suivis sur notre page de statut externe, mise à jour automatiquement au fur et à mesure que les problèmes sont détectés et résolus.",
+    "live_status_cta": "Voir la page de statut en direct",
+    "incident_history_note": "Les incidents passés et leur résolution sont répertoriés sur la page de statut ci-dessus.",
+    "empty_title": "Page de statut non encore configurée",
+    "empty_description": "Une page de statut en direct n'a pas encore été liée. Veuillez consulter le Discord de ScoutOff pour les mises à jour en attendant."
   },
   "progress_levels": {
     "level0": "Non vérifié",
