@@ -133,6 +133,18 @@ export interface ReferralStats {
   successfulReferrals: number;
 }
 
+export interface TopReferrer {
+  scoutWallet: string;
+  totalCodes: number;
+  successfulReferrals: number;
+}
+
+export interface ReferralOverview {
+  totalCodes: number;
+  totalSuccessfulReferrals: number;
+  topReferrers: TopReferrer[];
+}
+
 // ── Contract call helpers ─────────────────────────────────────────────────────
 export interface ContractCallResult<T = unknown> {
   success: boolean;
