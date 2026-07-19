@@ -1,7 +1,6 @@
-# ScoutOff
+﻿# ScoutOff
 
-[![Frontend CI](https://github.com/scout-off/scout-off-frontend/actions/workflows/ci.yml/badge.svg)](https://github.com/scout-off/scout-off-frontend/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/scout-off/scout-off-frontend/branch/main/graph/badge.svg)](https://codecov.io/gh/scout-off/scout-off-frontend)
+[![Frontend CI](https://github.com/scout-off/scout-off-frontend/actions/workflows/ci.yml/badge.svg)](https://github.com/scout-off/scout-off-frontend/actions/workflows/ci.yml) [![codecov](https://codecov.io/gh/scout-off/scout-off-frontend/branch/main/graph/badge.svg)](https://codecov.io/gh/scout-off/scout-off-frontend)
 
 Decentralized football scouting platform on Stellar with tamper-proof player profiles, on-chain milestone verification, and direct scout-to-player connections via Soroban smart contracts.
 
@@ -20,7 +19,7 @@ Stellar enables frictionless payments: transactions cost fractions of a cent and
 - **Pay-to-Contact**: Scouts pay micro-fees in XLM to unlock player contact details
 - **Scout Subscriptions**: On-chain subscriptions gate access and prevent spam
 - **Wallet Authentication**: Secure login via SEP-10 with Freighter, Albedo, or Lobstr
-- **Fractionalized Sponsorship** _(Future)_: Fans and investors buy "Player Tokens" to fund training and travel, with revenue routed back on-chain
+- **Fractionalized Sponsorship** *(Future)*: Fans and investors buy "Player Tokens" to fund training and travel, with revenue routed back on-chain
 
 ## Architecture
 
@@ -82,35 +81,35 @@ graph TB
 
 ### Core Components
 
-- **registration.rs**: Player and scout onboarding; stores wallet address, verification level, and IPFS hashes
-- **progress.rs**: Processes validator-approved milestones and updates a player's progress level
-- **subscription.rs**: Manages scout subscriptions and pay-to-contact payments in XLM
-- **connection.rs**: Manages scout-to-player connection agreements
-- **storage.rs**: Persistent storage for profiles, milestones, and subscriptions
-- **events.rs**: Event emission for off-chain indexing and monitoring
+- `registration.rs`: Player and scout onboarding; stores wallet address, verification level, and IPFS hashes
+- `progress.rs`: Processes validator-approved milestones and updates a player's progress level
+- `subscription.rs`: Manages scout subscriptions and pay-to-contact payments in XLM
+- `connection.rs`: Manages scout-to-player connection agreements
+- `storage.rs`: Persistent storage for profiles, milestones, and subscriptions
+- `events.rs`: Event emission for off-chain indexing and monitoring
 
 ### Progress Level Model
 
-| Level | Name                   | Trigger                                        |
-| ----- | ---------------------- | ---------------------------------------------- |
-| 0     | Unverified             | Player registers and uploads initial data      |
-| 1     | Verified Identity      | KYC passed or academy confirms club membership |
-| 2     | Performance Milestones | Performance verified by an approved validator  |
-| 3     | Elite Tier             | Scout logs trial offer on-chain                |
+| Level | Name                   | Trigger                                                |
+|------:|------------------------|--------------------------------------------------------|
+| 0     | Unverified             | Player registers and uploads initial data              |
+| 1     | Verified Identity      | KYC passed or academy confirms club membership         |
+| 2     | Performance Milestones | Performance verified by an approved validator         |
+| 3     | Elite Tier             | Scout logs trial offer on-chain                        |
 
 ## Tech Stack
 
-| Layer             | Technology               | Purpose                                                                |
-| ----------------- | ------------------------ | ---------------------------------------------------------------------- |
-| Smart Contracts   | Rust + Soroban (Stellar) | Player registration, progress verification, subscriptions, connections |
-| Frontend          | Next.js 14 + TailwindCSS | Player dashboard and scout discovery interface                         |
-| Backend & Storage | Node.js + IPFS           | Media storage; IPFS hashes stored on-chain in player profiles          |
-| Auth              | Stellar SEP-10           | Wallet login via Freighter, Albedo, or Lobstr                          |
-| Payments          | XLM                      | Micro-fee pay-to-contact and scout subscriptions                       |
+| Layer             | Technology               | Purpose                                                               |
+|------------------|--------------------------|-----------------------------------------------------------------------|
+| Smart Contracts  | Rust + Soroban (Stellar) | Player registration, progress verification, subscriptions, connections |
+| Frontend         | Next.js 14 + TailwindCSS | Player dashboard and scout discovery interface                        |
+| Backend & Storage| Node.js + IPFS           | Media storage; IPFS hashes stored on-chain in player profiles         |
+| Auth             | Stellar SEP-10           | Wallet login via Freighter, Albedo, or Lobstr                         |
+| Payments         | XLM                      | Micro-fee pay-to-contact and scout subscriptions                      |
 
 ## Project Structure
 
-```
+```text
 scout-off-frontend/
 ├── app/                          # Next.js 14 App Router
 │   ├── layout.tsx                # Root layout — WalletProvider + Navbar
@@ -118,106 +117,40 @@ scout-off-frontend/
 │   ├── error.tsx                 # Global error boundary page
 │   ├── not-found.tsx             # 404 page
 │   ├── [locale]/                 # i18n routing (en, fr, sw)
-│   │   ├── layout.tsx            # ✅ Locale layout with next-intl provider
-│   │   ├── page.tsx              # ✅ Landing page — hero + feature cards
+│   │   ├── layout.tsx            # Locale layout with next-intl provider
+│   │   ├── page.tsx              # Landing page — hero + feature cards
 │   │   ├── player/
-│   │   │   ├── page.tsx          # ✅ Player dashboard (register / view milestones)
-│   │   │   └── [id]/page.tsx     # ✅ Public player profile + pay-to-contact
+│   │   │   ├── page.tsx          # Player dashboard (register / view milestones)
+│   │   │   └── [id]/page.tsx     # Public player profile + pay-to-contact
 │   │   ├── scout/
-│   │   │   ├── page.tsx          # ✅ Scout dashboard (filter + wallet search + pagination)
-│   │   │   ├── layout.tsx        # ✅ Scout layout with subscription guard
-│   │   │   ├── subscribe/        # ✅ Scout subscription flow (tier selection + XLM payment)
-│   │   │   └── [id]/             # 🔲 Scout public profile
-│   │   ├── validator/            # ⚠️  Shell page only — milestone approval UI pending
-│   │   └── admin/                # ✅ Admin panel (validators, fees, pause/unpause)
+│   │   │   ├── page.tsx          # Scout dashboard (filter + wallet search + pagination)
+│   │   │   ├── layout.tsx        # Scout layout with subscription guard
+│   │   │   ├── subscribe/        # Scout subscription flow
+│   │   │   └── [id]/             # Scout public profile
+│   │   ├── validator/            # Validator dashboard shell
+│   │   └── admin/                # Admin panel
 │   └── api/
-│       ├── ipfs/upload/          # ✅ Server-side Pinata proxy
-│       ├── auth/sep10/           # ✅ SEP-10 challenge + verify endpoints
-│       ├── auth/session/         # ✅ Session read endpoint
-│       └── csp-report/           # ✅ CSP violation reporting
-│
-├── components/
-│   ├── Navbar.tsx                # ✅
-│   ├── WalletButton.tsx          # ✅ Provider selection modal (Freighter / Albedo / LOBSTR)
-│   ├── ProgressBar.tsx           # ✅
-│   ├── PlayerCard.tsx            # ✅
-│   ├── PlayerCardSkeleton.tsx    # ✅
-│   ├── ContractPausedBanner.tsx  # ✅ Circuit breaker UI
-│   ├── ui/                       # ✅ Modal, Toast, Badge, Button, Spinner, Select,
-│   │                             #    Tooltip, VideoUpload, ConfirmDialog, EmptyState,
-│   │                             #    TransactionStatus, ErrorBoundary
-│   ├── player/                   # ✅ PlayerProfileForm, UpdateProfileForm,
-│   │                             #    MilestoneTimeline, IPFSMediaGallery
-│   ├── scout/                    # ⚠️  ActivityFeed + ScoutProfileCard exist; ContactModal pending
-│   └── validator/                # ✅ ApproveForm, RevokeForm, ValidatorPlayerSearch
-│
-├── context/
-│   └── WalletContext.tsx         # ✅ Multi-provider wallet state + SEP-10 + balance
-│
-├── hooks/
-│   ├── useWallet.ts              # ✅
-│   ├── usePlayer.ts              # ✅
-│   ├── useScout.ts               # ✅ filter_players contract call
-│   ├── useValidator.ts           # ✅ approve + revoke milestone flows
-│   ├── useSubscription.ts        # ✅ subscribe contract call
-│   ├── usePayToContact.ts        # ✅ pay_to_contact contract call
-│   ├── useMilestoneHistory.ts    # ✅
-│   ├── useIPFSUpload.ts          # ✅
-│   ├── useContractHealth.ts      # ✅
-│   ├── useIsPaused.ts            # ✅
-│   ├── useRequireWallet.ts       # ✅ Redirect guard
-│   └── useDebounce.ts            # ✅
-│
-├── lib/
-│   ├── stellar.ts                # ✅ SorobanRpc client + network constants
-│   ├── contract.ts               # ✅ Typed wrappers for all contract functions
-│   ├── ipfs.ts                   # ✅ uploadToIPFS + ipfsUrl helpers
-│   ├── api.ts                    # ✅ Axios client for backend REST API
-│   ├── sanitize.ts               # ✅ Input sanitization helpers
-│   ├── regions.ts                # ✅ AFRICAN_REGIONS list
-│   └── positions.ts              # ✅ Football position constants
-│
-├── types/
-│   └── index.ts                  # ✅ Player, Scout, Milestone, ProgressLevel,
-│                                 #    PlayerFilter, Subscription, ContactDetails, ValidatorInfo
-│
-├── messages/                     # ✅ i18n strings — en.json, fr.json, sw.json
-│
-├── packages/
-│   └── indexer/                  # ✅ Off-chain event indexer with metrics (IndexerMetrics.ts)
-│                                 #    → See [packages/indexer/README.md](packages/indexer/README.md)
-│
-├── __tests__/
-│   ├── components/               # ✅ Modal, Navbar, PlayerCard, Badge, Spinner, Toast,
-│   │                             #    ApproveForm, TransactionStatus, MilestoneTimeline,
-│   │                             #    UpdateProfileForm, ValidatorPlayerSearch
-│   ├── hooks/                    # ✅ useWallet, useSubscription, useDebounce
-│   └── lib/                      # ✅ ipfs, stellar, api, sanitize, validate-env
-│
-├── scripts/
-│   ├── validate-env.js           # ✅ Checks all env vars are in .env.example
-│   └── generate-icons.js         # ✅ PWA icon generation script
-│
-├── public/
-│   ├── manifest.json             # ✅ PWA manifest
-│   ├── robots.txt                # ✅
-│   ├── og-image.svg              # ✅
-│   └── icons/                    # ⚠️  icon.svg present; raster PNG icons pending
-│
-├── .github/
-│   └── workflows/
-│       └── ci.yml                # ✅ Lint + test + env validation on push/PR
-│
-├── i18n.ts                       # ✅ next-intl configuration
-├── middleware.ts                 # ✅ Locale routing middleware
-├── .env.example                  # ✅
-├── next.config.js                # ✅ PWA + CSP + image domains
-├── tailwind.config.ts            # ✅
-├── tsconfig.json                 # ✅
-└── package.json                  # ✅
+│       ├── ipfs/upload/          # Server-side Pinata proxy
+│       ├── auth/sep10/           # SEP-10 challenge / verify endpoints
+│       ├── auth/session/         # Session endpoint
+│       └── csp-report/           # CSP reporting
+├── components/                   # UI components and widgets
+├── context/                      # Wallet and auth state
+├── hooks/                        # Reusable contract/UI hooks
+├── lib/                          # Stellar, contract, IPFS, API, sanitization helpers
+├── types/                        # Shared TypeScript models/interfaces
+├── messages/                     # i18n translations
+├── packages/indexer/             # Off-chain event indexing
+├── __tests__/                    # Component, hook, and lib tests
+├── scripts/                      # Env validation and utility scripts
+├── public/                       # Static assets and PWA manifest
+├── .github/                      # CI workflows and PR templates
+├── .env.example                  # Env var template
+├── next.config.js                # Next.js config
+├── tailwind.config.ts            # Tailwind config
+├── tsconfig.json                 # TypeScript config
+└── package.json                 # Dependencies and scripts
 ```
-
-> ✅ Implemented · ⚠️ Partial / shell only · 🔲 Not yet started
 
 ## Smart Contract Functions
 
@@ -254,7 +187,7 @@ scout-off-frontend/
 - `filter_players(region, position, min_level)` — Query players by region, position, and progress level
 - `health()` — On-chain health check
 
-## Player Progress Flow — Sequence Diagram
+## Player Progress Flow
 
 ```mermaid
 sequenceDiagram
@@ -298,7 +231,7 @@ sequenceDiagram
 
 ## Player Progress — State Machine
 
-```
+```text
 ┌─────────────────┐
 │    Level 0      │  ← initial state (profile created, data uploaded)
 │   Unverified    │
@@ -335,25 +268,25 @@ sequenceDiagram
 
 ## Security Features
 
-1. **Validator Authorization**: Only admin-approved validators can write milestones
-2. **Tamper-Proof History**: All milestone timestamps and validator identities are immutably recorded on Soroban
-3. **Authorization Checks**: All state-changing operations require proper Stellar account authorization
-4. **Overflow Protection**: Safe arithmetic throughout all fee and subscription calculations
-5. **Anti-Spam Gating**: Scout subscriptions and pay-to-contact fees prevent fraudulent contact attempts
-6. **Circuit Breaker**: Admin can pause the contract in an emergency without losing state
-7. **Server-Side IPFS Proxy**: Pinata API keys never exposed to the client
+- Validator Authorization: Only admin-approved validators can write milestones
+- Tamper-Proof History: All milestone timestamps and validator identities are immutably recorded on Soroban
+- Authorization Checks: All state-changing operations require proper Stellar account authorization
+- Overflow Protection: Safe arithmetic throughout all fee and subscription calculations
+- Anti-Spam Gating: Scout subscriptions and pay-to-contact fees prevent fraudulent contact attempts
+- Circuit Breaker: Admin can pause the contract in an emergency without losing state
+- Server-Side IPFS Proxy: Pinata API keys never exposed to the client
 
 ## Quick Start
 
 > For a complete end-to-end local development guide (clone → contracts → backend → frontend → wallet), see [DEVELOPMENT.md](DEVELOPMENT.md).
 
-### 1. Install Dependencies
+1. Install Dependencies
 
 ```bash
 npm install
 ```
 
-### 2. Build Smart Contracts
+2. Build Smart Contracts
 
 ```bash
 cd ../scout-off-contracts
@@ -361,7 +294,7 @@ cargo build --target wasm32-unknown-unknown --release
 stellar contract optimize --wasm target/wasm32-unknown-unknown/release/scout_off.wasm
 ```
 
-### 3. Deploy to Testnet
+3. Deploy to Testnet
 
 ```bash
 stellar contract deploy \
@@ -370,7 +303,7 @@ stellar contract deploy \
   --network testnet
 ```
 
-### 4. Initialize Contract
+4. Initialize Contract
 
 ```bash
 stellar contract invoke \
@@ -383,7 +316,7 @@ stellar contract invoke \
   --fee_config <FEE_CONFIG>
 ```
 
-### 5. Run the Frontend
+5. Run the Frontend
 
 ```bash
 cp .env.example .env.local
@@ -420,7 +353,7 @@ cp .env.example .env.local
 ### Key Configuration Variables
 
 | Variable                   | Description                                        |
-| -------------------------- | -------------------------------------------------- |
+|---------------------------|----------------------------------------------------|
 | `NEXT_PUBLIC_CONTRACT_ID`  | Deployed ScoutOff contract address                 |
 | `NEXT_PUBLIC_NETWORK`      | `testnet` or `mainnet`                             |
 | `NEXT_PUBLIC_HORIZON_URL`  | Stellar Horizon endpoint                           |
@@ -457,53 +390,48 @@ Test coverage targets:
 
 ## Implementation Status
 
-| Area                 | Status         | Notes                                                          |
-| -------------------- | -------------- | -------------------------------------------------------------- |
-| Config & tooling     | ✅ Complete    | package.json, tsconfig, tailwind, CI, Husky, lint-staged       |
-| Types                | ✅ Complete    | Player, Scout, Milestone, ValidatorInfo, Subscription, Contact |
-| Lib layer            | ✅ Complete    | stellar, contract, ipfs, api, sanitize, regions, positions     |
-| Wallet context       | ✅ Complete    | Freighter / Albedo / LOBSTR, SEP-10, balance, session restore  |
-| Shared components    | ✅ Complete    | Navbar, WalletButton, ProgressBar, PlayerCard, Skeleton        |
-| UI primitives        | ✅ Complete    | Modal, Toast, Badge, Button, Spinner, Select, Tooltip,         |
-|                      |                | VideoUpload, ConfirmDialog, EmptyState, TransactionStatus,     |
-|                      |                | ErrorBoundary                                                  |
-| Player components    | ✅ Complete    | PlayerProfileForm, UpdateProfileForm,                          |
-|                      |                | MilestoneTimeline, IPFSMediaGallery                            |
-| Player dashboard     | ✅ Complete    | Register + milestone history                                   |
-| Player profile page  | ✅ Complete    | Public view + pay-to-contact                                   |
-| Scout dashboard      | ✅ Complete    | Filter form + wallet search + paginated player grid            |
-| Scout subscription   | ✅ Complete    | Tier selection + XLM payment via `useSubscription`             |
-| Validator components | ✅ Complete    | ApproveForm, RevokeForm, ValidatorPlayerSearch                 |
-| Validator dashboard  | ⚠️ Shell only  | Page exists; milestone approval UI not yet wired               |
-| Admin panel          | ✅ Complete    | Add/remove validators, withdraw fees, pause/unpause            |
-| Hooks                | ✅ Complete    | usePlayer, useScout, useValidator, useSubscription,            |
-|                      |                | usePayToContact, useMilestoneHistory, useIPFSUpload,           |
-|                      |                | useContractHealth, useIsPaused, useDebounce, useRequireWallet  |
-| Off-chain indexer    | ✅ Complete    | IndexerMetrics with tests in `packages/indexer/`               |
-| Frontend tests       | ✅ Complete    | 11 component tests, 3 hook tests, 5 lib tests                  |
-| i18n                 | ✅ Complete    | English, French, Swahili via next-intl                         |
+| Area                 | Status       | Notes                                                          |
+|---------------------|--------------|----------------------------------------------------------------|
+| Config & tooling     | ✅ Complete | package.json, tsconfig, tailwind, CI, Husky, lint-staged       |
+| Types                | ✅ Complete | Player, Scout, Milestone, ValidatorInfo, Subscription, Contact |
+| Lib layer            | ✅ Complete | stellar, contract, ipfs, api, sanitize, regions, positions     |
+| Wallet context       | ✅ Complete | Freighter / Albedo / LOBSTR, SEP-10, balance, session restore  |
+| Shared components    | ✅ Complete | Navbar, WalletButton, ProgressBar, PlayerCard, Skeleton        |
+| UI primitives        | ✅ Complete | Modal, Toast, Badge, Button, Spinner, Select, Tooltip, ErrorBoundary |
+| Player components    | ✅ Complete | PlayerProfileForm, UpdateProfileForm, MilestoneTimeline, IPFSMediaGallery |
+| Player dashboard     | ✅ Complete | Register + milestone history                                   |
+| Player profile page  | ✅ Complete | Public view + pay-to-contact                                   |
+| Scout dashboard      | ✅ Complete | Filter form + wallet search + paginated player grid            |
+| Scout subscription   | ✅ Complete | Tier selection + XLM payment via `useSubscription`             |
+| Validator components | ✅ Complete | ApproveForm, RevokeForm, ValidatorPlayerSearch                 |
+| Validator dashboard  | ⚠️ Partial   | Shell only; milestone approval UI not yet wired                |
+| Admin panel          | ✅ Complete | Add/remove validators, withdraw fees, pause/unpause            |
+| Hooks                | ✅ Complete | usePlayer, useScout, useValidator, useSubscription, usePayToContact, useMilestoneHistory, useIPFSUpload, useContractHealth, useIsPaused, useDebounce, useRequireWallet |
+| Off-chain indexer    | ✅ Complete | IndexerMetrics with tests in `packages/indexer/`               |
+| Frontend tests       | ✅ Complete | 11 component tests, 3 hook tests, 5 lib tests                  |
+| i18n                 | ✅ Complete | English, French, Swahili via next-intl                         |
 | Scout public profile | 🔲 Not started | `app/[locale]/scout/[id]/` folder created                      |
 | Scout ContactModal   | 🔲 Not started | ActivityFeed + ScoutProfileCard exist; modal pending           |
-| Trial offer UI       | 🔲 Not started | `log_trial_offer` contract fn ready; no UI                     |
-| PWA raster icons     | ⚠️ Partial     | icon.svg present; PNG icons not yet generated                  |
+| Trial offer UI       | 🔲 Not started | `log_trial_offer` contract fn ready; UI missing                 |
+| PWA raster icons      | ⚠️ Partial   | icon.svg present; raster PNG icons not yet generated            |
 
 ## Roadmap
 
-- [x] Player profile registration on Stellar Testnet
-- [x] Validator milestone approval and on-chain progress updates
-- [x] Scout filtering by region, position, and progress tier
-- [x] Scout subscription flow (tier selection + XLM payment)
-- [x] Admin panel (validator management, fees, circuit breaker)
-- [x] i18n — English, French, Swahili
-- [x] SEP-10 wallet auth (Freighter, Albedo, LOBSTR)
-- [ ] Scout ContactModal + pay-to-contact UI
-- [ ] Scout public profile page (`/scout/[id]`)
-- [ ] Trial offer logging (Level 3 Elite Tier)
-- [ ] Validator dashboard — wire ApproveForm + RevokeForm
-- [ ] PWA raster icons (PNG generation)
-- [ ] Fractionalized Player Token sponsorship
-- [ ] Mobile-optimized PWA for low-bandwidth regions
-- [ ] Mainnet launch
+- Player profile registration on Stellar Testnet
+- Validator milestone approval and on-chain progress updates
+- Scout filtering by region, position, and progress tier
+- Scout subscription flow (tier selection + XLM payment)
+- Admin panel (validator management, fees, circuit breaker)
+- i18n — English, French, Swahili
+- SEP-10 wallet auth (Freighter, Albedo, LOBSTR)
+- Scout ContactModal + pay-to-contact UI
+- Scout public profile page (`/scout/[id]`)
+- Trial offer logging (Level 3 Elite Tier)
+- Validator dashboard wiring
+- PNG PWA icons generation
+- Fractionalized Player Token sponsorship
+- Mobile-optimized PWA for low-bandwidth regions
+- Mainnet launch
 
 ## Dependencies
 
@@ -516,24 +444,24 @@ Test coverage targets:
 ## Error Codes
 
 | Code | Error                 | Description                            | Common Cause                      | Resolution                         |
-| ---- | --------------------- | -------------------------------------- | --------------------------------- | ---------------------------------- |
-| 1    | AlreadyInitialized    | Contract already initialized           | Calling `initialize` twice        | No action needed                   |
-| 2    | NotInitialized        | Contract not initialized               | Operations before setup           | Call `initialize` first            |
-| 3    | PlayerNotFound        | Player ID does not exist               | Invalid or unregistered player_id | Verify player_id from registration |
-| 4    | UnauthorizedValidator | Caller is not an approved validator    | Non-validator calling approve     | Admin must call `add_validator`    |
-| 5    | InvalidMilestone      | Milestone data is empty or malformed   | Missing description or hash       | Provide valid milestone data       |
-| 6    | AlreadyAtLevel        | Player already at this level           | Duplicate milestone approval      | Check level via `get_player`       |
-| 7    | InsufficientFee       | XLM fee too low                        | Underpaying the required fee      | Check fee via `filter_players`     |
-| 8    | SubscriptionExpired   | Scout subscription has lapsed          | Accessing after expiry            | Renew via `subscribe`              |
-| 9    | ContractPaused        | Contract is paused                     | Circuit breaker active            | Wait for admin to unpause          |
-| 10   | Unauthorized          | Caller is not authorized               | Wrong Stellar account             | Use correct account                |
-| 11   | NoFeesToWithdraw      | No accumulated platform fees           | Withdrawal before payments        | Wait for fees to accumulate        |
-| 12   | Overflow              | Arithmetic overflow in fee calculation | Extremely large XLM amount        | Use safe i128 range                |
+|------|-----------------------|----------------------------------------|-----------------------------------|------------------------------------|
+| 1    | AlreadyInitialized     | Contract already initialized           | Calling `initialize` twice        | No action needed                   |
+| 2    | NotInitialized         | Contract not initialized               | Operations before setup           | Call `initialize` first            |
+| 3    | PlayerNotFound         | Player ID does not exist               | Invalid or unregistered player_id | Verify player_id from registration |
+| 4    | UnauthorizedValidator  | Caller is not an approved validator    | Non-validator calling approve     | Admin must call `add_validator`    |
+| 5    | InvalidMilestone       | Milestone data is empty or malformed   | Missing description or hash       | Provide valid milestone data       |
+| 6    | AlreadyAtLevel         | Player already at this level           | Duplicate milestone approval      | Check level via `get_player`       |
+| 7    | InsufficientFee        | XLM fee too low                        | Underpaying the required fee      | Check fee via `filter_players`     |
+| 8    | SubscriptionExpired    | Scout subscription has lapsed          | Accessing after expiry            | Renew via `subscribe`              |
+| 9    | ContractPaused         | Contract is paused                     | Circuit breaker active            | Wait for admin to unpause          |
+| 10   | Unauthorized           | Caller is not authorized               | Wrong Stellar account             | Use correct account                |
+| 11   | NoFeesToWithdraw       | No accumulated platform fees           | Withdrawal before payments        | Wait for fees to accumulate        |
+| 12   | Overflow               | Arithmetic overflow in fee calculation | Extremely large XLM amount        | Use safe i128 range                |
 
 ## Events
 
 | Event                | Emitted When                                          |
-| -------------------- | ----------------------------------------------------- |
+|----------------------|-------------------------------------------------------|
 | `player_registered`  | Player creates a new on-chain profile                 |
 | `milestone_approved` | Validator writes a verified milestone, level advances |
 | `milestone_revoked`  | Validator or admin removes an erroneous milestone     |
