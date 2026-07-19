@@ -1,43 +1,162 @@
 'use client';
+import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useWallet } from '@/hooks/useWallet';
 import { usePlayer } from '@/hooks/usePlayer';
 import { usePayToContact } from '@/hooks/usePayToContact';
-import { PLATFORM_CONTACT_FEE_XLM } from '@/lib/contract';
+import { useSubscription } from '@/hooks/useSubscription';
+import { PLATFORM_CONTACT_FEE_XLM, getContactFee } from '@/lib/contract';
 import ProgressBar from '@/components/ProgressBar';
 import PlayerProfileSkeleton from '@/components/PlayerProfileSkeleton';
+import PlayerStatsCard from '@/components/player/PlayerStatsCard';
+import IPFSMediaGallery from '@/components/player/IPFSMediaGallery';
 import TrialOfferForm from '@/components/scout/TrialOfferForm';
-import { buildPayToContact } from '@/lib/contract';
+import Button from '@/components/ui/Button';
+import QRModal from '@/components/ui/QRModal';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import TransactionStatus from '@/components/ui/TransactionStatus';
+import type { TxStatus } from '@/components/ui/TransactionStatus';
+import TruncatedAddress from '@/components/ui/TruncatedAddress';
 
 export default function PlayerProfile() {
   const { id } = useParams<{ id: string }>();
   const { publicKey } = useWallet();
-  const { player, loading } = usePlayer(id ?? null);
+  const t = useTranslations('player_profile');
+  const { player, loading: playerLoading, refetch } = usePlayer(id ?? null);
   const { unlock, loading: contacting } = usePayToContact();
+  const {
+    subscription,
+    isExpired,
+    loading: subscriptionLoading,
+  } = useSubscription();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [contactTxStatus, setContactTxStatus] = useState<TxStatus | null>(null);
+  const [liveFee, setLiveFee] = useState<number | null>(null);
+  const [feeCheckStatus, setFeeCheckStatus] = useState<
+    'idle' | 'checking' | 'ok' | 'error'
+  >('idle');
+  const shareButtonRef = useRef<HTMLButtonElement>(null);
+  const milestones = player?.milestones ?? [];
+  const profileUrl = typeof window !== 'undefined' ? window.location.href : '';
 
-  async function handleContact() {
-    await unlock(id);
+  // Re-check the live contact fee every time the confirmation dialog opens,
+  // so a scout is never confirming against a stale, build-time constant.
+  useEffect(() => {
+    if (!confirmOpen) return;
+    let cancelled = false;
+    setLiveFee(null);
+    setFeeCheckStatus('checking');
+    getContactFee()
+      .then((fee) => {
+        if (cancelled) return;
+        setLiveFee(fee);
+        setFeeCheckStatus('ok');
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setFeeCheckStatus('error');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [confirmOpen]);
+
+  const feeMismatch =
+    feeCheckStatus === 'ok' &&
+    liveFee !== null &&
+    liveFee !== PLATFORM_CONTACT_FEE_XLM;
+  const displayFee = feeCheckStatus === 'ok' && liveFee !== null
+    ? liveFee
+    : PLATFORM_CONTACT_FEE_XLM;
+
+  const confirmMessage = (() => {
+    if (!player) return '';
+    if (feeCheckStatus === 'checking') {
+      return `Unlock contact details for ${player.vitals.name}? Confirming the current fee before you sign…`;
+    }
+    if (feeMismatch) {
+      return `Unlock contact details for ${player.vitals.name}? The live contact fee is now ${liveFee} XLM — different from the ${PLATFORM_CONTACT_FEE_XLM} XLM shown initially. Confirming will charge ${liveFee} XLM.`;
+    }
+    if (feeCheckStatus === 'error') {
+      return `Unlock contact details for ${player.vitals.name}? Fee: ~${PLATFORM_CONTACT_FEE_XLM} XLM (estimate — could not confirm the live rate) will be deducted from your wallet.`;
+    }
+    return `Unlock contact details for ${player.vitals.name}? Fee: ${displayFee} XLM will be deducted from your wallet.`;
+  })();
+
+  async function handleConfirm() {
+    setContactTxStatus('pending');
+    try {
+      await unlock(id);
+      setContactTxStatus('success');
+    } catch {
+      setContactTxStatus('error');
+    }
+    setConfirmOpen(false);
   }
 
-  if (loading) {
+  function handleDownload() {
+    const payload = {
+      playerId: player!.id,
+      wallet: player!.wallet,
+      progressLevel: player!.progressLevel,
+      milestones: player!.milestones.map((m) => ({
+        id: m.id,
+        description: m.description,
+        validator: m.validator,
+        timestamp: m.timestamp,
+      })),
+      exportedAt: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `player-${player!.id}-milestones.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  const isScoutWithActiveSubscription = publicKey && subscription && !isExpired;
+  const canLogTrialOffer =
+    isScoutWithActiveSubscription && player && player.progressLevel < 3;
+
+  if (playerLoading) {
     return <PlayerProfileSkeleton showContactButton={!!publicKey} />;
   }
   if (!player)
     return <p className="text-center text-gray-400 mt-20">Player not found.</p>;
 
+  const isArchived = player.archived ?? false;
+
   return (
     <div className="max-w-2xl mx-auto flex flex-col gap-8">
+      {/* Back to Scout Dashboard */}
+      <Link
+        href="/scout"
+        className="self-start text-sm text-gray-400 hover:text-white transition flex items-center gap-1"
+      >
+        {t('back_to_scout_dashboard')}
+      </Link>
+
+      {/* Archived Profile Banner */}
+      {isArchived && (
+        <div className="rounded-xl border border-yellow-500/40 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-300">
+          <p className="font-semibold">This profile is currently private</p>
+          <p className="text-xs text-yellow-300/80 mt-1">
+            The player has archived their profile and it's not visible in search results.
+          </p>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-brand-card border border-gray-800 rounded-xl p-6 flex gap-6 items-start">
         <div className="w-20 h-20 rounded-full bg-gray-700 overflow-hidden shrink-0">
-          {player.ipfsHash && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={`${process.env.NEXT_PUBLIC_IPFS_GATEWAY ?? 'https://gateway.pinata.cloud/ipfs'}/${player.ipfsHash}`}
-              alt={player.vitals.name}
-              className="w-full h-full object-cover"
-            />
-          )}
+          <IPFSMediaGallery cids={player.ipfsHash ? [player.ipfsHash] : []} />
         </div>
         <div className="flex-1">
           <h1 className="text-2xl font-bold text-white">
@@ -53,6 +172,9 @@ export default function PlayerProfile() {
         </div>
       </div>
 
+      {/* Stats */}
+      <PlayerStatsCard stats={player.stats} position={player.vitals.position} />
+
       {/* Milestones */}
       <div className="bg-brand-card border border-gray-800 rounded-xl p-6">
         <h2 className="font-semibold text-white mb-4">On-Chain Milestones</h2>
@@ -67,8 +189,12 @@ export default function PlayerProfile() {
               >
                 {m.description}
                 <span className="block text-xs text-gray-500 mt-0.5">
-                  Validator: {m.validator.slice(0, 8)}… ·{' '}
-                  {new Date(m.timestamp * 1000).toLocaleDateString()}
+                  Validator:{' '}
+                  <TruncatedAddress
+                    address={m.validator}
+                    className="text-gray-500"
+                  />{' '}
+                  · {new Date(m.timestamp * 1000).toLocaleDateString()}
                 </span>
               </li>
             ))}
@@ -76,23 +202,95 @@ export default function PlayerProfile() {
         )}
       </div>
 
-      {/* Pay to contact */}
-      {publicKey && (
+      {/* Download milestones */}
+      {player.milestones.length > 0 && (
         <button
-          onClick={handleContact}
-          disabled={contacting}
-          className="bg-brand-green text-black font-semibold py-3 rounded-xl hover:opacity-90 transition disabled:opacity-50"
+          onClick={handleDownload}
+          className="self-start text-sm text-brand-green underline underline-offset-2 hover:opacity-80 transition"
         >
-          {contacting ? 'Processing…' : `Pay to Contact (${PLATFORM_CONTACT_FEE_XLM} XLM)`}
+          Download Milestones
         </button>
       )}
 
+      {/* Share via QR */}
+      <button
+        ref={shareButtonRef}
+        onClick={() => setQrOpen(true)}
+        className="self-start text-sm text-gray-400 border border-gray-700 px-3 py-1.5 rounded-lg hover:border-gray-500 hover:text-white transition"
+      >
+        Share via QR
+      </button>
+      <QRModal
+        isOpen={qrOpen}
+        onClose={() => {
+          setQrOpen(false);
+          shareButtonRef.current?.focus();
+        }}
+        url={profileUrl}
+      />
+
+      {/* Pay to contact */}
+      {publicKey && !isArchived && (
+        <>
+          <button
+            onClick={() => setConfirmOpen(true)}
+            disabled={contacting}
+            className="bg-brand-green text-black font-semibold py-3 rounded-xl hover:opacity-90 transition disabled:opacity-50"
+          >
+            {contacting
+              ? 'Processing…'
+              : `Pay to Contact (~${PLATFORM_CONTACT_FEE_XLM} XLM)`}
+          </button>
+          {contactTxStatus && (
+            <TransactionStatus
+              status={contactTxStatus}
+              feePaid={
+                contactTxStatus === 'success' ? String(displayFee) : undefined
+              }
+              onHide={() => setContactTxStatus(null)}
+            />
+          )}
+          <ConfirmDialog
+            isOpen={confirmOpen}
+            onConfirm={handleConfirm}
+            onCancel={() => setConfirmOpen(false)}
+            title="Contact Player"
+            message={confirmMessage}
+            confirmLabel="Confirm"
+            loading={feeCheckStatus === 'checking' || contacting}
+          />
+        </>
+      )}
+
       {/* Trial offer */}
-      {publicKey && id && (
-        <div className="bg-brand-card border border-gray-800 rounded-xl p-6">
-          <h2 className="font-semibold text-white mb-4">Log Trial Offer</h2>
-          <TrialOfferForm playerId={id} />
-        </div>
+      {publicKey && id && !isArchived && (
+        <>
+          {canLogTrialOffer ? (
+            <div className="bg-brand-card border border-gray-800 rounded-xl p-6">
+              <h2 className="font-semibold text-white mb-4">Log Trial Offer</h2>
+              <TrialOfferForm playerId={id} onSuccess={refetch} />
+            </div>
+          ) : player.progressLevel === 3 ? (
+            <div className="bg-brand-card border border-brand-green rounded-xl p-6">
+              <p className="text-sm text-brand-green">
+                ✓ This player is already at Elite Tier (Level 3).
+              </p>
+            </div>
+          ) : !subscriptionLoading && !subscription ? (
+            <div className="bg-brand-card border border-gray-700 rounded-xl p-6">
+              <p className="text-sm text-gray-400">
+                Subscribe to log trial offers and advance players to Elite Tier.
+              </p>
+            </div>
+          ) : !subscriptionLoading && isExpired ? (
+            <div className="bg-brand-card border border-gray-700 rounded-xl p-6">
+              <p className="text-sm text-gray-400">
+                Your subscription has expired. Renew your subscription to log
+                trial offers.
+              </p>
+            </div>
+          ) : null}
+        </>
       )}
     </div>
   );

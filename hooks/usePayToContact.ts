@@ -1,30 +1,19 @@
 'use client';
 import { useState, useCallback } from 'react';
-import { useTranslations } from 'next-intl';
 import { useWallet } from '@/hooks/useWallet';
-import { payToContact, getSubscription } from '@/lib/contract';
-import { extractContractErrorKey } from '@/lib/contractErrorMessage';
-import type { ContactDetails } from '@/types';
+import { useToast } from '@/components/ui/Toast';
+import {
+  buildPayToContact,
+  getSubscription,
+  PLATFORM_CONTACT_FEE_XLM,
+} from '@/lib/contract';
+import { parseContractError } from '@/lib/contractErrorMessage';
 
 export function usePayToContact() {
-  const { publicKey, signAndSubmit } = useWallet();
-  const t = useTranslations('contractErrors');
+  const { publicKey, signAndSubmit, xlmBalance, refreshBalance } = useWallet();
+  const { show } = useToast();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  function mapErrorMessage(errorText: string): string {
-    if (errorText.includes('code 3') || errorText.includes('InsufficientFee')) {
-      return t('InsufficientFee');
-    }
-    if (
-      errorText.includes('code 11') ||
-      errorText.includes('SubscriptionExpired')
-    ) {
-      return t('SubscriptionExpired');
-    }
-    const key = extractContractErrorKey(errorText);
-    return key ? t(key) : (errorText || t('unknown'));
-  }
 
   const unlock = useCallback(
     async (playerId: string): Promise<void> => {
@@ -46,22 +35,33 @@ export function usePayToContact() {
         const subscription = await getSubscription(publicKey);
         const now = Date.now() / 1000;
         if (!subscription || subscription.expiresAt < now) {
-          throw new Error('SubscriptionExpired');
+          fail(
+            'An active subscription is required to contact players. Please subscribe or renew.',
+          );
+          return;
         }
 
-        // Call the contract function
-        const contactDetails = await payToContact(publicKey, playerId, signAndSubmit);
-        return contactDetails;
+        // ── 2. Balance gate ───────────────────────────────────────────────────
+        const balance = parseFloat(xlmBalance ?? '0');
+        if (balance < PLATFORM_CONTACT_FEE_XLM) {
+          fail(
+            `Insufficient XLM. You need at least ${PLATFORM_CONTACT_FEE_XLM} XLM to contact this player.`,
+          );
+          return;
+        }
+
+        // ── 3. Build, sign, and refresh ───────────────────────────────────────
+        const xdr = await buildPayToContact(publicKey, playerId);
+        await signAndSubmit(xdr);
+        await refreshBalance();
       } catch (e: any) {
-        const msg = e?.message ?? 'An error occurred while contacting the player.';
-        setError(msg);
-        show({ message: msg, variant: 'error' });
+        fail(parseContractError(e));
         throw e;
       } finally {
         setLoading(false);
       }
     },
-    [publicKey, signAndSubmit],
+    [publicKey, xlmBalance, signAndSubmit, refreshBalance, show],
   );
 
   return { unlock, loading, error };

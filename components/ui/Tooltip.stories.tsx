@@ -17,7 +17,9 @@ type Story = StoryObj<typeof Tooltip>;
 export const Default: Story = {
   args: {
     content: 'Hover or focus to see this tooltip',
-    children: <span className="text-brand-green underline cursor-help">Hover me</span>,
+    children: (
+      <span className="text-brand-green underline cursor-help">Hover me</span>
+    ),
   },
 };
 
@@ -47,7 +49,9 @@ export const BottomFlip: Story = {
   render: () => (
     <div style={{ paddingTop: '0px' }}>
       <Tooltip content="Tooltip flips below when near the top of the viewport">
-        <span className="text-gray-400 underline cursor-help text-sm">Near top</span>
+        <span className="text-gray-400 underline cursor-help text-sm">
+          Near top
+        </span>
       </Tooltip>
     </div>
   ),

@@ -9,6 +9,9 @@ const customJestConfig = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },
+  // e2e/ holds Playwright specs (its own runner, see playwright.config.ts) —
+  // Jest's default testMatch would otherwise pick up *.spec.ts under it too.
+  testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/e2e/'],
   // Issue #108: enforce minimum coverage thresholds
   coverageThreshold: {
     global: {
@@ -28,6 +31,7 @@ const customJestConfig = {
     'context/**/*.{ts,tsx}',
     'packages/**/*.{ts,tsx}',
     '!**/*.d.ts',
+    '!**/*.stories.{ts,tsx}',
     '!**/node_modules/**',
   ],
 };

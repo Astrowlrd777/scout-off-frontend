@@ -8,6 +8,14 @@ export const PROGRESS_LABELS: Record<ProgressLevel, string> = {
   3: 'Elite Tier',
 };
 
+// ── Player Stats ──────────────────────────────────────────────────────────────
+export interface PlayerStats {
+  goals: number;
+  assists: number;
+  appearances: number;
+  clean_sheets?: number;
+}
+
 // ── Player ────────────────────────────────────────────────────────────────────
 export interface PlayerVitals {
   name: string;
@@ -29,10 +37,14 @@ export interface Player {
   id: string;
   wallet: string;
   vitals: PlayerVitals;
+  stats?: PlayerStats;
   ipfsHash: string; // Latest highlight reel CID
   progressLevel: ProgressLevel;
   milestones: Milestone[];
   createdAt: number;
+  archived?: boolean; // Off-chain archive flag; defaults to false
+  backupWallet?: string; // Optional recovery/backup wallet address
+  backupWalletVerifiedAt?: number; // Timestamp when backup was verified with primary wallet signature
 }
 
 // ── Validator ────────────────────────────────────────────────────────────────────
@@ -107,6 +119,32 @@ export interface TrialOfferDetails {
   clubName: string;
   offerType: TrialOfferType;
   message?: string;
+}
+
+// ── Referral / Invite ─────────────────────────────────────────────────────────
+export interface ReferralCode {
+  code: string;
+  scoutWallet: string;
+  createdAt: number;
+  usedBy: string | null;
+  usedAt: number | null;
+}
+
+export interface ReferralStats {
+  totalCodes: number;
+  successfulReferrals: number;
+}
+
+export interface TopReferrer {
+  scoutWallet: string;
+  totalCodes: number;
+  successfulReferrals: number;
+}
+
+export interface ReferralOverview {
+  totalCodes: number;
+  totalSuccessfulReferrals: number;
+  topReferrers: TopReferrer[];
 }
 
 // ── Contract call helpers ─────────────────────────────────────────────────────

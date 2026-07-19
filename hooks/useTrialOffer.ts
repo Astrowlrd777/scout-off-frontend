@@ -7,7 +7,10 @@ import { extractContractErrorKey } from '@/lib/contractErrorMessage';
 import type { TrialOfferDetails } from '@/types';
 
 export interface UseTrialOfferReturn {
-  logTrialOffer: (playerId: string, details: TrialOfferDetails) => Promise<void>;
+  logTrialOffer: (
+    playerId: string,
+    details: TrialOfferDetails,
+  ) => Promise<void>;
   loading: boolean;
   error: string | null;
   txHash: string | null;

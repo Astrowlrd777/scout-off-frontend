@@ -11,9 +11,13 @@ The typical contribution workflow is:
 3. Make changes and run local validation.
 4. Open a pull request against `main`.
 
+> This repository includes a GitHub pull request template at `.github/PULL_REQUEST_TEMPLATE.md` and a PR process guide at `.github/PR_DOCUMENTATION.md` to help you provide the right details.
+
 ## Local Development Setup
 
 > For a complete end-to-end guide covering contracts, backend, and wallet setup, see [DEVELOPMENT.md](DEVELOPMENT.md).
+
+> **Optional:** This repository includes a [devcontainer configuration](.devcontainer/devcontainer.json) for VS Code and GitHub Codespaces. When opened in a devcontainer, the correct Node.js version and all dependencies are set up automatically. See [Developing inside a Container](https://code.visualstudio.com/docs/devcontainers/containers) to learn more.
 
 ### Prerequisites
 
@@ -140,9 +144,22 @@ The repository exposes the following test-related commands:
 - `npm run dev` — start the local Next.js development server
 - `npm run lint` — run ESLint
 - `npm run test` — run Jest tests
+- `npm run test:watch` — run Jest tests in watch mode
+- `npm run test:coverage` — run Jest tests with coverage collection enabled
+- `npm run typecheck` — run the TypeScript compiler in `--noEmit` mode to check for type errors
 - `npm run format` — format files with Prettier
 - `npm run format:check` — check formatting with Prettier
 - `npm run prepare` — install Husky hooks
+
+### Indexer Package Tests
+
+To run only the off-chain event indexer tests, use:
+
+```bash
+npx jest packages/indexer --no-coverage
+```
+
+For full indexer setup, environment variables, and schema details, see [packages/indexer/README.md](packages/indexer/README.md).
 
 ### Smart Contract Tests
 

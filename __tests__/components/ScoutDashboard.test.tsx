@@ -2,10 +2,37 @@ import React from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
+// ── Globals ───────────────────────────────────────────────────────────────────
+
+// jsdom does not implement IntersectionObserver; provide a no-op stub.
+global.IntersectionObserver = class {
+  observe = jest.fn();
+  unobserve = jest.fn();
+  disconnect = jest.fn();
+  constructor(
+    _cb: IntersectionObserverCallback,
+    _opts?: IntersectionObserverInit,
+  ) {}
+  takeRecords(): IntersectionObserverEntry[] {
+    return [];
+  }
+  root: Element | null = null;
+  rootMargin: string = '';
+  thresholds: ReadonlyArray<number> = [];
+} as unknown as typeof IntersectionObserver;
+
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
 jest.mock('@/hooks/useRequireWallet', () => ({
-  useRequireWallet: () => ({ walletAddress: 'GABC1234567890ABCDE1234567890ABCDE1234567890ABCDE123456' }),
+  useRequireWallet: () => ({
+    walletAddress: 'GABC1234567890ABCDE1234567890ABCDE1234567890ABCDE123456',
+  }),
+}));
+
+jest.mock('@/hooks/useRequireSubscription', () => ({
+  useRequireSubscription: jest
+    .fn()
+    .mockReturnValue({ isProtected: true, loading: false }),
 }));
 
 const mockSearch = jest.fn();
@@ -72,6 +99,17 @@ jest.mock('@/components/scout/PlayerFilterForm', () => {
   };
 });
 
+jest.mock('@/hooks/useSubscription', () => ({
+  useSubscription: jest.fn().mockReturnValue({
+    subscription: null,
+    isLoading: false,
+    error: null,
+    writeLoading: false,
+    writeError: null,
+    subscribe: jest.fn(),
+  }),
+}));
+
 // ErrorBoundary is a transparent pass-through for these tests.
 jest.mock('@/components/ui/ErrorBoundary', () => ({
   __esModule: true,
@@ -84,7 +122,13 @@ import ScoutDashboard from '@/app/[locale]/scout/page';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const EMPTY_SCOUT = { players: [], loading: false, error: null, search: mockSearch };
+const EMPTY_SCOUT = {
+  players: [],
+  loading: false,
+  error: null,
+  search: mockSearch,
+  searchByName: jest.fn(),
+};
 
 function setupScout(overrides: Partial<typeof EMPTY_SCOUT> = {}) {
   mockUseScout.mockReturnValue({ ...EMPTY_SCOUT, ...overrides });
@@ -93,14 +137,18 @@ function setupScout(overrides: Partial<typeof EMPTY_SCOUT> = {}) {
 /** Advance the mock through a full loading cycle: idle → loading → done. */
 function simulateSearchCycle(
   rerender: (ui: React.ReactElement) => void,
-  resultPlayers: typeof EMPTY_SCOUT['players'] = [],
+  resultPlayers: (typeof EMPTY_SCOUT)['players'] = [],
 ) {
   act(() => {
     mockUseScout.mockReturnValue({ ...EMPTY_SCOUT, loading: true });
     rerender(<ScoutDashboard />);
   });
   act(() => {
-    mockUseScout.mockReturnValue({ ...EMPTY_SCOUT, loading: false, players: resultPlayers });
+    mockUseScout.mockReturnValue({
+      ...EMPTY_SCOUT,
+      loading: false,
+      players: resultPlayers,
+    });
     rerender(<ScoutDashboard />);
   });
 }
@@ -110,6 +158,22 @@ function simulateSearchCycle(
 describe('ScoutDashboard — empty state', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    const { useRequireSubscription } = jest.requireMock(
+      '@/hooks/useRequireSubscription',
+    );
+    useRequireSubscription.mockReturnValue({
+      isProtected: true,
+      loading: false,
+    });
+    const { useSubscription } = jest.requireMock('@/hooks/useSubscription');
+    useSubscription.mockReturnValue({
+      subscription: null,
+      isLoading: false,
+      error: null,
+      writeLoading: false,
+      writeError: null,
+      subscribe: jest.fn(),
+    });
     setupScout();
   });
 
@@ -135,7 +199,21 @@ describe('ScoutDashboard — empty state', () => {
   it('does not show the empty state when the search returns players', () => {
     const { rerender } = render(<ScoutDashboard />);
     const players = [
-      { id: 'p1', wallet: 'G...', vitals: { name: 'A', age: 20, position: 'ST', region: 'NG', nationality: 'Nigerian' }, ipfsHash: '', progressLevel: 0 as const, milestones: [], createdAt: 0 },
+      {
+        id: 'p1',
+        wallet: 'G...',
+        vitals: {
+          name: 'A',
+          age: 20,
+          position: 'ST',
+          region: 'NG',
+          nationality: 'Nigerian',
+        },
+        ipfsHash: '',
+        progressLevel: 0 as const,
+        milestones: [],
+        createdAt: 0,
+      },
     ];
     simulateSearchCycle(rerender, players);
     expect(screen.queryByText('No players found')).not.toBeInTheDocument();
@@ -151,7 +229,11 @@ describe('ScoutDashboard — empty state', () => {
 
     // A second search starts — empty state must hide during loading
     act(() => {
-      mockUseScout.mockReturnValue({ ...EMPTY_SCOUT, loading: true, players: [] });
+      mockUseScout.mockReturnValue({
+        ...EMPTY_SCOUT,
+        loading: true,
+        players: [],
+      });
       rerender(<ScoutDashboard />);
     });
     expect(screen.queryByText('No players found')).not.toBeInTheDocument();
@@ -162,47 +244,47 @@ describe('ScoutDashboard — empty state', () => {
   it('renders the correct heading in the empty state', () => {
     const { rerender } = render(<ScoutDashboard />);
     simulateSearchCycle(rerender, []);
-    expect(screen.getByRole('heading', { name: /no players found/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /no players found/i }),
+    ).toBeInTheDocument();
   });
 
   it('renders the descriptive subtext in the empty state', () => {
     const { rerender } = render(<ScoutDashboard />);
     simulateSearchCycle(rerender, []);
-    expect(
-      screen.getByText('Try adjusting your region, position, or level filter.'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Try adjusting your filters.')).toBeInTheDocument();
   });
 
-  it('renders a "Clear Filters" button inside the empty state', () => {
+  it('renders a "Reset Filters" button inside the empty state', () => {
     const { rerender } = render(<ScoutDashboard />);
     simulateSearchCycle(rerender, []);
     expect(
-      screen.getByRole('button', { name: /clear filters/i }),
+      screen.getByRole('button', { name: /reset filters/i }),
     ).toBeInTheDocument();
   });
 
   // ── Clear Filters interaction ─────────────────────────────────────────────
 
-  it('clicking "Clear Filters" retriggers the filter search with defaults', () => {
+  it('clicking "Reset Filters" retriggers the filter search with defaults', () => {
     const { rerender } = render(<ScoutDashboard />);
     simulateSearchCycle(rerender, []);
 
     mockSearch.mockClear();
 
     act(() => {
-      fireEvent.click(screen.getByRole('button', { name: /clear filters/i }));
+      fireEvent.click(screen.getByRole('button', { name: /reset filters/i }));
     });
 
     // PlayerFilterForm's resetKey effect fires onSearch, which calls handleSearch → search
     expect(mockSearch).toHaveBeenCalledTimes(1);
   });
 
-  it('hides the empty state after "Clear Filters" triggers a new loading cycle', () => {
+  it('hides the empty state after "Reset Filters" triggers a new loading cycle', () => {
     const { rerender } = render(<ScoutDashboard />);
     simulateSearchCycle(rerender, []);
 
     act(() => {
-      fireEvent.click(screen.getByRole('button', { name: /clear filters/i }));
+      fireEvent.click(screen.getByRole('button', { name: /reset filters/i }));
     });
 
     // New search starts loading — empty state must hide
@@ -219,7 +301,9 @@ describe('ScoutDashboard — empty state', () => {
   it('shows loading skeletons (not the empty state) during the very first search', () => {
     setupScout({ loading: true });
     render(<ScoutDashboard />);
-    expect(screen.getAllByTestId('player-card-skeleton').length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByTestId('player-card-skeleton').length,
+    ).toBeGreaterThan(0);
     expect(screen.queryByText('No players found')).not.toBeInTheDocument();
   });
 });

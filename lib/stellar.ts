@@ -3,9 +3,12 @@ import {
   TransactionBuilder,
   Networks,
   BASE_FEE,
+  StrKey,
 } from '@stellar/stellar-sdk';
 
-const RPC_URL = process.env.NEXT_PUBLIC_SOROBAN_RPC!;
+const DEFAULT_SOROBAN_RPC_URL = 'https://soroban-testnet.stellar.org';
+
+const RPC_URL = process.env.NEXT_PUBLIC_SOROBAN_RPC ?? DEFAULT_SOROBAN_RPC_URL;
 const NETWORK =
   process.env.NEXT_PUBLIC_NETWORK === 'mainnet'
     ? Networks.PUBLIC
@@ -19,28 +22,62 @@ export function isValidStellarAddress(key: string): boolean {
 
 export { NETWORK, BASE_FEE, TransactionBuilder };
 
-async function pollTransaction(hash: string) {
-  const MAX_ATTEMPTS = 10;
-  const POLL_DELAY_MS = 1500;
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+export class TransactionFailedError extends Error {
+  constructor(hash: string) {
+    super(`Transaction ${hash} failed on-chain`);
+    this.name = 'TransactionFailedError';
+  }
+}
+
+export class TransactionTimeoutError extends Error {
+  constructor(hash: string, attempts: number) {
+    super(`Transaction ${hash} was not confirmed after ${attempts} attempts`);
+    this.name = 'TransactionTimeoutError';
+  }
+}
+
+export async function pollTransaction(
+  hash: string,
+  maxAttempts = 10,
+  delayMs = 3000,
+) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const result = await rpc.getTransaction(hash);
     if (result.status !== 'NOT_FOUND') {
       if (result.status === 'FAILED') {
-        throw new Error(`ContractError: transaction ${hash} failed`);
+        throw new TransactionFailedError(hash);
       }
       return result;
     }
-    if (attempt < MAX_ATTEMPTS - 1) {
-      await new Promise<void>((r) => setTimeout(r, POLL_DELAY_MS));
+    if (attempt < maxAttempts - 1) {
+      await new Promise<void>((r) => setTimeout(r, delayMs));
     }
   }
-  throw new Error(`ContractError: transaction ${hash} was not confirmed`);
+  throw new TransactionTimeoutError(hash, maxAttempts);
 }
 
 /**
  * Signs the provided XDR using `signFn`, submits it via the RPC node, polls
  * until the transaction is confirmed, and returns the final transaction result.
  */
+const HORIZON_URL =
+  process.env.NEXT_PUBLIC_HORIZON_URL ?? 'https://horizon-testnet.stellar.org';
+
+/**
+ * Fetches the native XLM balance for a Stellar account via Horizon.
+ * Returns 0 for unfunded accounts (404). Returns a number rounded to 7 decimal places.
+ */
+export async function getXLMBalance(address: string): Promise<number> {
+  const res = await fetch(`${HORIZON_URL}/accounts/${address}`);
+  if (res.status === 404) return 0;
+  if (!res.ok) throw new Error(`Horizon error: ${res.status}`);
+  const { balances } = (await res.json()) as {
+    balances: Array<{ asset_type: string; balance: string }>;
+  };
+  const native = balances.find((b) => b.asset_type === 'native');
+  return native ? parseFloat(parseFloat(native.balance).toFixed(7)) : 0;
+}
+
 export async function signAndSubmitTx(
   xdrTx: string,
   signFn: (xdr: string) => Promise<string>,

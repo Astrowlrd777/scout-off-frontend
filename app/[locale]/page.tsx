@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
 import {
   MessageCircle,
   BookOpen,
@@ -36,7 +37,14 @@ const features = [
   },
 ];
 
-export default function HomePage() {
+export default async function HomePage({
+  params,
+}: {
+  params: { locale: string };
+}) {
+  const locale = params.locale;
+  const t = await getTranslations({ locale, namespace: 'footer' });
+
   return (
     <div className="flex flex-col gap-24 pb-20">
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
@@ -156,6 +164,13 @@ export default function HomePage() {
               <BookOpen size={15} />
               README
             </a>
+            <Link
+              href={`/${locale}/changelog`}
+              className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm transition"
+            >
+              <BookOpen size={15} />
+              {t('changelog')}
+            </Link>
           </nav>
         </div>
       </footer>

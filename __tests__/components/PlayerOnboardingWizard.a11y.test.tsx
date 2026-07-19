@@ -90,7 +90,9 @@ describe('PlayerOnboardingWizard – accessibility', () => {
       const { container } = renderWizard();
       await act(async () => {
         const nameInput = screen.getByLabelText(/name \*/i);
-        fireEvent.change(nameInput, { target: { name: 'name', value: 'Alice' } });
+        fireEvent.change(nameInput, {
+          target: { name: 'name', value: 'Alice' },
+        });
         const ageInput = screen.getByLabelText(/age \*/i);
         fireEvent.change(ageInput, { target: { name: 'age', value: '22' } });
         const natInput = screen.getByLabelText(/nationality \*/i);

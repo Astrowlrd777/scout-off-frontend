@@ -3,6 +3,8 @@
   "nav": {
     "scout_dashboard": "Tableau de bord des scouts",
     "player_dashboard": "Tableau de bord des joueurs",
+    "sponsorship": "Parrainage",
+    "soon": "Bientôt",
     "maintenance_warning": "ScoutOff est actuellement en maintenance. Les actions d'écriture sont temporairement désactivées."
   },
   "common": {
@@ -46,10 +48,16 @@
     "player_not_found": "Joueur non trouvé",
     "no_players": "Aucun joueur trouvé"
   },
+  "player_profile": {
+    "back_to_scout_dashboard": "← Retour au tableau de bord des scouts"
+  },
   "player_dashboard": {
     "title": "Tableau de bord des joueurs",
     "welcome": "Bienvenue sur le tableau de bord des joueurs",
     "description": "Voir votre profil et vos progrès",
+    "tab_register": "S'inscrire",
+    "tab_profile": "Mon Profil",
+    "register_prompt": "Inscrivez-vous d'abord pour voir votre profil.",
     "profile": "Profil",
     "milestones": "Jalons",
     "achievements": "Réalisations",
@@ -67,10 +75,16 @@
     "installMobile": "Extension de navigateur / mobile",
     "cancel": "Annuler",
     "noWalletDetected": "Aucun portefeuille détecté. Veuillez installer une extension de portefeuille Stellar.",
+    "noWalletInstalledBanner": "Aucun portefeuille Stellar détecté. Installez l'une des options ci-dessous pour commencer.",
+    "notInstalled": "Non installé",
+    "installLink": "Installer",
     "balance": "Solde",
     "address": "Adresse",
     "invalid_address": "Adresse Stellar invalide",
-    "connection_failed": "Échec de la connexion au portefeuille"
+    "connection_failed": "Échec de la connexion au portefeuille",
+    "balanceError": "Solde indisponible — erreur réseau",
+    "ledgerConnect": "Portefeuille matériel — connectez via USB",
+    "ledgerInstructions": "Connectez votre appareil Ledger via USB et ouvrez l'application Stellar."
   },
   "errors": {
     "not_found": "Non trouvé",
@@ -89,6 +103,35 @@
     "upload": "Télécharger",
     "view_details": "Afficher les détails",
     "view_more": "Afficher plus"
+  },
+  "sponsorship": {
+    "badge": "Bientôt disponible",
+    "title": "Parrainage fractionné de joueurs",
+    "description": "Les fans et investisseurs pourront bientôt acheter des « Jetons Joueur » pour financer l'entraînement et les déplacements d'un joueur — avec les revenus reversés de manière transparente sur la chaîne.",
+    "howItWorksTitle": "Comment cela fonctionnera",
+    "howItWorksDescription": "Les parrains achèteront des Jetons Joueur fractionnés représentant une participation aux revenus futurs d'un joueur. Les fonds collectés financent directement l'entraînement, les déplacements et le développement, tandis qu'une part des revenus futurs du joueur sur la chaîne est reversée aux détenteurs de jetons — tout cela appliqué par des contrats intelligents Soroban.",
+    "notice": "Cette page est un espace réservé. Aucun jeton ne peut encore être acheté et aucune interaction blockchain n'est disponible ici."
+  },
+  "footer": {
+    "changelog": "Journal des modifications"
+  },
+  "changelog": {
+    "back_to_home": "Retour à l'accueil",
+    "page_title": "Journal des modifications",
+    "page_description": "Mises à jour et améliorations récentes de la plateforme.",
+    "eyebrow": "Mises à jour de la plateforme",
+    "english_notice": "Ce journal des modifications est actuellement disponible en anglais uniquement.",
+    "added": "Ajouté",
+    "improved": "Amélioré",
+    "fixed": "Corrigé",
+    "empty_title": "Journal des modifications indisponible",
+    "empty_description": "Nous n'avons pas pu charger le journal des modifications. Veuillez réessayer plus tard."
+  },
+  "progress_levels": {
+    "level0": "Non vérifié",
+    "level1": "Vérifié",
+    "level2": "Performance",
+    "level3": "Élite"
   },
   "contractErrors": {
     "AlreadyInitialized": "Ce joueur est déjà inscrit.",

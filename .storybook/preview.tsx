@@ -2,7 +2,13 @@ import type { Preview, Decorator } from '@storybook/react';
 import './tailwind.css';
 
 const withDarkBackground: Decorator = (Story) => (
-  <div style={{ backgroundColor: '#0A0F1E', minHeight: '100vh', padding: '1.5rem' }}>
+  <div
+    style={{
+      backgroundColor: '#0A0F1E',
+      minHeight: '100vh',
+      padding: '1.5rem',
+    }}
+  >
     <Story />
   </div>
 );

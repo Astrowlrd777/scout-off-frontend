@@ -44,8 +44,12 @@ export const AllVariants: Story = {
       <Button variant="default">Default</Button>
       <Button variant="danger">Danger</Button>
       <Button variant="secondary">Secondary</Button>
-      <Button variant="default" isLoading>Loading</Button>
-      <Button variant="default" disabled>Disabled</Button>
+      <Button variant="default" isLoading>
+        Loading
+      </Button>
+      <Button variant="default" disabled>
+        Disabled
+      </Button>
     </div>
   ),
 };
