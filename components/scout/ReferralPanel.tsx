@@ -1,10 +1,15 @@
 'use client';
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { generateReferralCode, getReferralStats } from '@/lib/api';
+import {
+  generateReferralCode,
+  getReferralStats,
+  listReferralCodes,
+} from '@/lib/api';
 import type { ReferralCode, ReferralStats } from '@/types';
 import { Copy, Check } from 'lucide-react';
 
 const COPIED_RESET_MS = 2000;
+const PAGE_SIZE = 5;
 
 function copyToClipboard(text: string) {
   if (navigator.clipboard) {
@@ -14,6 +19,8 @@ function copyToClipboard(text: string) {
 
 export default function ReferralPanel() {
   const [codes, setCodes] = useState<ReferralCode[]>([]);
+  const [codesLoading, setCodesLoading] = useState(true);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [stats, setStats] = useState<ReferralStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -49,9 +56,22 @@ export default function ReferralPanel() {
     }
   }, []);
 
+  const loadCodes = useCallback(async () => {
+    setCodesLoading(true);
+    try {
+      const list = await listReferralCodes();
+      setCodes(list);
+    } catch {
+      // silently fail — the "generate" flow still works without history
+    } finally {
+      setCodesLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     loadStats();
-  }, [loadStats]);
+    loadCodes();
+  }, [loadStats, loadCodes]);
 
   const handleGenerate = useCallback(async () => {
     setGenerating(true);
@@ -65,6 +85,10 @@ export default function ReferralPanel() {
       setGenerating(false);
     }
   }, [loadStats]);
+
+  const handleShowMore = useCallback(() => {
+    setVisibleCount((count) => count + PAGE_SIZE);
+  }, []);
 
   const baseUrl =
     typeof window !== 'undefined'
@@ -117,13 +141,15 @@ export default function ReferralPanel() {
         {generating ? 'Generating…' : 'Generate Invite Link'}
       </button>
 
-      {codes.length === 0 ? (
+      {codesLoading && codes.length === 0 ? (
+        <p className="text-sm text-gray-500">Loading your invite links…</p>
+      ) : codes.length === 0 ? (
         <p className="text-sm text-gray-500">
           Your generated invite links will appear here.
         </p>
       ) : (
         <div className="flex flex-col gap-2">
-          {codes.slice(0, 5).map((ref, i) => {
+          {codes.slice(0, visibleCount).map((ref, i) => {
             const inviteUrl = `${baseUrl}/scout/subscribe?ref=${ref.code}`;
             return (
               <div
@@ -135,6 +161,7 @@ export default function ReferralPanel() {
                 </code>
                 <button
                   onClick={() => handleCopy(i, inviteUrl)}
+                  aria-label={`Copy invite link for code ${ref.code}`}
                   className="shrink-0 rounded px-2 py-1 text-xs font-medium transition bg-gray-700 text-gray-300 hover:bg-gray-600"
                 >
                   {copiedIndex === i ? (
@@ -152,6 +179,15 @@ export default function ReferralPanel() {
               </div>
             );
           })}
+
+          {codes.length > visibleCount && (
+            <button
+              onClick={handleShowMore}
+              className="self-start text-sm text-brand-green hover:underline"
+            >
+              Show more ({codes.length - visibleCount} remaining)
+            </button>
+          )}
         </div>
       )}
     </div>
