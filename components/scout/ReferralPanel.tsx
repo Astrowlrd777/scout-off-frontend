@@ -1,7 +1,9 @@
 'use client';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { generateReferralCode, getReferralStats } from '@/lib/api';
 import type { ReferralCode, ReferralStats } from '@/types';
+
+const COPIED_RESET_MS = 2000;
 
 function copyToClipboard(text: string) {
   if (navigator.clipboard) {
@@ -15,6 +17,24 @@ export default function ReferralPanel() {
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const copyResetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (copyResetTimer.current !== null) clearTimeout(copyResetTimer.current);
+    },
+    [],
+  );
+
+  const handleCopy = useCallback((index: number, inviteUrl: string) => {
+    copyToClipboard(inviteUrl);
+    setCopiedIndex(index);
+    if (copyResetTimer.current !== null) clearTimeout(copyResetTimer.current);
+    copyResetTimer.current = setTimeout(
+      () => setCopiedIndex(null),
+      COPIED_RESET_MS,
+    );
+  }, []);
 
   const loadStats = useCallback(async () => {
     setLoading(true);
@@ -113,11 +133,7 @@ export default function ReferralPanel() {
                   {inviteUrl}
                 </code>
                 <button
-                  onClick={() => {
-                    copyToClipboard(inviteUrl);
-                    setCopiedIndex(i);
-                    setTimeout(() => setCopiedIndex(null), 2000);
-                  }}
+                  onClick={() => handleCopy(i, inviteUrl)}
                   className="shrink-0 rounded px-2 py-1 text-xs font-medium transition bg-gray-700 text-gray-300 hover:bg-gray-600"
                 >
                   {copiedIndex === i ? 'Copied!' : 'Copy'}
