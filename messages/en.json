@@ -113,7 +113,8 @@
     "notice": "This page is a placeholder. No tokens can be purchased yet and no blockchain interaction is available here."
   },
   "footer": {
-    "changelog": "Changelog"
+    "changelog": "Changelog",
+    "status": "Status"
   },
   "changelog": {
     "back_to_home": "Back to home",
@@ -126,6 +127,22 @@
     "fixed": "Fixed",
     "empty_title": "Changelog unavailable",
     "empty_description": "We couldn't load the changelog right now. Please check back later."
+  },
+  "status": {
+    "back_to_home": "Back to home",
+    "page_title": "System Status",
+    "page_description": "Check whether an issue you're seeing is a known, platform-wide outage and review past incidents.",
+    "eyebrow": "Platform status",
+    "dependencies_title": "Monitored dependencies",
+    "dependency_frontend": "Frontend",
+    "dependency_backend": "Backend API",
+    "dependency_rpc": "Soroban RPC / Horizon",
+    "live_status_title": "Live status & incident history",
+    "live_status_description": "Real-time status and historical incident summaries for ScoutOff are tracked on our external status page, updated automatically as issues are detected and resolved.",
+    "live_status_cta": "View live status page",
+    "incident_history_note": "Past incidents and their resolutions are listed on the status page above.",
+    "empty_title": "Status page not yet configured",
+    "empty_description": "A live status page hasn't been linked yet. Please check the ScoutOff Discord for updates in the meantime."
   },
   "progress_levels": {
     "level0": "Unverified",
