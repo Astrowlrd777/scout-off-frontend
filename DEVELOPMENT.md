@@ -283,6 +283,47 @@ npm run lint
 
 ---
 
+## Referral Links (`?ref=CODE`)
+
+The scout referral program passes a referral code between two independent parts of the app via a plain query string — there's no shared constant or type enforcing this contract, so it's easy to break by accident. This section documents the current, verified behavior end to end.
+
+### Where the code is generated
+
+`components/scout/ReferralPanel.tsx` (rendered inside the scout dashboard) lets a scout generate an invite link:
+
+1. On "Generate Invite Link", it calls `generateReferralCode()` (`lib/api.ts`), which `POST`s to `app/api/referrals/generate/route.ts`.
+2. The route requires an authenticated `session` cookie and calls `generateCode()` in `lib/referralStore.ts`, which creates a random code in the form `SCOUT-XXXXXX` and persists `{ code, scoutWallet, createdAt, usedBy: null, usedAt: null }` to a JSON-backed store.
+3. `ReferralPanel` builds the shareable URL from the returned code:
+
+   ```tsx
+   const inviteUrl = `${baseUrl}/scout/subscribe?ref=${ref.code}`;
+   ```
+
+   `baseUrl` is derived from `window.location`, and the URL does **not** include a locale segment (e.g. `/en/...`) even though the app is served under `app/[locale]/...`.
+
+### Where the code must be read and redeemed
+
+`app/[locale]/scout/subscribe/page.tsx` is the sole consumer:
+
+1. It reads the param with `useSearchParams().get('ref')` and shows a banner ("You were referred by a colleague! Your referral will be credited automatically when you subscribe.") whenever `ref` is present — this banner does **not** verify the code is real.
+2. On successful subscription (`handleSubscribe`), if a `referralCode` was present it fires `redeemReferralCode(referralCode)` (`lib/api.ts`), which `POST`s to `app/api/referrals/redeem/route.ts`. That route calls `redeemCode(code, sessionCookie)` in `lib/referralStore.ts`, which looks up an unused code with a matching string and, if found, marks it `usedBy`/`usedAt`.
+
+If a future contributor changes or removes the subscribe page's `ref` handling, referral codes will still be generated and shared but will never be redeemed — there is no other call site that consumes this param.
+
+### Behavior on an invalid, expired, or malformed code
+
+As implemented today, redemption failures are silent and have no effect on the subscribe flow:
+
+- **Client:** the redeem call is fire-and-forget — `redeemReferralCode(referralCode).catch(() => {})` — so any failure (network error, invalid code, unauthenticated request) is swallowed with no UI feedback or retry.
+- **Server:** `redeem/route.ts` does return `404 { error: 'Invalid or already redeemed code' }` when no matching unused code exists, but since the client discards the response body, this is never surfaced to the user.
+- **Expiration:** codes never expire — there is no `expiresAt`/TTL field on a referral code and `redeemCode` never checks age.
+- **Malformed input:** there is no format validation (e.g. a `SCOUT-` prefix check); any string is sent as-is, gated only by the "does an unused code with this exact string exist" lookup.
+- **Self-referral:** `redeemCode` never compares the redeeming session against the code's `scoutWallet`, so nothing currently prevents a scout from redeeming their own generated code.
+
+Net effect: the "You were referred" banner on `/scout/subscribe` renders based purely on the presence of `?ref=`, regardless of whether the code turns out to be valid — a bogus or already-used `ref` value shows the same "will be credited automatically" message as a real one, and the user is never told redemption failed.
+
+---
+
 ## Related Documentation
 
 - [README.md](README.md) — project overview, architecture, and smart contract API
