@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@/hooks/useWallet';
 import { useToast } from '@/components/ui/Toast';
@@ -29,7 +29,15 @@ import TruncatedAddress from '@/components/ui/TruncatedAddress';
 import { parseContractError } from '@/lib/contractErrorMessage';
 
 const ADMIN_ADDRESS = process.env.NEXT_PUBLIC_ADMIN_ADDRESS;
+const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID ?? '';
 const ACTIVITY_PAGE_SIZE = 20;
+const COPIED_RESET_MS = 2000;
+
+function copyToClipboard(text: string) {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text);
+  }
+}
 
 const EVENT_LABELS: Record<ActivityEventType, string> = {
   player_registered: 'Player Registered',
@@ -72,6 +80,26 @@ function AdminDashboardContent() {
     label: string;
     message: string;
   } | null>(null);
+
+  const [contractIdCopied, setContractIdCopied] = useState(false);
+  const copyResetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (copyResetTimer.current !== null) clearTimeout(copyResetTimer.current);
+    },
+    [],
+  );
+
+  const handleCopyContractId = useCallback(() => {
+    copyToClipboard(CONTRACT_ID);
+    setContractIdCopied(true);
+    if (copyResetTimer.current !== null) clearTimeout(copyResetTimer.current);
+    copyResetTimer.current = setTimeout(
+      () => setContractIdCopied(false),
+      COPIED_RESET_MS,
+    );
+  }, []);
 
   // Gate: redirect non-admin
   useEffect(() => {
@@ -210,6 +238,23 @@ function AdminDashboardContent() {
   return (
     <div className="max-w-3xl mx-auto flex flex-col gap-8">
       <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
+
+      {/* Contract Info */}
+      <section className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
+        <h2 className="text-lg font-semibold text-white">Contract</h2>
+        <div className="flex items-center gap-2">
+          <code className="flex-1 text-sm text-gray-300 truncate">
+            {CONTRACT_ID}
+          </code>
+          <button
+            onClick={handleCopyContractId}
+            aria-label="Copy contract ID to clipboard"
+            className="shrink-0 rounded px-2 py-1 text-xs font-medium transition bg-gray-700 text-gray-300 hover:bg-gray-600"
+          >
+            {contractIdCopied ? 'Copied!' : 'Copy'}
+          </button>
+        </div>
+      </section>
 
       {/* Circuit Breaker */}
       <section className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
