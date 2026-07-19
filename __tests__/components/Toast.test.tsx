@@ -155,4 +155,63 @@ describe('Toast notifications', () => {
       true,
     );
   });
+
+  it('stacks multiple toasts fired in quick succession and dismisses each independently', () => {
+    render(
+      <ToastProvider>
+        <ToastTestApp />
+      </ToastProvider>,
+    );
+
+    // Clear the initial toast so it doesn't interfere with the 3-toast cap.
+    act(() => {
+      jest.advanceTimersByTime(4000);
+    });
+    expect(screen.queryByText('Initial toast')).toBeNull();
+
+    fireEvent.click(screen.getByText(/show success/i));
+    act(() => {
+      jest.advanceTimersByTime(1500);
+    });
+    fireEvent.click(screen.getByText(/show error/i));
+    act(() => {
+      jest.advanceTimersByTime(1500);
+    });
+    fireEvent.click(screen.getByText(/show info/i));
+
+    // All three toasts are visible simultaneously as distinct, stacked nodes
+    // rather than overlapping/replacing one another.
+    const alerts = screen.getAllByRole('alert');
+    expect(alerts).toHaveLength(3);
+
+    const stack = alerts[0].parentElement;
+    expect(stack).not.toBeNull();
+    expect(stack?.className).toMatch(/flex-col/);
+    expect(stack?.className).toMatch(/gap-3/);
+    alerts.forEach((alert) => {
+      expect(alert.parentElement).toBe(stack);
+    });
+
+    // Success (shown first) dismisses on its own timer without shifting
+    // the still-active Error/Info toasts.
+    act(() => {
+      jest.advanceTimersByTime(1000); // t = 4000ms since Success shown
+    });
+    expect(screen.queryByText('Success message')).toBeNull();
+    expect(screen.getByText('Error message')).toBeTruthy();
+    expect(screen.getByText('Info message')).toBeTruthy();
+
+    // Error dismisses next, independently of Info.
+    act(() => {
+      jest.advanceTimersByTime(1500); // t = 4000ms since Error shown
+    });
+    expect(screen.queryByText('Error message')).toBeNull();
+    expect(screen.getByText('Info message')).toBeTruthy();
+
+    // Info dismisses last, on its own schedule.
+    act(() => {
+      jest.advanceTimersByTime(1500); // t = 4000ms since Info shown
+    });
+    expect(screen.queryByText('Info message')).toBeNull();
+  });
 });
