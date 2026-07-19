@@ -10,8 +10,36 @@ const api = axios.create({
 export const fetchPlayerProfile = (playerId: string) =>
   api.get(`/players/${playerId}`).then((r) => r.data);
 
-export const searchPlayersByName = (name: string): Promise<Player[]> =>
-  api.get('/players/search', { params: { name } }).then((r) => r.data);
+/**
+ * Thrown when the player search proxy (app/api/players/search/route.ts)
+ * rate-limits the caller. `retryAfterSec` mirrors the response's
+ * Retry-After header so callers can back off appropriately.
+ */
+export class SearchRateLimitedError extends Error {
+  retryAfterSec: number;
+  constructor(retryAfterSec: number) {
+    super('Too many search requests. Please slow down.');
+    this.name = 'SearchRateLimitedError';
+    this.retryAfterSec = retryAfterSec;
+  }
+}
+
+// Routed through app/api/players/search/route.ts (same-origin), not the
+// external backend directly — that route applies per-IP rate limiting on
+// top of the client-side debouncing in ScoutDashboardContent.
+export const searchPlayersByName = async (name: string): Promise<Player[]> => {
+  const res = await fetch(
+    `/api/players/search?name=${encodeURIComponent(name)}`,
+  );
+  if (res.status === 429) {
+    const retryAfterSec = Number(res.headers.get('Retry-After') ?? '0');
+    throw new SearchRateLimitedError(retryAfterSec);
+  }
+  if (!res.ok) {
+    throw new Error('Failed to search players');
+  }
+  return res.json();
+};
 
 export const fetchPlayerComments = (playerId: string) =>
   api.get(`/players/${playerId}/comments`).then((r) => r.data);

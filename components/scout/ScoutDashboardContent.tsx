@@ -9,6 +9,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useOnboardingTour } from '@/hooks/useOnboardingTour';
+import { useToast } from '@/components/ui/Toast';
 import { getPlayer } from '@/lib/contract';
 import PlayerCard from '@/components/PlayerCard';
 import PlayerCardSkeleton from '@/components/PlayerCardSkeleton';
@@ -37,9 +38,28 @@ export default function ScoutDashboardContent() {
 
   const tour = useOnboardingTour(SCOUT_TOUR_ID, scoutTourSteps, publicKey);
 
-  const { players, loading, search, searchByName, refetch } = useScout();
+  const {
+    players,
+    loading,
+    isRateLimited,
+    retryAfterSec,
+    search,
+    searchByName,
+    refetch,
+  } = useScout();
   const { subscription } = useSubscription();
+  const { show: showToast } = useToast();
   const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!isRateLimited) return;
+    showToast({
+      message: retryAfterSec
+        ? `Searching too fast — please wait ${retryAfterSec}s and try again.`
+        : 'Searching too fast — please slow down and try again.',
+      variant: 'warning',
+    });
+  }, [isRateLimited, retryAfterSec, showToast]);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 60_000);
