@@ -8,7 +8,7 @@ This guide walks you from a freshly cloned repository to a fully running local s
 
 | Tool                         | Version / Requirement                                            | Check                            |
 | ---------------------------- | ---------------------------------------------------------------- | -------------------------------- |
-| **Node.js**                  | 20.x or later                                                    | `node --version`                 |
+| **Node.js**                  | 24.x (matches CI — use `nvm use` if you have nvm)                | `node --version`                 |
 | **npm**                      | 10.x or later (bundled with Node)                                | `npm --version`                  |
 | **Rust** (stable)            | 1.70+                                                            | `rustc --version`                |
 | **wasm32 target**            | `wasm32-unknown-unknown`                                         | `rustup target list --installed` |
@@ -58,6 +58,8 @@ projects/
 
 ```bash
 cd scout-off-frontend
+# If you use nvm, switch to the project's Node version first:
+nvm use
 npm install
 ```
 
