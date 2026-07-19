@@ -20,6 +20,7 @@ import OnboardingTour from '@/components/ui/OnboardingTour';
 import { scoutTourSteps, SCOUT_TOUR_ID } from '@/lib/tourSteps';
 import type { Player, PlayerFilter } from '@/types';
 import PullToRefresh from '@/components/ui/PullToRefresh';
+import ScrollToTop from '@/components/ui/ScrollToTop';
 
 const PAGE_SIZE = 12;
 
@@ -403,6 +404,7 @@ export default function ScoutDashboardContent() {
         </>
       )}
     </div>
+    <ScrollToTop />
     </PullToRefresh>
   );
 }
