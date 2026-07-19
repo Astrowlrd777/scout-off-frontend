@@ -127,7 +127,7 @@ const nextConfig = {
     const cspHeader = [
       "default-src 'self'",
       scriptSrc,
-      `img-src 'self' ${ipfsGatewayDomain}`,
+      `img-src 'self' data: ${ipfsGatewayDomain}`,
       `connect-src 'self' ${sorobanDomain} ${horizonDomain}`,
       "style-src 'self' 'unsafe-inline'",
       "font-src 'self' data:",
