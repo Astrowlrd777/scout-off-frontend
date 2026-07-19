@@ -60,14 +60,25 @@ export function getReferralCount(scoutWallet: string): number {
   ).length;
 }
 
-export function redeemCode(code: string, usedBy: string): boolean {
+export type RedeemFailureReason = 'not_found' | 'self_redemption';
+
+export type RedeemResult =
+  | { success: true }
+  | { success: false; reason: RedeemFailureReason };
+
+export function redeemCode(code: string, usedBy: string): RedeemResult {
   const store = readStore();
   const idx = store.codes.findIndex(
     (c) => c.code === code && c.usedBy === null,
   );
-  if (idx === -1) return false;
+  if (idx === -1) return { success: false, reason: 'not_found' };
+
+  if (store.codes[idx].scoutWallet === usedBy) {
+    return { success: false, reason: 'self_redemption' };
+  }
+
   store.codes[idx].usedBy = usedBy;
   store.codes[idx].usedAt = Date.now();
   writeStore(store);
-  return true;
+  return { success: true };
 }
