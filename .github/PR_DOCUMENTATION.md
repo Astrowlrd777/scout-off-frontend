@@ -1,82 +1,89 @@
-# Pull Request Documentation
+﻿# Pull Request Guide
 
-This document explains the ScoutOff frontend PR expectations and the information reviewers need.
-Use `.github/PULL_REQUEST_TEMPLATE.md` for every PR, and update this guide if the process changes.
+This guide describes the ScoutOff frontend PR workflow and review expectations.
+Use `.github/PULL_REQUEST_TEMPLATE.md` to add structured PR details and this guide for process clarity.
 
-## What to Include in Every PR
+## Before opening a PR
 
-### Summary
-
-- Provide a concise overview of what changed and why.
-- Mention the user problem, bug, feature, or documentation update.
-- Keep it short and clear.
-
-### Related Issue
-
-- Reference the issue number, e.g. `Fixes #123` or `Refs #123`.
-- If there is no issue, explain the motivation and why this work is needed.
-
-### Testing
-
-- Describe the manual and automated validation performed.
-- Include commands run locally and any environment setup.
-- Examples:
+- Sync your branch with `main`.
+- Keep the PR focused and scoped to a single goal.
+- Run local validation before creating a PR:
+  - `npm install`
   - `npm run lint`
   - `npm run test`
   - `node scripts/validate-env.js`
-  - `cd ../scout-off-contracts && cargo test`
+- Add tests and documentation for new behavior.
 
-### Checklist
+## What to include
 
-- [ ] I followed the repository contribution guidelines in `CONTRIBUTING.md`
-- [ ] My code is formatted and linted
-- [ ] New or updated tests are included where applicable
-- [ ] All tests pass locally
-- [ ] Environment validation passes
-- [ ] No secrets, credentials, or private keys are included
-- [ ] Documentation is updated if needed
+### Summary
 
-### Notes for Reviewers
+- What changed?
+- Why is this change needed?
+- Keep it short, clear, and outcome-focused.
 
-- Mention any important context or tradeoffs.
-- Call out UI changes, contract integration impacts, or edge cases.
-- Add links to screenshots, designs, or relevant test stories.
-- Note follow-up work if the PR is intentionally partial.
+### Type
 
-## PR Quality Guidelines
+- `feat`, `fix`, `docs`, `test`, `chore`, or `refactor`
 
-- Keep PRs small and focused where possible.
-- Prefer one primary change per PR.
-- If a PR touches multiple areas, clearly explain the scope and reasoning.
-- Avoid large refactors without a supporting issue or design note.
+### Scope
 
-## Review Expectations
+- What is included in this PR?
+- Does it affect frontend only, contracts, backend, or docs?
 
-### Code Review
+### Related issue
 
-- Confirm the implementation matches the summary.
-- Check that tests and lints were run.
-- Verify no security-sensitive values or secrets are added.
-- Validate that the PR includes documentation updates when behavior changes.
+- Reference an issue: `Fixes #123` or `Refs #123`.
+- If no issue exists, explain the motivation.
 
-### Documentation
+### Validation
 
-- Update `README.md`, `CONTRIBUTING.md`, or other docs for new features.
-- Add missing environment variables to `.env.example` when source code requires them.
-- Document any new contract calls, public APIs, or UX flows.
+Document how you validated the change locally.
 
-### Contracts and On-Chain Integration
+Examples:
 
-- For smart contract integration, include contract IDs, network notes, or testnet setup steps if relevant.
-- Verify that `node scripts/validate-env.js` passes and that the frontend code matches the contract ABI or flow.
-- When backend/API or contract changes are required, note the repo or service impacted.
+- `npm run lint`
+- `npm run test`
+- `node scripts/validate-env.js`
+- `cd ../scout-off-contracts && cargo test`
 
-## Branch and Label Guidance
+### Review notes
 
-- Use a descriptive branch name, such as `feat/player-profile-ipfs-upload` or `fix/validator-approval-modal`.
-- Avoid generic branch names like `feature`, `bugfix`, or `temp`.
-- Add PR labels when available: `feature`, `bug`, `docs`, `test`, `chore`, `security`.
+- Highlight important context or tradeoffs.
+- Mention UI changes, contract impact, or edge cases.
+- Include screenshots or links when helpful.
+- List follow-up tasks for partial work.
 
-## When to Update This Guide
+## Reviewer expectations
 
-Update this document whenever the PR workflow changes, the template is revised, or the repository adds new validation steps.
+- Confirm the PR summary matches the code.
+- Verify tests, linting, and environment validation were run.
+- Ensure documentation is updated when behavior changes.
+- Check that no secrets or credentials were added.
+- Validate branch naming and PR scope.
+
+## Branch naming and labels
+
+- Use descriptive branch names:
+  - `feat/player-profile-ipfs-upload`
+  - `fix/validator-approval-modal`
+  - `docs/update-readme`
+- Avoid generic names:
+  - `feature`, `bugfix`, `work`, `temp`
+- Add labels when available: `feature`, `bug`, `docs`, `test`, `chore`, `security`.
+
+## Smart contract or on-chain PRs
+
+- Include contract IDs, network notes, and testnet assumptions if relevant.
+- Confirm `node scripts/validate-env.js` passes.
+- Document any ABI or workflow changes and the impacted repository.
+
+## Docs-only PRs
+
+- Keep docs-only PRs small and focused.
+- Ensure content reflects current behavior.
+- Use `docs/` branch prefix when appropriate.
+
+## Guide updates
+
+Update this document whenever the PR workflow changes or new validation steps are introduced.
