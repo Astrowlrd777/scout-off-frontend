@@ -148,6 +148,16 @@ The repository exposes the following test-related commands:
 - `npm run format:check` — check formatting with Prettier
 - `npm run prepare` — install Husky hooks
 
+### Indexer Package Tests
+
+To run only the off-chain event indexer tests, use:
+
+```bash
+npx jest packages/indexer --no-coverage
+```
+
+For full indexer setup, environment variables, and schema details, see [packages/indexer/README.md](packages/indexer/README.md).
+
 ### Smart Contract Tests
 
 When your changes include contract integration, run the smart contract tests from the contracts repository:
