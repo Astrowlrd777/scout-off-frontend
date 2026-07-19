@@ -13,6 +13,7 @@ import PlayerProfileSkeleton from '@/components/PlayerProfileSkeleton';
 import PlayerStatsCard from '@/components/player/PlayerStatsCard';
 import IPFSMediaGallery from '@/components/player/IPFSMediaGallery';
 import TrialOfferForm from '@/components/scout/TrialOfferForm';
+import ContactModal from '@/components/scout/ContactModal';
 import Button from '@/components/ui/Button';
 import QRModal from '@/components/ui/QRModal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
@@ -25,7 +26,8 @@ export default function PlayerProfile() {
   const { publicKey } = useWallet();
   const t = useTranslations('player_profile');
   const { player, loading: playerLoading, refetch } = usePlayer(id ?? null);
-  const { unlock, loading: contacting } = usePayToContact();
+  const { unlock, loading: contacting } = usePayToContact(id ?? '');
+  const [contactModalOpen, setContactModalOpen] = useState(false);
   const {
     subscription,
     isExpired,
@@ -89,8 +91,9 @@ export default function PlayerProfile() {
   async function handleConfirm() {
     setContactTxStatus('pending');
     try {
-      await unlock(id);
+      await unlock();
       setContactTxStatus('success');
+      setContactModalOpen(true);
     } catch {
       setContactTxStatus('error');
     }
@@ -258,6 +261,11 @@ export default function PlayerProfile() {
             message={confirmMessage}
             confirmLabel="Confirm"
             loading={feeCheckStatus === 'checking' || contacting}
+          />
+          <ContactModal
+            isOpen={contactModalOpen}
+            onClose={() => setContactModalOpen(false)}
+            playerId={id ?? ''}
           />
         </>
       )}

@@ -13,6 +13,7 @@ import { TransactionBuilder } from '@stellar/stellar-sdk';
 import { rpc, NETWORK } from '@/lib/stellar';
 import { walletAdapters } from '@/lib/walletAdapters';
 import type { WalletProvider as WalletProviderAlias } from '@/lib/walletAdapters';
+import { purgeAllContactDetails } from '@/lib/contactDetailsCache';
 
 // ── Wallet provider types ─────────────────────────────────────────────────────
 
@@ -115,6 +116,7 @@ interface WalletContextValue {
   connect: () => Promise<void>;
   disconnect: () => void;
   signAndSubmit: (xdr: string) => Promise<string>;
+  signOnly: (xdr: string) => Promise<string>;
   refreshBalance: () => Promise<void>;
 }
 
@@ -257,7 +259,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setBalanceError(null);
     setWalletProvider(null);
     removeStoredSession();
+    // Unlocked contact details (and any other cached data) must not survive
+    // logout — see lib/contactDetailsCache.ts. The explicit purge below is
+    // belt-and-suspenders on top of this blanket wipe: it also cancels any
+    // pending auto-purge timers, which the blanket mutate alone wouldn't do.
     mutate(() => true, undefined, { revalidate: false });
+    purgeAllContactDetails();
   }, []);
 
   const signAndSubmit = useCallback(
@@ -273,6 +280,22 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         tx as Parameters<typeof rpc.sendTransaction>[0],
       );
       return (result as { hash: string }).hash;
+    },
+    [publicKey, walletProvider],
+  );
+
+  /**
+   * Signs an XDR transaction without submitting it — the wallet-adapter
+   * "signFn" callback shape that lib/contract.ts's lower-level
+   * signAndSubmitTx/payToContact expect, for callers that need the
+   * contract's decoded return value (e.g. unlocked ContactDetails), which
+   * signAndSubmit above discards.
+   */
+  const signOnly = useCallback(
+    async (xdr: string): Promise<string> => {
+      if (!publicKey) throw new Error('Wallet not connected');
+      if (!walletProvider) throw new Error('No wallet provider selected');
+      return walletAdapters[walletProvider].signTransaction(xdr, NETWORK);
     },
     [publicKey, walletProvider],
   );
@@ -296,6 +319,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       connect,
       disconnect,
       signAndSubmit,
+      signOnly,
       refreshBalance,
     }),
     [
@@ -316,6 +340,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       connect,
       disconnect,
       signAndSubmit,
+      signOnly,
       refreshBalance,
     ],
   );
