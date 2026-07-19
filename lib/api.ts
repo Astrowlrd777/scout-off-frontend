@@ -107,6 +107,13 @@ export const getReferralStats = async (): Promise<ReferralStats> => {
   return res.json();
 };
 
+export const listReferralCodes = async (): Promise<ReferralCode[]> => {
+  const res = await fetch('/api/referrals/list');
+  if (!res.ok) throw new Error('Failed to fetch referral codes');
+  const data = await res.json();
+  return data.codes;
+};
+
 export const redeemReferralCode = async (code: string): Promise<boolean> => {
   const res = await fetch('/api/referrals/redeem', {
     method: 'POST',
