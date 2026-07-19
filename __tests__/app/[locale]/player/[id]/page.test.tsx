@@ -17,7 +17,7 @@ jest.mock('@/hooks/usePlayer', () => ({
 }));
 
 jest.mock('@/hooks/usePayToContact', () => ({
-  usePayToContact: jest.fn(() => ({ unlock: jest.fn(), loading: false })),
+  usePayToContact: jest.fn(() => ({ unlock: jest.fn(), loading: false, contactDetails: undefined, error: null, clear: jest.fn() })),
 }));
 
 jest.mock('@/hooks/useSubscription', () => ({
@@ -141,7 +141,7 @@ const basePlayer = {
 beforeEach(() => {
   jest.clearAllMocks();
   mockUseWallet.mockReturnValue({ publicKey: null });
-  mockUsePayToContact.mockReturnValue({ unlock: jest.fn(), loading: false });
+  mockUsePayToContact.mockReturnValue({ unlock: jest.fn(), loading: false, contactDetails: undefined, error: null, clear: jest.fn() });
   mockGetContactFee.mockResolvedValue(1);
 });
 
