@@ -123,7 +123,9 @@
     "english_notice": "Ce journal des modifications est actuellement disponible en anglais uniquement.",
     "added": "Ajouté",
     "improved": "Amélioré",
-    "fixed": "Corrigé"
+    "fixed": "Corrigé",
+    "empty_title": "Journal des modifications indisponible",
+    "empty_description": "Nous n'avons pas pu charger le journal des modifications. Veuillez réessayer plus tard."
   },
   "progress_levels": {
     "level0": "Non vérifié",

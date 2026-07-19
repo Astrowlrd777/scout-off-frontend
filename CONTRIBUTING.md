@@ -144,9 +144,22 @@ The repository exposes the following test-related commands:
 - `npm run dev` — start the local Next.js development server
 - `npm run lint` — run ESLint
 - `npm run test` — run Jest tests
+- `npm run test:watch` — run Jest tests in watch mode
+- `npm run test:coverage` — run Jest tests with coverage collection enabled
+- `npm run typecheck` — run the TypeScript compiler in `--noEmit` mode to check for type errors
 - `npm run format` — format files with Prettier
 - `npm run format:check` — check formatting with Prettier
 - `npm run prepare` — install Husky hooks
+
+### Indexer Package Tests
+
+To run only the off-chain event indexer tests, use:
+
+```bash
+npx jest packages/indexer --no-coverage
+```
+
+For full indexer setup, environment variables, and schema details, see [packages/indexer/README.md](packages/indexer/README.md).
 
 ### Smart Contract Tests
 

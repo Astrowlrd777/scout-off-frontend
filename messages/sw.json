@@ -123,7 +123,9 @@
     "english_notice": "TODO: Machine-translated - Changelog hii inapatikana kwa Kiingereza pekee kwa sasa.",
     "added": "TODO: Machine-translated - Iliyoongezwa",
     "improved": "TODO: Machine-translated - Iliboreshwa",
-    "fixed": "TODO: Machine-translated - Iliyorekebishwa"
+    "fixed": "TODO: Machine-translated - Iliyorekebishwa",
+    "empty_title": "TODO: Machine-translated - Mabadiliko hayapatikani",
+    "empty_description": "TODO: Machine-translated - Hatukuweza kupakia mabadiliko kwa sasa. Tafadhali angalia tena baadaye."
   },
   "progress_levels": {
     "level0": "Haijathibitishwa",

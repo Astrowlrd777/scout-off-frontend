@@ -356,6 +356,66 @@ cp .env.example .env.local
 | `NEXT_PUBLIC_API_URL`      | Backend API base URL (default: localhost:4000)     |
 | `PLATFORM_CONTACT_FEE_XLM` | XLM fee for pay-to-contact (default: 1)            |
 
+## Testing
+
+```bash
+# Frontend tests
+npm run test
+
+# Frontend tests in watch mode
+npm run test:watch
+
+# Frontend tests with coverage
+npm run test:coverage
+
+# Type checking
+npm run typecheck
+
+# Validate env vars
+node scripts/validate-env.js
+
+# Smart contract tests (in scout-off-contracts repo)
+cd ../scout-off-contracts && cargo test
+```
+
+Test coverage targets:
+
+- ✅ Player registration and profile storage
+- ✅ Milestone approval and progress level advancement
+- ✅ Scout subscription and pay-to-contact fee handling
+- ✅ Trial offer logging and Level 3 transition
+- ✅ Validator authorization enforcement
+- ✅ Fee accumulation and admin withdrawal
+- ✅ Pause / unpause circuit breaker
+- ✅ Edge cases: unauthorized validators, duplicate milestones, invalid fees
+
+## Implementation Status
+
+| Area                 | Status       | Notes                                                          |
+|---------------------|--------------|----------------------------------------------------------------|
+| Config & tooling     | ✅ Complete | package.json, tsconfig, tailwind, CI, Husky, lint-staged       |
+| Types                | ✅ Complete | Player, Scout, Milestone, ValidatorInfo, Subscription, Contact |
+| Lib layer            | ✅ Complete | stellar, contract, ipfs, api, sanitize, regions, positions     |
+| Wallet context       | ✅ Complete | Freighter / Albedo / LOBSTR, SEP-10, balance, session restore  |
+| Shared components    | ✅ Complete | Navbar, WalletButton, ProgressBar, PlayerCard, Skeleton        |
+| UI primitives        | ✅ Complete | Modal, Toast, Badge, Button, Spinner, Select, Tooltip, ErrorBoundary |
+| Player components    | ✅ Complete | PlayerProfileForm, UpdateProfileForm, MilestoneTimeline, IPFSMediaGallery |
+| Player dashboard     | ✅ Complete | Register + milestone history                                   |
+| Player profile page  | ✅ Complete | Public view + pay-to-contact                                   |
+| Scout dashboard      | ✅ Complete | Filter form + wallet search + paginated player grid            |
+| Scout subscription   | ✅ Complete | Tier selection + XLM payment via `useSubscription`             |
+| Validator components | ✅ Complete | ApproveForm, RevokeForm, ValidatorPlayerSearch                 |
+| Validator dashboard  | ⚠️ Partial   | Shell only; milestone approval UI not yet wired                |
+| Admin panel          | ✅ Complete | Add/remove validators, withdraw fees, pause/unpause            |
+| Hooks                | ✅ Complete | usePlayer, useScout, useValidator, useSubscription, usePayToContact, useMilestoneHistory, useIPFSUpload, useContractHealth, useIsPaused, useDebounce, useRequireWallet |
+| Off-chain indexer    | ✅ Complete | IndexerMetrics with tests in `packages/indexer/`               |
+| Frontend tests       | ✅ Complete | 11 component tests, 3 hook tests, 5 lib tests                  |
+| i18n                 | ✅ Complete | English, French, Swahili via next-intl                         |
+| Scout public profile | 🔲 Not started | `app/[locale]/scout/[id]/` folder created                      |
+| Scout ContactModal   | 🔲 Not started | ActivityFeed + ScoutProfileCard exist; modal pending           |
+| Trial offer UI       | 🔲 Not started | `log_trial_offer` contract fn ready; UI missing                 |
+| PWA raster icons      | ⚠️ Partial   | icon.svg present; raster PNG icons not yet generated            |
+
 ## Roadmap
 
 - Player profile registration on Stellar Testnet
