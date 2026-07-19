@@ -2,10 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-type EventType =
+export type EventType =
   | 'player_registered'
   | 'milestone_approved'
-  | 'trial_offer_logged';
+  | 'milestone_revoked'
+  | 'scout_subscribed'
+  | 'player_contacted'
+  | 'trial_offer_logged'
+  | 'fees_withdrawn';
 
 export interface FeedEvent {
   id: string;
