@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "test": "jest --passWithNoTests --maxWorkers=2 --workerIdleMemoryLimit=512MB",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,md,mdx}\"",
     "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,css,md,mdx}\"",
     "prepare": "node -e \"if (process.env.CI !== 'true') { require('child_process').execSync('husky install', {stdio: 'inherit'}) }\"",
@@ -40,6 +42,7 @@
   },
   "devDependencies": {
     "@axe-core/react": "4.9.1",
+    "@playwright/test": "^1.61.1",
     "@storybook/addon-essentials": "^8.6.14",
     "@storybook/builder-vite": "^8.6.18",
     "@storybook/nextjs": "^8.6.18",

@@ -283,8 +283,23 @@ npm run lint
 
 ---
 
+## Running E2E tests
+
+```bash
+npx playwright install --with-deps chromium   # once
+npm run test:e2e
+```
+
+See [e2e/README.md](e2e/README.md) for the shared wallet-mocking harness
+(mocks the Freighter extension surface so signed-transaction flows are
+E2E-testable without a real browser extension) and how to extend it to new
+flows.
+
+---
+
 ## Related Documentation
 
 - [README.md](README.md) — project overview, architecture, and smart contract API
 - [CONTRIBUTING.md](CONTRIBUTING.md) — contribution workflow and branch conventions
 - [DEPLOYMENT.md](DEPLOYMENT.md) — production deployment notes (Vercel, analytics)
+- [e2e/README.md](e2e/README.md) — Playwright E2E suite and wallet-mocking harness

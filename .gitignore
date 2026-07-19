@@ -8,6 +8,11 @@ out/
 coverage/
 storybook-static/
 
+# Playwright E2E output (issue #673)
+/test-results/
+/playwright-report/
+/blob-report/
+
 # Kiro IDE directory
 .kiro/
 

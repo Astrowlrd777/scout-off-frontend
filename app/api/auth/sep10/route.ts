@@ -1,4 +1,4 @@
-import { WebAuth, Networks } from '@stellar/stellar-sdk';
+import { WebAuth, Networks, Keypair } from '@stellar/stellar-sdk';
 import { NextRequest, NextResponse } from 'next/server';
 
 function getAllowedOrigin(req: NextRequest): string | null {
@@ -45,9 +45,14 @@ export async function POST(req: NextRequest) {
       : Networks.TESTNET;
 
   try {
+    // verifyChallengeTxSigners' second argument is the server's *public* key
+    // (compared directly against the challenge transaction's source
+    // account) — passing the raw secret seed here always fails with
+    // "the transaction source account is not equal to the server's account".
+    const serverAccountId = Keypair.fromSecret(serverKey).publicKey();
     WebAuth.verifyChallengeTxSigners(
       signedXdr,
-      serverKey,
+      serverAccountId,
       network,
       [publicKey],
       homeDomain,
