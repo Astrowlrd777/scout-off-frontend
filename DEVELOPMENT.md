@@ -331,3 +331,4 @@ Net effect: the "You were referred" banner on `/scout/subscribe` renders based p
 - [README.md](README.md) — project overview, architecture, and smart contract API
 - [CONTRIBUTING.md](CONTRIBUTING.md) — contribution workflow and branch conventions
 - [DEPLOYMENT.md](DEPLOYMENT.md) — production deployment notes (Vercel, analytics)
+- [e2e/README.md](e2e/README.md) — Playwright E2E suite and wallet-mocking harness
