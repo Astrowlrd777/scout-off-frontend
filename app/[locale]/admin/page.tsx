@@ -8,6 +8,7 @@ import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import EmptyState from '@/components/ui/EmptyState';
 import TransactionStatus from '@/components/ui/TransactionStatus';
 import AdminDashboardSkeleton from '@/components/admin/AdminDashboardSkeleton';
+import FraudFlagsPanel from '@/components/admin/FraudFlagsPanel';
 import type { TxStatus } from '@/components/ui/TransactionStatus';
 import {
   getValidators,
@@ -419,6 +420,8 @@ function AdminDashboardContent() {
           </>
         )}
       </section>
+
+      <FraudFlagsPanel />
 
       {dialog && (
         <ConfirmDialog

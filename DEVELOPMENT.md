@@ -288,3 +288,4 @@ npm run lint
 - [README.md](README.md) — project overview, architecture, and smart contract API
 - [CONTRIBUTING.md](CONTRIBUTING.md) — contribution workflow and branch conventions
 - [DEPLOYMENT.md](DEPLOYMENT.md) — production deployment notes (Vercel, analytics)
+- [docs/fraud-detection.md](docs/fraud-detection.md) — referral/pay-to-contact abuse heuristics and admin flag review

@@ -110,4 +110,16 @@ export const redeemReferralCode = async (code: string): Promise<boolean> => {
   return res.ok;
 };
 
+// Fraud / abuse detection (admin only)
+import type { FraudFlag } from '@/types';
+
+export const fetchFraudFlags = async (): Promise<{
+  flags: FraudFlag[];
+  warnings: string[];
+}> => {
+  const res = await fetch('/api/admin/fraud-flags');
+  if (!res.ok) throw new Error('Failed to fetch fraud flags');
+  return res.json();
+};
+
 export default api;
