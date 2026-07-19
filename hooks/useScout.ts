@@ -33,7 +33,9 @@ export function useScout() {
     async (key: string) => {
       if (key.startsWith('scout:name:')) {
         const name = key.slice('scout:name:'.length);
-        return searchPlayersByName(name);
+        const results = await searchPlayersByName(name);
+        // Filter out archived profiles
+        return results.filter((p) => !p.archived);
       }
       // contract filter key: "scout:contract:{region}:{position}:{minLevel}"
       const parts = key.split(':');
@@ -41,7 +43,8 @@ export function useScout() {
       const position = parts[3] ?? '';
       const minLevel = Number(parts[4] ?? 0);
       const results = await filterPlayers(region, position, minLevel);
-      return results as Player[];
+      // Filter out archived profiles
+      return (results as Player[]).filter((p) => !p.archived);
     },
     {
       dedupingInterval: 60_000,

@@ -42,6 +42,7 @@ export interface Player {
   progressLevel: ProgressLevel;
   milestones: Milestone[];
   createdAt: number;
+  archived?: boolean; // Off-chain archive flag; defaults to false
 }
 
 // ── Validator ────────────────────────────────────────────────────────────────────

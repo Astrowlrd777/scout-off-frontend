@@ -16,6 +16,12 @@ export const searchPlayersByName = (name: string): Promise<Player[]> =>
 export const fetchPlayerComments = (playerId: string) =>
   api.get(`/players/${playerId}/comments`).then((r) => r.data);
 
+export const archivePlayerProfile = (playerId: string): Promise<Player> =>
+  api.post(`/players/${playerId}/archive`).then((r) => r.data);
+
+export const unarchivePlayerProfile = (playerId: string): Promise<Player> =>
+  api.post(`/players/${playerId}/unarchive`).then((r) => r.data);
+
 // Scouts
 export const fetchScoutProfile = (scoutId: string) =>
   api.get(`/scouts/${scoutId}`).then((r) => r.data);
