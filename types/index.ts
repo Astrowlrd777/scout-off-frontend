@@ -42,6 +42,9 @@ export interface Player {
   progressLevel: ProgressLevel;
   milestones: Milestone[];
   createdAt: number;
+  archived?: boolean; // Off-chain archive flag; defaults to false
+  backupWallet?: string; // Optional recovery/backup wallet address
+  backupWalletVerifiedAt?: number; // Timestamp when backup was verified with primary wallet signature
 }
 
 // ── Validator ────────────────────────────────────────────────────────────────────
@@ -130,6 +133,18 @@ export interface ReferralCode {
 export interface ReferralStats {
   totalCodes: number;
   successfulReferrals: number;
+}
+
+export interface TopReferrer {
+  scoutWallet: string;
+  totalCodes: number;
+  successfulReferrals: number;
+}
+
+export interface ReferralOverview {
+  totalCodes: number;
+  totalSuccessfulReferrals: number;
+  topReferrers: TopReferrer[];
 }
 
 // ── Contract call helpers ─────────────────────────────────────────────────────

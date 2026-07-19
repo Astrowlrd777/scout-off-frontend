@@ -18,3 +18,6 @@ storybook-static/
 
 # Pull request description files
 pr-*.md
+
+# Local referral-store data (lib/referralStore.ts writes here in dev)
+.data/

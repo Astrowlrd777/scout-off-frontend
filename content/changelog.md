@@ -4,6 +4,18 @@
 
 Notable updates and improvements to the platform.
 
+## Scout referral/invite system - 2026-07-17
+
+### Added
+
+- Players can now invite friends to the scout dashboard through a referral system. Generate personalized invite links, track referral counts, and redeem rewards when friends join.
+
+## Pull-to-refresh gesture support - 2026-07-17
+
+### Added
+
+- Mobile dashboard views now support pull-to-refresh gestures for quick content updates.
+
 ## Accessibility and discovery updates - 2026-06-30
 
 ### Added

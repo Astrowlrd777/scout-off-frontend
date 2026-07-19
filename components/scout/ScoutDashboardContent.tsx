@@ -8,6 +8,7 @@ import { useScout } from '@/hooks/useScout';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useOnboardingTour } from '@/hooks/useOnboardingTour';
 import { getPlayer } from '@/lib/contract';
 import PlayerCard from '@/components/PlayerCard';
 import PlayerCardSkeleton from '@/components/PlayerCardSkeleton';
@@ -15,8 +16,11 @@ import PlayerFilterForm from '@/components/scout/PlayerFilterForm';
 import EmptyState from '@/components/ui/EmptyState';
 import Spinner from '@/components/ui/Spinner';
 import ReferralPanel from '@/components/scout/ReferralPanel';
+import OnboardingTour from '@/components/ui/OnboardingTour';
+import { scoutTourSteps, SCOUT_TOUR_ID } from '@/lib/tourSteps';
 import type { Player, PlayerFilter } from '@/types';
 import PullToRefresh from '@/components/ui/PullToRefresh';
+import ScrollToTop from '@/components/ui/ScrollToTop';
 
 const PAGE_SIZE = 12;
 
@@ -30,6 +34,8 @@ export default function ScoutDashboardContent() {
     useRequireSubscription();
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  const tour = useOnboardingTour(SCOUT_TOUR_ID, scoutTourSteps, publicKey);
 
   const { players, loading, search, searchByName, refetch } = useScout();
   const { subscription } = useSubscription();
@@ -146,6 +152,17 @@ export default function ScoutDashboardContent() {
 
   return (
     <PullToRefresh onRefresh={refetch} isLoading={loading}>
+      <OnboardingTour
+        isVisible={tour.isVisible}
+        currentStep={tour.currentStep}
+        currentStepData={tour.currentStepData}
+        steps={tour.steps}
+        onNext={tour.nextStep}
+        onPrev={tour.prevStep}
+        onDismiss={tour.dismissTour}
+        onSkip={tour.skipTour}
+        onComplete={tour.completeTour}
+      />
       <div className="flex flex-col gap-8">
       <h1 className="text-3xl font-bold text-white">Scout Dashboard</h1>
 
@@ -160,7 +177,10 @@ export default function ScoutDashboardContent() {
 
           if (daysRemaining <= 0) {
             return (
-              <div className="flex items-center gap-3 rounded-xl border border-red-500 bg-brand-card px-4 py-3 text-sm">
+              <div
+                data-tour="subscription-status"
+                className="flex items-center gap-3 rounded-xl border border-red-500 bg-brand-card px-4 py-3 text-sm"
+              >
                 <span className="text-red-400">Subscription expired</span>
                 <Link
                   href="/scout/subscribe"
@@ -174,7 +194,10 @@ export default function ScoutDashboardContent() {
 
           if (daysRemaining <= 7) {
             return (
-              <div className="flex items-center gap-3 rounded-xl border border-orange-400 bg-brand-card px-4 py-3 text-sm text-gray-200">
+              <div
+                data-tour="subscription-status"
+                className="flex items-center gap-3 rounded-xl border border-orange-400 bg-brand-card px-4 py-3 text-sm text-gray-200"
+              >
                 <span>
                   {tierLabel} — expires in {daysRemaining} day
                   {daysRemaining !== 1 ? 's' : ''}
@@ -190,7 +213,10 @@ export default function ScoutDashboardContent() {
           }
 
           return (
-            <div className="flex items-center gap-3 rounded-xl border border-brand-green bg-brand-card px-4 py-3 text-sm text-gray-200">
+            <div
+              data-tour="subscription-status"
+              className="flex items-center gap-3 rounded-xl border border-brand-green bg-brand-card px-4 py-3 text-sm text-gray-200"
+            >
               {tierLabel} — {daysRemaining} days remaining
             </div>
           );
@@ -198,7 +224,10 @@ export default function ScoutDashboardContent() {
 
       <ReferralPanel />
 
-      <div className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-3">
+      <div
+        className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-3"
+        data-tour="search-section"
+      >
         <label
           className="text-sm font-medium text-gray-300"
           htmlFor="wallet-search"
@@ -271,6 +300,7 @@ export default function ScoutDashboardContent() {
 
       <div
         className={`bg-brand-card border border-gray-800 rounded-xl p-5${nameQuery ? ' opacity-50 pointer-events-none' : ''}`}
+        data-tour="filter-section"
       >
         <PlayerFilterForm onSearch={handleSearch} resetKey={resetKey} />
       </div>
@@ -374,6 +404,7 @@ export default function ScoutDashboardContent() {
         </>
       )}
     </div>
+    <ScrollToTop />
     </PullToRefresh>
   );
 }
