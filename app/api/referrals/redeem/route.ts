@@ -60,8 +60,14 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const ok = redeemCode(body.code, sessionCookie);
-  if (!ok) {
+  const result = redeemCode(body.code, sessionCookie);
+  if (!result.success) {
+    if (result.reason === 'self_redemption') {
+      return NextResponse.json(
+        { error: 'You cannot redeem your own referral code.' },
+        { status: 400 },
+      );
+    }
     return NextResponse.json(
       { error: 'Invalid or already redeemed code' },
       { status: 404 },
