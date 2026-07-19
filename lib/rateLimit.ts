@@ -15,7 +15,7 @@ export interface RateLimitResult {
 export function checkRateLimit(
   key: string,
   limit: number,
-  windowMs: number
+  windowMs: number,
 ): RateLimitResult {
   const now = Date.now();
   const win = store.get(key);
@@ -27,7 +27,10 @@ export function checkRateLimit(
   }
 
   if (win.count >= limit) {
-    return { allowed: false, retryAfter: Math.ceil((win.resetAt - now) / 1000) };
+    return {
+      allowed: false,
+      retryAfter: Math.ceil((win.resetAt - now) / 1000),
+    };
   }
 
   win.count += 1;

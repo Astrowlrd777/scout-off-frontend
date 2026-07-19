@@ -1,4 +1,10 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import RevokeForm from '@/components/validator/RevokeForm';
@@ -240,7 +246,9 @@ describe('RevokeForm – accessibility', () => {
       const errorSummary = screen.getByRole('alert', {
         name: /revocation error/i,
       });
-      expect(document.activeElement).toBe(errorSummary);
+      // Focus moves via setTimeout(..., 0) in the component, so wait for it
+      // rather than asserting immediately after the click.
+      await waitFor(() => expect(document.activeElement).toBe(errorSummary));
     });
   });
 });

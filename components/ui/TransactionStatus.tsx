@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import Spinner from '@/components/ui/Spinner';
+import { parseContractError } from '@/lib/contractErrorMessage';
 
 export type TxStatus = 'pending' | 'success' | 'error';
 
@@ -9,6 +10,8 @@ export interface TransactionStatusProps {
   status: TxStatus | null;
   txHash?: string | null;
   error?: string | null;
+  /** XLM amount deducted by this transaction, e.g. "5.00". Shown on success. */
+  feePaid?: string;
   /** Milliseconds before success state auto-hides. Defaults to 8000. */
   autoHideMs?: number;
   onHide?: () => void;
@@ -24,6 +27,7 @@ export default function TransactionStatus({
   status,
   txHash,
   error,
+  feePaid,
   autoHideMs = 8000,
   onHide,
 }: TransactionStatusProps) {
@@ -69,6 +73,12 @@ export default function TransactionStatus({
           ✓
         </span>
         <span className="text-gray-200">Transaction confirmed.</span>
+        {feePaid && (
+          <span className="text-gray-400">
+            Fee paid:{' '}
+            <span className="text-white font-medium">{feePaid} XLM</span>
+          </span>
+        )}
         {txHash && (
           <a
             href={explorerUrl(txHash)}
@@ -77,7 +87,7 @@ export default function TransactionStatus({
             className="ml-auto text-brand-green underline hover:opacity-80 transition"
             aria-label="View transaction on Stellar Expert"
           >
-            View on Explorer
+            View on Stellar Expert →
           </a>
         )}
       </div>
@@ -85,6 +95,7 @@ export default function TransactionStatus({
   }
 
   // error
+  const readableError = error ? parseContractError(error) : null;
   return (
     <div
       role="alert"
@@ -94,7 +105,9 @@ export default function TransactionStatus({
       <span className="text-red-500 mt-0.5" aria-hidden="true">
         ✕
       </span>
-      <span className="text-red-300">{error ?? 'Transaction failed.'}</span>
+      <span className="text-red-300">
+        {readableError ?? 'Transaction failed.'}
+      </span>
     </div>
   );
 }

@@ -1,4 +1,10 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import ApproveForm from '@/components/validator/ApproveForm';
@@ -96,9 +102,7 @@ describe('ApproveForm – accessibility', () => {
     it('associates the Evidence URL label with its input', () => {
       renderComponent();
       const label = screen.getByText('Evidence URL');
-      const input = screen.getByPlaceholderText(
-        'https://example.com/evidence',
-      );
+      const input = screen.getByPlaceholderText('https://example.com/evidence');
       expect(label).toHaveAttribute('for', 'approve-evidence-url');
       expect(input).toHaveAttribute('id', 'approve-evidence-url');
     });

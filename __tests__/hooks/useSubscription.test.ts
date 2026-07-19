@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import { renderHook, act } from '@testing-library/react';
+import { SWRConfig } from 'swr';
 import { useSubscription } from '@/hooks/useSubscription';
 
 // Mock useWallet
@@ -15,11 +16,22 @@ jest.mock('@/lib/contract', () => ({
 }));
 
 import { useWallet } from '@/hooks/useWallet';
-import { getSubscription, subscribe as contractSubscribe } from '@/lib/contract';
+import {
+  getSubscription,
+  subscribe as contractSubscribe,
+} from '@/lib/contract';
 
 const mockUseWallet = useWallet as jest.Mock;
 const mockGetSubscription = getSubscription as jest.Mock;
 const mockSubscribe = contractSubscribe as jest.Mock;
+
+function wrapper({ children }: { children: React.ReactNode }) {
+  return React.createElement(
+    SWRConfig,
+    { value: { provider: () => new Map(), shouldRetryOnError: false } },
+    children,
+  );
+}
 
 describe('useSubscription', () => {
   beforeEach(() => {
@@ -37,7 +49,7 @@ describe('useSubscription', () => {
     };
     mockGetSubscription.mockResolvedValue(mockSubscription);
 
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderHook(() => useSubscription(), { wrapper });
 
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -57,7 +69,7 @@ describe('useSubscription', () => {
     };
     mockGetSubscription.mockResolvedValue(mockSubscription);
 
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderHook(() => useSubscription(), { wrapper });
 
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -68,7 +80,11 @@ describe('useSubscription', () => {
 
   test('subscribe(tier) calls subscribe from contract then fetchSubscription', async () => {
     const mockPublicKey = 'GABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890';
-    mockUseWallet.mockReturnValue({ publicKey: mockPublicKey });
+    const mockSignAndSubmit = jest.fn();
+    mockUseWallet.mockReturnValue({
+      publicKey: mockPublicKey,
+      signAndSubmit: mockSignAndSubmit,
+    });
 
     const mockSubscription = {
       scout: mockPublicKey,
@@ -78,7 +94,7 @@ describe('useSubscription', () => {
     mockSubscribe.mockResolvedValue(undefined);
     mockGetSubscription.mockResolvedValue(mockSubscription);
 
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderHook(() => useSubscription(), { wrapper });
 
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -88,7 +104,11 @@ describe('useSubscription', () => {
       await result.current.subscribe('pro');
     });
 
-    expect(mockSubscribe).toHaveBeenCalledWith(mockPublicKey, 'pro');
+    expect(mockSubscribe).toHaveBeenCalledWith(
+      mockPublicKey,
+      'pro',
+      mockSignAndSubmit,
+    );
     expect(mockGetSubscription).toHaveBeenCalledTimes(2);
   });
 
@@ -99,7 +119,7 @@ describe('useSubscription', () => {
     mockSubscribe.mockRejectedValue(new Error('InsufficientFee'));
     mockGetSubscription.mockResolvedValue(null);
 
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderHook(() => useSubscription(), { wrapper });
 
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));

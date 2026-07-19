@@ -6,15 +6,15 @@ This guide walks you from a freshly cloned repository to a fully running local s
 
 ## Prerequisites
 
-| Tool                         | Version / Requirement                                       | Check                          |
-| ---------------------------- | ----------------------------------------------------------- | ------------------------------ |
-| **Node.js**                  | 20.x or later                                               | `node --version`               |
-| **npm**                      | 10.x or later (bundled with Node)                           | `npm --version`                |
-| **Rust** (stable)            | 1.70+                                                       | `rustc --version`              |
-| **wasm32 target**            | `wasm32-unknown-unknown`                                    | `rustup target list --installed` |
-| **Stellar CLI**              | Latest (`stellar --version` ≥ 22.0)                         | `stellar --version`            |
-| **Freighter** (browser ext.) | [Freighter Wallet](https://www.freighter.app/) in Chrome/Firefox | Check extensions list    |
-| **Git**                      | Any recent version                                          | `git --version`                |
+| Tool                         | Version / Requirement                                            | Check                            |
+| ---------------------------- | ---------------------------------------------------------------- | -------------------------------- |
+| **Node.js**                  | 24.x (matches CI — use `nvm use` if you have nvm)                | `node --version`                 |
+| **npm**                      | 10.x or later (bundled with Node)                                | `npm --version`                  |
+| **Rust** (stable)            | 1.70+                                                            | `rustc --version`                |
+| **wasm32 target**            | `wasm32-unknown-unknown`                                         | `rustup target list --installed` |
+| **Stellar CLI**              | Latest (`stellar --version` ≥ 22.0)                              | `stellar --version`              |
+| **Freighter** (browser ext.) | [Freighter Wallet](https://www.freighter.app/) in Chrome/Firefox | Check extensions list            |
+| **Git**                      | Any recent version                                               | `git --version`                  |
 
 ### Install missing prerequisites
 
@@ -58,6 +58,8 @@ projects/
 
 ```bash
 cd scout-off-frontend
+# If you use nvm, switch to the project's Node version first:
+nvm use
 npm install
 ```
 
@@ -75,18 +77,18 @@ cp .env.example .env.local
 
 Open `.env.local` and fill in the required values. At minimum you need these for local dev:
 
-| Variable                   | Value                                          |
-| -------------------------- | ---------------------------------------------- |
-| `NEXT_PUBLIC_NETWORK`      | `testnet`                                      |
-| `NEXT_PUBLIC_HORIZON_URL`  | `https://horizon-testnet.stellar.org`          |
-| `NEXT_PUBLIC_SOROBAN_RPC`  | `https://soroban-testnet.stellar.org`          |
-| `NEXT_PUBLIC_API_URL`      | `http://localhost:4000`                        |
-| `NEXT_PUBLIC_CONTRACT_ID`  | _Leave blank for now; fill in after step 6_   |
-| `NEXT_PUBLIC_ADMIN_ADDRESS`| Your testnet wallet public key                |
-| `PINATA_API_KEY`           | _Optional for local dev (IPFS uploads)_        |
-| `PINATA_SECRET`            | _Optional for local dev (IPFS uploads)_        |
-| `STELLAR_SECRET_KEY`       | Your testnet wallet secret key                |
-| `NEXT_PUBLIC_APP_URL`      | `http://localhost:3000`                        |
+| Variable                    | Value                                       |
+| --------------------------- | ------------------------------------------- |
+| `NEXT_PUBLIC_NETWORK`       | `testnet`                                   |
+| `NEXT_PUBLIC_HORIZON_URL`   | `https://horizon-testnet.stellar.org`       |
+| `NEXT_PUBLIC_SOROBAN_RPC`   | `https://soroban-testnet.stellar.org`       |
+| `NEXT_PUBLIC_API_URL`       | `http://localhost:4000`                     |
+| `NEXT_PUBLIC_CONTRACT_ID`   | _Leave blank for now; fill in after step 6_ |
+| `NEXT_PUBLIC_ADMIN_ADDRESS` | Your testnet wallet public key              |
+| `PINATA_API_KEY`            | _Optional for local dev (IPFS uploads)_     |
+| `PINATA_SECRET`             | _Optional for local dev (IPFS uploads)_     |
+| `STELLAR_SECRET_KEY`        | Your testnet wallet secret key              |
+| `NEXT_PUBLIC_APP_URL`       | `http://localhost:3000`                     |
 
 Validate that all expected variables are declared:
 
@@ -205,6 +207,7 @@ Missing from .env.example: SOME_VAR_NAME
 This means a `process.env.SOME_VAR_NAME` is referenced in source code (`.ts` / `.tsx` files) but is not declared in `.env.example`.
 
 **Solution:**
+
 - If it's a new variable you need: add it to `.env.example` and `.env.local` with a value.
 - If it's a stale reference: search for the variable in the codebase and remove it, or add it to `.env.example`.
 
@@ -223,6 +226,7 @@ Resource temporarily unavailable
 Or wallet operations show `"account not found"` / `"insufficient balance"`.
 
 **Solution:**
+
 1. Verify your account exists on testnet: visit `https://horizon-testnet.stellar.org/accounts/<YOUR_PUBLIC_KEY>`.
 2. If you get a 404, the account hasn't been created yet — fund it via Friendbot:
    ```
@@ -238,6 +242,7 @@ Or wallet operations show `"account not found"` / `"insufficient balance"`.
 This happens when one component of the stack is on the wrong network.
 
 **Checklist:**
+
 1. `.env.local` → `NEXT_PUBLIC_NETWORK=testnet` (not `mainnet`)
 2. `.env.local` → `NEXT_PUBLIC_HORIZON_URL=https://horizon-testnet.stellar.org`
 3. `.env.local` → `NEXT_PUBLIC_SOROBAN_RPC=https://soroban-testnet.stellar.org`
@@ -280,8 +285,50 @@ npm run lint
 
 ---
 
+## Referral Links (`?ref=CODE`)
+
+The scout referral program passes a referral code between two independent parts of the app via a plain query string — there's no shared constant or type enforcing this contract, so it's easy to break by accident. This section documents the current, verified behavior end to end.
+
+### Where the code is generated
+
+`components/scout/ReferralPanel.tsx` (rendered inside the scout dashboard) lets a scout generate an invite link:
+
+1. On "Generate Invite Link", it calls `generateReferralCode()` (`lib/api.ts`), which `POST`s to `app/api/referrals/generate/route.ts`.
+2. The route requires an authenticated `session` cookie and calls `generateCode()` in `lib/referralStore.ts`, which creates a random code in the form `SCOUT-XXXXXX` and persists `{ code, scoutWallet, createdAt, usedBy: null, usedAt: null }` to a JSON-backed store.
+3. `ReferralPanel` builds the shareable URL from the returned code:
+
+   ```tsx
+   const inviteUrl = `${baseUrl}/scout/subscribe?ref=${ref.code}`;
+   ```
+
+   `baseUrl` is derived from `window.location`, and the URL does **not** include a locale segment (e.g. `/en/...`) even though the app is served under `app/[locale]/...`.
+
+### Where the code must be read and redeemed
+
+`app/[locale]/scout/subscribe/page.tsx` is the sole consumer:
+
+1. It reads the param with `useSearchParams().get('ref')` and shows a banner ("You were referred by a colleague! Your referral will be credited automatically when you subscribe.") whenever `ref` is present — this banner does **not** verify the code is real.
+2. On successful subscription (`handleSubscribe`), if a `referralCode` was present it fires `redeemReferralCode(referralCode)` (`lib/api.ts`), which `POST`s to `app/api/referrals/redeem/route.ts`. That route calls `redeemCode(code, sessionCookie)` in `lib/referralStore.ts`, which looks up an unused code with a matching string and, if found, marks it `usedBy`/`usedAt`.
+
+If a future contributor changes or removes the subscribe page's `ref` handling, referral codes will still be generated and shared but will never be redeemed — there is no other call site that consumes this param.
+
+### Behavior on an invalid, expired, or malformed code
+
+As implemented today, redemption failures are silent and have no effect on the subscribe flow:
+
+- **Client:** the redeem call is fire-and-forget — `redeemReferralCode(referralCode).catch(() => {})` — so any failure (network error, invalid code, unauthenticated request) is swallowed with no UI feedback or retry.
+- **Server:** `redeem/route.ts` does return `404 { error: 'Invalid or already redeemed code' }` when no matching unused code exists, but since the client discards the response body, this is never surfaced to the user.
+- **Expiration:** codes never expire — there is no `expiresAt`/TTL field on a referral code and `redeemCode` never checks age.
+- **Malformed input:** there is no format validation (e.g. a `SCOUT-` prefix check); any string is sent as-is, gated only by the "does an unused code with this exact string exist" lookup.
+- **Self-referral:** `redeemCode` never compares the redeeming session against the code's `scoutWallet`, so nothing currently prevents a scout from redeeming their own generated code.
+
+Net effect: the "You were referred" banner on `/scout/subscribe` renders based purely on the presence of `?ref=`, regardless of whether the code turns out to be valid — a bogus or already-used `ref` value shows the same "will be credited automatically" message as a real one, and the user is never told redemption failed.
+
+---
+
 ## Related Documentation
 
 - [README.md](README.md) — project overview, architecture, and smart contract API
 - [CONTRIBUTING.md](CONTRIBUTING.md) — contribution workflow and branch conventions
 - [DEPLOYMENT.md](DEPLOYMENT.md) — production deployment notes (Vercel, analytics)
+- [e2e/README.md](e2e/README.md) — Playwright E2E suite and wallet-mocking harness

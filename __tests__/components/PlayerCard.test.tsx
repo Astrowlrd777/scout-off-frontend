@@ -36,7 +36,13 @@ jest.mock('next/image', () => ({
     className?: string;
   }) => (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={src} alt={alt} width={width} height={height} className={className} />
+    <img
+      src={src}
+      alt={alt}
+      width={width}
+      height={height}
+      className={className}
+    />
   ),
 }));
 
@@ -49,6 +55,9 @@ jest.mock('next/navigation', () => ({
 
 jest.mock('swr', () => ({
   __esModule: true,
+  default: jest
+    .fn()
+    .mockReturnValue({ data: undefined, error: undefined, isLoading: false }),
   mutate: jest.fn(),
 }));
 
@@ -116,7 +125,9 @@ describe('PlayerCard — rendering', () => {
   it('renders position and region in the details text', () => {
     render(<PlayerCard player={mockPlayer} />);
     expect(
-      screen.getByText(`${mockPlayer.vitals.position} · ${mockPlayer.vitals.region}`),
+      screen.getByText(
+        `${mockPlayer.vitals.position} · ${mockPlayer.vitals.region}`,
+      ),
     ).toBeInTheDocument();
   });
 
@@ -124,7 +135,9 @@ describe('PlayerCard — rendering', () => {
     render(<PlayerCard player={mockPlayer} />);
     const progressLabel = screen.getByRole('status');
     expect(progressLabel).toBeInTheDocument();
-    expect(progressLabel).toHaveTextContent(PROGRESS_LABELS[mockPlayer.progressLevel]);
+    expect(progressLabel).toHaveTextContent(
+      PROGRESS_LABELS[mockPlayer.progressLevel],
+    );
     expect(progressLabel).toHaveClass('text-yellow-800');
   });
 
@@ -146,7 +159,9 @@ describe('PlayerCard — rendering', () => {
 
   it('shows a placeholder when no IPFS image CID is set', () => {
     render(<PlayerCard player={{ ...mockPlayer, ipfsHash: '' }} />);
-    expect(screen.queryByAltText(mockPlayer.vitals.name)).not.toBeInTheDocument();
+    expect(
+      screen.queryByAltText(mockPlayer.vitals.name),
+    ).not.toBeInTheDocument();
   });
 });
 

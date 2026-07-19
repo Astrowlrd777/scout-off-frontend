@@ -18,14 +18,16 @@ export const Default: Story = {
 export const WithDescription: Story = {
   args: {
     title: 'No Players Found',
-    description: 'No players match your current filters. Try adjusting your region or position criteria.',
+    description:
+      'No players match your current filters. Try adjusting your region or position criteria.',
   },
 };
 
 export const WithAction: Story = {
   args: {
     title: 'No Subscription Yet',
-    description: 'Subscribe to a plan to unlock player contact details and advanced search filters.',
+    description:
+      'Subscribe to a plan to unlock player contact details and advanced search filters.',
     action: { label: 'Subscribe Now', onClick: fn() },
   },
 };

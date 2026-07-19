@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { Player } from '@/types';
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000',
@@ -9,8 +10,26 @@ const api = axios.create({
 export const fetchPlayerProfile = (playerId: string) =>
   api.get(`/players/${playerId}`).then((r) => r.data);
 
+export const searchPlayersByName = (name: string): Promise<Player[]> =>
+  api.get('/players/search', { params: { name } }).then((r) => r.data);
+
 export const fetchPlayerComments = (playerId: string) =>
   api.get(`/players/${playerId}/comments`).then((r) => r.data);
+
+export const archivePlayerProfile = (playerId: string): Promise<Player> =>
+  api.post(`/players/${playerId}/archive`).then((r) => r.data);
+
+export const unarchivePlayerProfile = (playerId: string): Promise<Player> =>
+  api.post(`/players/${playerId}/unarchive`).then((r) => r.data);
+
+export const linkBackupWallet = (playerId: string, backupWallet: string, signature: string): Promise<Player> =>
+  api.post(`/players/${playerId}/backup-wallet/link`, { backupWallet, signature }).then((r) => r.data);
+
+export const removeBackupWallet = (playerId: string): Promise<Player> =>
+  api.post(`/players/${playerId}/backup-wallet/remove`).then((r) => r.data);
+
+export const claimAccountWithBackupWallet = (primaryWallet: string, backupWallet: string): Promise<{ playerId: string; wallet: string }> =>
+  api.post('/players/recovery/claim', { primaryWallet, backupWallet }).then((r) => r.data);
 
 // Scouts
 export const fetchScoutProfile = (scoutId: string) =>
@@ -36,5 +55,87 @@ export const postChatMessage = (
   message: string,
   sender: string,
 ) => api.post(`/chat/${roomId}`, { message, sender }).then((r) => r.data);
+
+// Admin activity feed
+export type ActivityEventType =
+  | 'player_registered'
+  | 'milestone_approved'
+  | 'milestone_revoked'
+  | 'scout_subscribed'
+  | 'player_contacted'
+  | 'fees_withdrawn';
+
+export interface ActivityEvent {
+  id: string;
+  type: ActivityEventType;
+  timestamp: number;
+  actor: string;
+  subjectId?: string;
+}
+
+export const fetchActivityEvents = (
+  page = 1,
+  pageSize = 20,
+): Promise<{ events: ActivityEvent[]; total: number }> =>
+  api
+    .get('/admin/activity', { params: { page, pageSize } })
+    .then((r) => r.data);
+
+// Validators
+/**
+ * Fetches the number of milestones approved by a specific validator from the
+ * indexer. Returns `null` when the indexer is unavailable or returns an
+ * unexpected response so callers can fall back gracefully.
+ */
+export const fetchValidatorMilestoneCount = async (
+  validatorAddress: string,
+): Promise<number | null> => {
+  try {
+    const data = await api
+      .get(`/validators/${encodeURIComponent(validatorAddress)}/stats`)
+      .then((r) => r.data);
+    const count = data?.milestoneCount ?? data?.milestone_count;
+    return typeof count === 'number' ? count : null;
+  } catch {
+    return null;
+  }
+};
+
+// Referrals
+import type { ReferralCode, ReferralStats, ReferralOverview } from '@/types';
+
+export const generateReferralCode = async (): Promise<ReferralCode> => {
+  const res = await fetch('/api/referrals/generate', { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to generate referral code');
+  return res.json();
+};
+
+export const getReferralStats = async (): Promise<ReferralStats> => {
+  const res = await fetch('/api/referrals/count');
+  if (!res.ok) throw new Error('Failed to fetch referral stats');
+  return res.json();
+};
+
+export const listReferralCodes = async (): Promise<ReferralCode[]> => {
+  const res = await fetch('/api/referrals/list');
+  if (!res.ok) throw new Error('Failed to fetch referral codes');
+  const data = await res.json();
+  return data.codes;
+};
+
+export const redeemReferralCode = async (code: string): Promise<boolean> => {
+  const res = await fetch('/api/referrals/redeem', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code }),
+  });
+  return res.ok;
+};
+
+export const getReferralOverview = async (): Promise<ReferralOverview> => {
+  const res = await fetch('/api/admin/referrals');
+  if (!res.ok) throw new Error('Failed to fetch referral overview');
+  return res.json();
+};
 
 export default api;

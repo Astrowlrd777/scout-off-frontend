@@ -1,7 +1,8 @@
 'use client';
 import { useState, useCallback } from 'react';
-import useSWR from 'swr';
+import useSWR, { mutate as globalMutate } from 'swr';
 import { filterPlayers } from '@/lib/contract';
+import { searchPlayersByName } from '@/lib/api';
 import type { Player, PlayerFilter } from '@/types';
 
 /**
@@ -9,11 +10,19 @@ import type { Player, PlayerFilter } from '@/types';
  *   "scout:search:{region}:{position}:{minLevel}"
  *
  * All filter dimensions are encoded in the key so different filter combos
- * get separate caches. SWR deduplicates concurrent requests for the same
- * key, preventing duplicate RPC calls.
+ * get separate cache entries. SWR deduplicates concurrent requests for the
+ * same key, preventing duplicate RPC calls within the deduplication window.
  */
-function scoutSearchKey(filter: PlayerFilter): string {
+export function scoutSearchKey(filter: PlayerFilter): string {
   return `scout:search:${filter.region ?? ''}:${filter.position ?? ''}:${filter.minLevel ?? 0}`;
+}
+
+/**
+ * Imperatively invalidate a specific scout search result.
+ * Call after a write operation that changes the player list (e.g. registration).
+ */
+export function invalidateScoutSearch(filter: PlayerFilter): Promise<void> {
+  return globalMutate(scoutSearchKey(filter)) as Promise<void>;
 }
 
 export function useScout() {
@@ -22,25 +31,35 @@ export function useScout() {
   const { data, error, isValidating } = useSWR<Player[]>(
     searchKey,
     async (key: string) => {
+      if (key.startsWith('scout:name:')) {
+        const name = key.slice('scout:name:'.length);
+        const results = await searchPlayersByName(name);
+        // Filter out archived profiles
+        return results.filter((p) => !p.archived);
+      }
+      // contract filter key: "scout:contract:{region}:{position}:{minLevel}"
       const parts = key.split(':');
       const region = parts[2] ?? '';
       const position = parts[3] ?? '';
       const minLevel = Number(parts[4] ?? 0);
       const results = await filterPlayers(region, position, minLevel);
-      return results as Player[];
+      // Filter out archived profiles
+      return (results as Player[]).filter((p) => !p.archived);
     },
     {
-      dedupingInterval: 60_000, // 60-second stale time — no duplicate RPC calls within this window
+      dedupingInterval: 60_000,
       revalidateOnFocus: false,
       errorRetryCount: 2,
     },
   );
 
-  /** Trigger a search with the given filter. The returned loading/isValidating
-   *  state can be observed via the reactive `loading` property. */
+  /** Trigger a search with the given filter. */
   const search = useCallback((filter: PlayerFilter) => {
-    const key = scoutSearchKey(filter);
-    setSearchKey(key);
+    setSearchKey(scoutSearchKey(filter));
+  }, []);
+
+  const searchByName = useCallback((name: string) => {
+    setSearchKey(`scout:name:${name}`);
   }, []);
 
   return {
@@ -48,5 +67,7 @@ export function useScout() {
     loading: isValidating,
     error: error?.message ?? null,
     search,
+    searchByName,
+    refetch: () => mutate(),
   };
 }

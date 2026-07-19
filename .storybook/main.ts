@@ -1,6 +1,5 @@
 import type { StorybookConfig } from '@storybook/react-vite';
 import react from '@vitejs/plugin-react';
-import tailwindcss from '@tailwindcss/vite';
 import tsconfigPaths from 'vite-tsconfig-paths';
 
 const config: StorybookConfig = {
@@ -13,10 +12,7 @@ const config: StorybookConfig = {
   docs: { autodocs: 'tag' },
   async viteFinal(config) {
     config.plugins ??= [];
-    config.plugins.push(react(), tailwindcss(), tsconfigPaths());
-    // @tailwindcss/vite handles CSS; clear the PostCSS tailwindcss plugin to avoid
-    // the "moved to @tailwindcss/postcss" error from postcss.config.js
-    config.css = { ...config.css, postcss: { plugins: [] } };
+    config.plugins.push(react(), tsconfigPaths());
     return config;
   },
 };

@@ -1,11 +1,13 @@
 'use client';
 import { memo, useCallback, useEffect, useRef } from 'react';
+import useSWR from 'swr';
+import { getMilestoneHistory } from '@/lib/contract';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { mutate } from 'swr';
 import type { Player, ProgressLevel } from '@/types';
-import { PROGRESS_LABELS } from '@/types';
+import { getProgressLabel } from '@/lib/progress';
 import ProgressBar from './ProgressBar';
 import Badge from '@/components/ui/Badge';
 
@@ -23,11 +25,19 @@ const PREFETCH_DELAY_MS = 200;
 
 function PlayerCard({ player }: { player: Player }) {
   const { id, vitals, progressLevel, ipfsHash } = player;
+  const {
+    data: milestones,
+    error: milestonesError,
+    isLoading: milestonesLoading,
+  } = useSWR(`milestones:${id}`, () => getMilestoneHistory(id), {
+    revalidateOnFocus: false,
+  });
+  const milestoneCount = milestones ? milestones.length : 0;
   const router = useRouter();
 
   const href = `/player/${id}`;
   const cacheKey = `player:${id}`;
-  const levelLabel = PROGRESS_LABELS[progressLevel];
+  const levelLabel = getProgressLabel(progressLevel);
   const cardLabel = `${vitals.name}, ${vitals.position}, Level ${progressLevel} – ${levelLabel}`;
 
   const prefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -126,6 +136,18 @@ function PlayerCard({ player }: { player: Player }) {
           size="sm"
           className="mt-1"
         />
+        {/* Milestone count badge */}
+        {milestonesLoading ? (
+          <span className="inline-block h-4 w-12 bg-gray-600 rounded animate-pulse mt-1" />
+        ) : (
+          <Badge
+            role="none"
+            variant="region"
+            label={`${milestoneCount} milestones`}
+            size="sm"
+            className="mt-1"
+          />
+        )}
       </div>
 
       <ProgressBar level={progressLevel} />

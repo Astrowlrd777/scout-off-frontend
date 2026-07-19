@@ -28,7 +28,9 @@ export const UploadingState: Story = {
   name: 'Uploading (visual mock)',
   render: () => (
     <div className="space-y-1">
-      <label className="block text-sm font-medium text-gray-300">Highlight Reel</label>
+      <label className="block text-sm font-medium text-gray-300">
+        Highlight Reel
+      </label>
       <div className="relative">
         <input
           type="file"
@@ -44,7 +46,14 @@ export const UploadingState: Story = {
               fill="none"
               viewBox="0 0 24 24"
             >
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
               <path
                 className="opacity-75"
                 fill="currentColor"

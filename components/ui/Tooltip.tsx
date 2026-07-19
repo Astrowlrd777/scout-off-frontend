@@ -33,7 +33,11 @@ function computePosition(trigger: HTMLElement): Position {
 
 export default function Tooltip({ content, children }: TooltipProps) {
   const [visible, setVisible] = useState(false);
-  const [position, setPosition] = useState<Position>({ top: 0, left: 0, above: true });
+  const [position, setPosition] = useState<Position>({
+    top: 0,
+    left: 0,
+    above: true,
+  });
   const triggerRef = useRef<HTMLSpanElement>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tooltipId = useId();
@@ -62,7 +66,11 @@ export default function Tooltip({ content, children }: TooltipProps) {
   useEffect(() => () => clearHideTimer(), [clearHideTimer]);
 
   const tooltipStyle = position.above
-    ? { top: position.top, left: position.left, transform: 'translate(-50%, -100%)' }
+    ? {
+        top: position.top,
+        left: position.left,
+        transform: 'translate(-50%, -100%)',
+      }
     : { top: position.top, left: position.left, transform: 'translateX(-50%)' };
 
   return (

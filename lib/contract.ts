@@ -1,3 +1,16 @@
+/**
+ * CONTRACT WRITE PATTERN — source === signer invariant
+ *
+ * Every write function in this file MUST pass the same wallet address as both
+ * the Stellar transaction source account (fee-payer) and the on-chain
+ * authorization signer.  Allowing a different account to fee-bump a write
+ * transaction would let a third party craft a transaction that authorises an
+ * action on behalf of a signer they do not control.
+ *
+ * Enforcement: `buildTx` calls `assertSourceMatchesSigner` at entry; any
+ * mismatch throws before an RPC call is made.  All public `build*` / action
+ * helpers must therefore pass the same key as both arguments.
+ */
 import {
   Contract,
   nativeToScVal,
@@ -5,21 +18,72 @@ import {
   xdr,
   TransactionBuilder as TB,
   Account,
+  StrKey,
 } from '@stellar/stellar-sdk';
-import { rpc, NETWORK, BASE_FEE, signAndSubmitTx } from './stellar';
+import {
+  rpc,
+  NETWORK,
+  BASE_FEE,
+  signAndSubmitTx,
+  isValidStellarAddress,
+} from './stellar';
+import { ValidationError } from './errors';
 import type {
   PlayerVitals,
   ValidatorInfo,
   ContactDetails,
   SubscriptionTier,
   TrialOfferDetails,
+  TrialOfferType,
 } from '@/types';
 
-const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID!;
-const contract = new Contract(CONTRACT_ID);
+function getContract() {
+  const contractId = process.env.NEXT_PUBLIC_CONTRACT_ID;
+
+  if (!contractId) {
+    throw new Error(
+      'Missing NEXT_PUBLIC_CONTRACT_ID. Set the deployed Soroban contract ID in your environment before making contract calls.',
+    );
+  }
+
+  return new Contract(contractId);
+}
 
 /** XLM required to unlock a player's contact details via pay_to_contact. */
 export const PLATFORM_CONTACT_FEE_XLM = 1;
+
+/** Human-readable messages for every on-chain error code (codes 1–12). */
+export const CONTRACT_ERRORS: Record<number, string> = {
+  1: 'Contract is already initialized',
+  2: 'Contract is not initialized',
+  3: 'Player not found',
+  4: 'Unauthorized validator',
+  5: 'Invalid milestone data',
+  6: 'Player is already at this level',
+  7: 'Insufficient fee',
+  8: 'Subscription expired',
+  9: 'Contract is paused',
+  10: 'Unauthorized',
+  11: 'No fees to withdraw',
+  12: 'Arithmetic overflow',
+};
+
+/**
+ * Extracts a numeric Soroban contract error code from an error message string.
+ * Recognises patterns like `Error(Contract, #9)` and `ContractError(9)`.
+ * Returns `null` when no code is found.
+ */
+export function parseContractError(message: string): Error {
+  const match = message.match(
+    /Error\(Contract,\s*#(\d+)\)|ContractError\((\d+)\)/,
+  );
+  if (match) {
+    const code = parseInt(match[1] ?? match[2], 10);
+    const human = CONTRACT_ERRORS[code];
+    return new Error(human ?? `Contract error code ${code}`);
+  }
+  return new Error(message);
+}
 
 /** Lazily import Sentry so it is never loaded in test/development environments. */
 async function captureContractError(
@@ -36,22 +100,44 @@ async function captureContractError(
 }
 
 // ── Write helper (requires a real funded account) ─────────────────────────────
+
+/** Enforces the source === signer invariant before any RPC call is made. */
+function assertSourceMatchesSigner(
+  sourcePublicKey: string,
+  authSigner: string,
+): void {
+  if (sourcePublicKey !== authSigner) {
+    throw new Error(
+      `Source and signer must match: source=${sourcePublicKey} signer=${authSigner}`,
+    );
+  }
+}
+
 async function buildTx(
   method: string,
   args: xdr.ScVal[],
   sourcePublicKey: string,
+  authSigner: string = sourcePublicKey,
 ) {
+  assertSourceMatchesSigner(sourcePublicKey, authSigner);
+  const contract = getContract();
   const account = await rpc.getAccount(sourcePublicKey);
   const tx = new TB(account, { fee: BASE_FEE, networkPassphrase: NETWORK })
     .addOperation(contract.call(method, ...args))
     .setTimeout(30)
     .build();
-  const prepared = await rpc.prepareTransaction(tx);
-  return prepared.toXDR();
+  try {
+    const prepared = await rpc.prepareTransaction(tx);
+    return prepared.toXDR();
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw parseContractError(msg);
+  }
 }
 
 // ── Read-only helper (uses a dummy account — no ledger lookup needed) ─────────
 async function simulateTx(method: string, args: xdr.ScVal[]) {
+  const contract = getContract();
   const dummyAccount = new Account(
     'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN',
     '0',
@@ -62,7 +148,8 @@ async function simulateTx(method: string, args: xdr.ScVal[]) {
     .build();
   const result = await rpc.simulateTransaction(tx);
   if ('result' in result) return scValToNative(result.result!.retval);
-  throw new Error(`Simulation failed: ${JSON.stringify(result)}`);
+  const errMsg = (result as { error?: string }).error ?? 'Simulation failed';
+  throw parseContractError(errMsg);
 }
 
 // ── Player ────────────────────────────────────────────────────────────────────
@@ -89,6 +176,11 @@ export async function buildRegisterPlayer(
   vitals: PlayerVitals,
   ipfsHash: string,
 ) {
+  if (!isValidStellarAddress(wallet)) {
+    throw new ValidationError(
+      `wallet "${wallet}" is not a valid Stellar address`,
+    );
+  }
   return buildTx(
     'register_player',
     [
@@ -184,6 +276,11 @@ export async function buildApproveMilestone(
   playerId: string,
   milestone: string,
 ) {
+  if (!isValidStellarAddress(validatorKey)) {
+    throw new ValidationError(
+      `validatorKey "${validatorKey}" is not a valid Stellar address`,
+    );
+  }
   return buildTx(
     'approve_milestone',
     [
@@ -354,6 +451,11 @@ export const SCOUT_ERROR_CODES = {
  * @throws {Error} If the RPC node cannot fetch the source account or prepare the transaction.
  */
 export async function buildPayToContact(scoutKey: string, playerId: string) {
+  if (!isValidStellarAddress(scoutKey)) {
+    throw new ValidationError(
+      `scoutKey "${scoutKey}" is not a valid Stellar address`,
+    );
+  }
   return buildTx(
     'pay_to_contact',
     [
@@ -389,7 +491,8 @@ export async function buildLogTrialOffer(
   scoutKey: string,
   playerId: string,
   details: TrialOfferDetails,
-) {
+): Promise<string> {
+  validateTrialOfferInputs(scoutKey, playerId, details);
   return buildTx(
     'log_trial_offer',
     [
@@ -399,6 +502,58 @@ export async function buildLogTrialOffer(
     ],
     scoutKey,
   );
+}
+
+/**
+ * Builds, signs, and submits a `log_trial_offer` transaction, then polls the
+ * Soroban Testnet RPC until the transaction is confirmed.
+ *
+ * This is the full end-to-end helper for recording a trial offer on-chain.
+ * It reuses {@link buildLogTrialOffer} for construction (including input
+ * validation) and {@link signAndSubmitTx} for signing, submission, and
+ * confirmation polling — matching the patterns used by {@link payToContact}
+ * and {@link subscribe}.
+ *
+ * @param scoutKey - The scout's Stellar public key (source account and auth
+ *   signer). Must be a valid Ed25519 G-prefixed Stellar public key.
+ * @param playerId - Unique identifier of the player receiving the offer.
+ *   Must be a non-empty, non-whitespace string.
+ * @param details - Structured on-chain record of the offer.
+ *   `details.clubName` must be a non-empty string; `details.offerType` must
+ *   be one of `"trial"`, `"loan"`, or `"transfer"`.
+ * @param signFn - Wallet-agnostic signing callback that receives the unsigned
+ *   transaction XDR and returns the signed XDR. For Testnet usage, pass the
+ *   Freighter adapter's `signTransaction` (e.g. from `WalletContext`) or any
+ *   compatible signer.
+ * @returns A Promise that resolves when the trial offer is confirmed on-chain.
+ *   Throws on validation failure, signing rejection, submission error, or
+ *   confirmation timeout.
+ *
+ * @throws {TypeError} If `scoutKey` is not a valid Stellar Ed25519 public key.
+ * @throws {TypeError} If `playerId` is empty or contains only whitespace.
+ * @throws {TypeError} If `details.clubName` is empty or contains only whitespace.
+ * @throws {TypeError} If `details.offerType` is not `"trial"`, `"loan"`, or
+ *   `"transfer"`.
+ * @throws {ContractError} SubscriptionExpired (8) — The scout's active
+ *   subscription has passed its expiry timestamp and must be renewed before
+ *   trial offers can be logged.
+ * @throws {ContractError} ContractPaused (9) — All write operations are blocked
+ *   while the contract is administratively paused; try again after it is
+ *   unpaused.
+ * @throws {Error} If `signFn` rejects (e.g. user dismissed the Freighter
+ *   popup or the wallet is not connected).
+ * @throws {Error} If the RPC node rejects the submitted transaction.
+ * @throws {Error} If the transaction is not confirmed within the polling window
+ *   (10 attempts × 1 500 ms).
+ */
+export async function logTrialOffer(
+  scoutKey: string,
+  playerId: string,
+  details: TrialOfferDetails,
+  signFn: (xdr: string) => Promise<string>,
+): Promise<void> {
+  const xdrTx = await buildLogTrialOffer(scoutKey, playerId, details);
+  await signAndSubmitTx(xdrTx, signFn);
 }
 
 /**
@@ -609,6 +764,25 @@ export async function getSubscription(scout: string) {
   return simulateTx('get_subscription', [
     nativeToScVal(scout, { type: 'address' }),
   ]);
+}
+
+/**
+ * Reads the contract's currently configured `pay_to_contact` fee, in XLM.
+ *
+ * {@link PLATFORM_CONTACT_FEE_XLM} is a build-time constant baked into the
+ * frontend; the contract's actual fee configuration can change independently
+ * of a frontend deploy. Callers displaying the fee to a scout immediately
+ * before they confirm a `pay_to_contact` transaction should prefer this over
+ * the static constant, and fall back to labeling the constant as an estimate
+ * if this call fails.
+ *
+ * This is a read-only simulation — no transaction is built or submitted.
+ *
+ * @returns A Promise resolving to the current contact fee, in XLM.
+ * @throws {Error} If the RPC simulation request fails or returns an unexpected result.
+ */
+export async function getContactFee(): Promise<number> {
+  return simulateTx('get_contact_fee', []);
 }
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
