@@ -1,6 +1,7 @@
 import * as http from 'http';
 import { IndexerMetrics } from './metrics/IndexerMetrics';
 import { getLastLedgerInfo, getLedgerLag } from './ledgerTracker';
+import { startEventPolling } from './eventPoller';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3001;
 
@@ -76,4 +77,13 @@ export function startServer(): void {
   server.listen(PORT, () => {
     console.log(`Indexer server listening on port ${PORT}`);
   });
+
+  // The poller needs SOROBAN_RPC_URL/CONTRACT_ID; a config error here is a
+  // deploy-time misconfiguration, not a reason to bring the whole process
+  // (and /health, which is useful for diagnosing exactly this) down.
+  try {
+    startEventPolling();
+  } catch (err) {
+    console.error('Failed to start event poller:', err);
+  }
 }
