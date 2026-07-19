@@ -106,7 +106,12 @@ export const fetchValidatorMilestoneCount = async (
 // Backed by the Node.js off-chain API (server/) — a real SQLite-backed
 // service, not a local Next.js route reading/writing a JSON file. Follows
 // the same shared-axios-client pattern as the chat helpers above.
-import type { ReferralCode, ReferralStats, ReferralOverview } from '@/types';
+import type {
+  ReferralCode,
+  ReferralStats,
+  ReferralOverview,
+  FraudFlag,
+} from '@/types';
 
 export const generateReferralCode = (
   scoutWallet: string,
@@ -136,9 +141,22 @@ export const redeemReferralCode = (
     .then(() => true)
     .catch(() => false);
 
+export const fetchAllReferralCodes = (): Promise<ReferralCode[]> =>
+  api.get('/referrals/all').then((r) => r.data);
+
 export const getReferralOverview = async (): Promise<ReferralOverview> => {
   const res = await fetch('/api/admin/referrals');
   if (!res.ok) throw new Error('Failed to fetch referral overview');
+  return res.json();
+};
+
+// Fraud / abuse detection (admin only)
+export const fetchFraudFlags = async (): Promise<{
+  flags: FraudFlag[];
+  warnings: string[];
+}> => {
+  const res = await fetch('/api/admin/fraud-flags');
+  if (!res.ok) throw new Error('Failed to fetch fraud flags');
   return res.json();
 };
 

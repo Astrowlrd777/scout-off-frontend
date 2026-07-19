@@ -38,6 +38,11 @@ router.get('/overview', (req, res) => {
   return res.json(referralService.getReferralOverview());
 });
 
+// GET /referrals/all
+router.get('/all', (req, res) => {
+  return res.json(referralService.getAllCodes());
+});
+
 // POST /referrals/redeem
 // Body: { code: string, usedBy: string }
 router.post('/redeem', (req, res) => {

@@ -155,3 +155,14 @@ test('GET /referrals/overview reports totals and top referrers', async () => {
     successfulReferrals: 1,
   });
 });
+
+test('GET /referrals/all returns every code across every scout', async () => {
+  await post('/referrals/generate', { scoutWallet: 'GSCOUT_F' });
+  await post('/referrals/generate', { scoutWallet: 'GSCOUT_G' });
+
+  const res = await get('/referrals/all');
+  assert.equal(res.status, 200);
+  assert.ok(res.body.length >= 2);
+  assert.ok(res.body.some((c) => c.scoutWallet === 'GSCOUT_F'));
+  assert.ok(res.body.some((c) => c.scoutWallet === 'GSCOUT_G'));
+});

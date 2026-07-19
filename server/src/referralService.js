@@ -70,6 +70,11 @@ function getReferralCount(scoutWallet) {
   return countRedeemedByScout.get(scoutWallet).count;
 }
 
+/** Every referral code across every scout wallet, for cross-wallet fraud analysis. */
+function getAllCodes() {
+  return allCodes.all().map(toReferral);
+}
+
 /** Redeems a code on behalf of `usedBy`; rejects self-redemption. */
 function redeemCode(code, usedBy) {
   const existing = findByCode.get(code);
@@ -120,6 +125,7 @@ module.exports = {
   generateCode,
   getCodesByScout,
   getReferralCount,
+  getAllCodes,
   redeemCode,
   getReferralOverview,
 };
