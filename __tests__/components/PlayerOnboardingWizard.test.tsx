@@ -594,18 +594,12 @@ describe('PlayerOnboardingWizard', () => {
   });
 
   it('shows the wizard when the player has not yet registered', () => {
-    setupWallet();
-    const player: Player | null = null;
-
-    render(
-      <div>
-        {player ? (
-          <p data-testid="dashboard">Dashboard</p>
-        ) : (
-          <PlayerOnboardingWizard onSuccess={jest.fn()} />
-        )}
-      </div>,
-    );
+    // renderWizard() defaults to a null player, resetting the usePlayer mock
+    // the previous ("profile already exists") test left pointed at a
+    // registered player — mockReturnValue persists across tests since
+    // jest.clearAllMocks() in beforeEach only clears call history, not
+    // implementations.
+    renderWizard();
 
     expect(
       screen.getByRole('heading', { name: /personal information/i }),
