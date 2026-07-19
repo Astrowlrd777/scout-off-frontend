@@ -11,6 +11,8 @@ The typical contribution workflow is:
 3. Make changes and run local validation.
 4. Open a pull request against `main`.
 
+> This repository includes a GitHub pull request template at `.github/PULL_REQUEST_TEMPLATE.md` to help you provide the right details.
+
 ## Local Development Setup
 
 > For a complete end-to-end guide covering contracts, backend, and wallet setup, see [DEVELOPMENT.md](DEVELOPMENT.md).
