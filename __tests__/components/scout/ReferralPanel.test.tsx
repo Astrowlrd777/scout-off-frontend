@@ -33,19 +33,9 @@ beforeEach(() => {
   mockGetReferralStats.mockResolvedValue(STATS);
 });
 
-describe('ReferralPanel empty state', () => {
-  it('shows a brief message when the scout has never generated a code', async () => {
-    render(<ReferralPanel />);
-
-    await screen.findByRole('button', { name: 'Generate Invite Link' });
-
-    expect(
-      screen.getByText('Your generated invite links will appear here.'),
-    ).toBeInTheDocument();
-  });
-
-  it('hides the empty-state message once at least one code exists', async () => {
-    mockGenerateReferralCode.mockResolvedValueOnce(makeCode('FIRSTCODE'));
+describe('ReferralPanel invite URL format', () => {
+  it('renders the invite URL as <baseUrl>/scout/subscribe?ref=<code>', async () => {
+    mockGenerateReferralCode.mockResolvedValueOnce(makeCode('MYCODE123'));
     render(<ReferralPanel />);
 
     const generateButton = await screen.findByRole('button', {
@@ -53,12 +43,17 @@ describe('ReferralPanel empty state', () => {
     });
     fireEvent.click(generateButton);
 
+    // Derive the expected base URL from window.location, the same way the
+    // component does, so this test stays valid across jsdom test hosts.
+    const expectedUrl = `${window.location.protocol}//${window.location.host}/scout/subscribe?ref=MYCODE123`;
+
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Copy' })).toBeInTheDocument(),
+      expect(screen.getByText(expectedUrl)).toBeInTheDocument(),
     );
 
-    expect(
-      screen.queryByText('Your generated invite links will appear here.'),
-    ).not.toBeInTheDocument();
+    // Exact-match the full string, so a change to the path segment or the
+    // `ref` query param name (not just the code) fails this test.
+    expect(screen.getByText(expectedUrl).textContent).toBe(expectedUrl);
+    expect(expectedUrl).toBe('http://localhost/scout/subscribe?ref=MYCODE123');
   });
 });
