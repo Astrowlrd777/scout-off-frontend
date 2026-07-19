@@ -97,7 +97,9 @@ describe('UpdateProfileForm – accessibility', () => {
       mockedUpdateProfile.mockRejectedValue(new Error('Contract error'));
       const { container } = renderComponent();
 
-      fireEvent.click(screen.getByRole('button', { name: /upload new media/i }));
+      fireEvent.click(
+        screen.getByRole('button', { name: /upload new media/i }),
+      );
 
       await act(async () => {
         fireEvent.click(
@@ -115,7 +117,9 @@ describe('UpdateProfileForm – accessibility', () => {
       mockedUpdateProfile.mockRejectedValue(new Error('Contract error'));
       renderComponent();
 
-      fireEvent.click(screen.getByRole('button', { name: /upload new media/i }));
+      fireEvent.click(
+        screen.getByRole('button', { name: /upload new media/i }),
+      );
 
       await act(async () => {
         fireEvent.click(
@@ -123,7 +127,9 @@ describe('UpdateProfileForm – accessibility', () => {
         );
       });
 
-      const alert = screen.getByRole('alert', { name: /form submission error/i });
+      const alert = screen.getByRole('alert', {
+        name: /form submission error/i,
+      });
       expect(alert).toBeInTheDocument();
       expect(alert).toHaveTextContent(/failed to update profile media/i);
     });
@@ -139,7 +145,9 @@ describe('UpdateProfileForm – accessibility', () => {
       mockedUpdateProfile.mockRejectedValue(new Error('Contract error'));
       renderComponent();
 
-      fireEvent.click(screen.getByRole('button', { name: /upload new media/i }));
+      fireEvent.click(
+        screen.getByRole('button', { name: /upload new media/i }),
+      );
 
       await act(async () => {
         fireEvent.click(
@@ -152,7 +160,9 @@ describe('UpdateProfileForm – accessibility', () => {
       ).toBeInTheDocument();
 
       // A new upload clears the error
-      fireEvent.click(screen.getByRole('button', { name: /upload new media/i }));
+      fireEvent.click(
+        screen.getByRole('button', { name: /upload new media/i }),
+      );
 
       expect(
         screen.queryByRole('alert', { name: /form submission error/i }),

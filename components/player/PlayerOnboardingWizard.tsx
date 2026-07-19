@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { sanitize } from '@/lib/sanitize';
 import { useWallet } from '@/hooks/useWallet';
+import { usePlayer } from '@/hooks/usePlayer';
 import useIsPaused from '@/hooks/useIsPaused';
 import { extractContractErrorKey } from '@/lib/contractErrorMessage';
 import { buildRegisterPlayer } from '@/lib/contract';
@@ -45,7 +46,11 @@ interface WizardData {
 }
 
 export interface PlayerOnboardingWizardProps {
-  onSuccess: (playerId: string) => void;
+  onSuccess: (result: {
+    playerId: string;
+    vitals: PlayerVitals;
+    ipfsHash: string;
+  }) => void;
 }
 
 // ── Progress Stepper ──────────────────────────────────────────────────────────
@@ -106,6 +111,7 @@ export default function PlayerOnboardingWizard({
   onSuccess,
 }: PlayerOnboardingWizardProps) {
   const { publicKey, signAndSubmit } = useWallet();
+  const { player, loading: playerLoading } = usePlayer(publicKey);
   const isPaused = useIsPaused();
   const tErrors = useTranslations('contractErrors');
 
@@ -161,18 +167,51 @@ export default function PlayerOnboardingWizard({
 
   // ── Per-step validation ───────────────────────────────────────────────────
 
-  const validateStep1 = (): boolean => {
-    const errs: Record<string, string> = {};
-    if (!data.name.trim()) errs.name = 'Name is required';
-    if (!data.age) {
-      errs.age = 'Age is required';
-    } else {
-      const n = parseInt(data.age);
-      if (isNaN(n) || n < 14 || n > 45) errs.age = 'Age must be between 14 and 45';
+  // ── Single-field validation ───────────────────────────────────────────────
+
+  const validateField = (
+    field: keyof WizardData,
+    value: string,
+  ): string | undefined => {
+    switch (field) {
+      case 'name': {
+        const trimmed = value.trim();
+        if (!trimmed) return 'Name is required';
+        if (trimmed.length < 2) return 'Name must be at least 2 characters';
+        if (trimmed.length > 50) return 'Name must be 50 characters or fewer';
+        return undefined;
+      }
+      case 'age': {
+        if (!value) return 'Age is required';
+        const n = parseInt(value);
+        if (isNaN(n) || n < 14 || n > 45)
+          return 'Age must be between 14 and 45';
+        return undefined;
+      }
+      case 'nationality':
+        return value.trim() ? undefined : 'Nationality is required';
+      case 'region':
+        return value ? undefined : 'Region is required';
+      case 'position':
+        return value ? undefined : 'Position is required';
+      default:
+        return undefined;
     }
-    if (!data.nationality.trim()) errs.nationality = 'Nationality is required';
-    if (!data.region) errs.region = 'Region is required';
-    if (!data.position) errs.position = 'Position is required';
+  };
+
+  const validateStep1 = (): boolean => {
+    const fields = [
+      'name',
+      'age',
+      'nationality',
+      'region',
+      'position',
+    ] as const;
+    const errs: Record<string, string> = {};
+    for (const field of fields) {
+      const msg = validateField(field, data[field]);
+      if (msg) errs[field] = msg;
+    }
     setErrors(errs);
 
     if (Object.keys(errs).length > 0) {
@@ -186,6 +225,32 @@ export default function PlayerOnboardingWizard({
 
     return Object.keys(errs).length === 0;
   };
+
+  // Validate a single field on blur and surface the error immediately.
+  const handleBlur = (
+    e: React.FocusEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
+  ) => {
+    const field = e.target.name as keyof WizardData;
+    const msg = validateField(field, e.target.value);
+    setErrors((prev) => {
+      if (!msg) {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      }
+      return { ...prev, [field]: msg };
+    });
+  };
+
+  // Derived: is step 1 free of errors and all required fields touched/filled?
+  const isStep1Valid =
+    !validateField('name', data.name) &&
+    !validateField('age', data.age) &&
+    !validateField('nationality', data.nationality) &&
+    !validateField('region', data.region) &&
+    !validateField('position', data.position);
 
   const validateStep2 = (): boolean => {
     if (!data.ipfsHash) {
@@ -249,13 +314,17 @@ export default function PlayerOnboardingWizard({
       setTxStatus('success');
 
       const playerId = (result as any)?.id || publicKey;
-      onSuccess(playerId);
+      onSuccess({ playerId, vitals, ipfsHash: data.ipfsHash });
     } catch (error) {
       setTxStatus('error');
       const rawMessage = error instanceof Error ? error.message : null;
-      const contractKey = rawMessage ? extractContractErrorKey(rawMessage) : null;
+      const contractKey = rawMessage
+        ? extractContractErrorKey(rawMessage)
+        : null;
       setErrors({
-        form: contractKey ? tErrors(contractKey) : (rawMessage ?? 'Registration failed'),
+        form: contractKey
+          ? tErrors(contractKey)
+          : (rawMessage ?? 'Registration failed'),
       });
     } finally {
       setIsLoading(false);
@@ -272,6 +341,19 @@ export default function PlayerOnboardingWizard({
   const shortCid = data.ipfsHash
     ? `${data.ipfsHash.slice(0, 8)}…${data.ipfsHash.slice(-6)}`
     : '';
+
+  if (!playerLoading && player) {
+    return (
+      <div
+        role="alert"
+        className="rounded-md border border-yellow-500 bg-yellow-950/30 p-4 text-center"
+      >
+        <p className="text-sm text-yellow-400 font-medium">
+          A profile already exists for this wallet. You cannot register again.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -311,6 +393,7 @@ export default function PlayerOnboardingWizard({
             name="name"
             value={data.name}
             onChange={handleChange}
+            onBlur={handleBlur}
             error={errors.name}
             placeholder="Enter your full name"
             autoComplete="name"
@@ -324,6 +407,7 @@ export default function PlayerOnboardingWizard({
             name="age"
             value={data.age}
             onChange={handleChange}
+            onBlur={handleBlur}
             error={errors.age}
             placeholder="Enter your age (14–45)"
             min="14"
@@ -338,6 +422,7 @@ export default function PlayerOnboardingWizard({
             name="nationality"
             value={data.nationality}
             onChange={handleChange}
+            onBlur={handleBlur}
             error={errors.nationality}
             placeholder="Enter your nationality"
           />
@@ -349,6 +434,7 @@ export default function PlayerOnboardingWizard({
             name="region"
             value={data.region}
             onChange={handleChange}
+            onBlur={handleBlur}
             error={errors.region}
           >
             <option value="">Select region</option>
@@ -366,6 +452,7 @@ export default function PlayerOnboardingWizard({
             name="position"
             value={data.position}
             onChange={handleChange}
+            onBlur={handleBlur}
             error={errors.position}
           >
             <option value="">Select position</option>
@@ -394,7 +481,12 @@ export default function PlayerOnboardingWizard({
             />
           </div>
 
-          <Button type="button" onClick={handleNext} className="w-full">
+          <Button
+            type="button"
+            onClick={handleNext}
+            className="w-full"
+            disabled={validationAttempted && !isStep1Valid}
+          >
             Continue
           </Button>
         </div>
@@ -509,7 +601,8 @@ export default function PlayerOnboardingWizard({
               type="button"
               onClick={handleSubmit}
               isLoading={isLoading}
-              disabled={isLoading}
+              disabled={isLoading || isPaused}
+              title={isPaused ? 'Contract is currently paused' : undefined}
               className="flex-1"
             >
               {isLoading ? 'Registering...' : 'Register as Player'}

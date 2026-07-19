@@ -301,7 +301,8 @@ describe('PlayerFilterForm', () => {
     fireEvent.change(getLevelSelect(), { target: { value: '2' } });
     fireEvent.change(getLevelSelect(), { target: { value: '0' } });
     // The last call should have no level param
-    const lastCall = mockReplace.mock.calls[mockReplace.mock.calls.length - 1][0];
+    const lastCall =
+      mockReplace.mock.calls[mockReplace.mock.calls.length - 1][0];
     expect(lastCall).not.toContain('level=');
   });
 
@@ -383,7 +384,9 @@ describe('PlayerFilterForm', () => {
 
   it('resets all selects to defaults and calls onSearch when resetKey increments', () => {
     const onSearch = jest.fn();
-    const { rerender } = render(<PlayerFilterForm onSearch={onSearch} resetKey={0} />);
+    const { rerender } = render(
+      <PlayerFilterForm onSearch={onSearch} resetKey={0} />,
+    );
     onSearch.mockClear();
 
     // Put the form into a non-default state
@@ -411,7 +414,9 @@ describe('PlayerFilterForm', () => {
 
   it('does not call onSearch again when rerendered with the same resetKey', () => {
     const onSearch = jest.fn();
-    const { rerender } = render(<PlayerFilterForm onSearch={onSearch} resetKey={1} />);
+    const { rerender } = render(
+      <PlayerFilterForm onSearch={onSearch} resetKey={1} />,
+    );
     onSearch.mockClear();
 
     rerender(<PlayerFilterForm onSearch={onSearch} resetKey={1} />);
@@ -421,14 +426,28 @@ describe('PlayerFilterForm', () => {
 
   it('fires onSearch each time resetKey increments (supports multiple clears)', () => {
     const onSearch = jest.fn();
-    const { rerender } = render(<PlayerFilterForm onSearch={onSearch} resetKey={0} />);
+    const { rerender } = render(
+      <PlayerFilterForm onSearch={onSearch} resetKey={0} />,
+    );
     onSearch.mockClear();
 
-    act(() => { rerender(<PlayerFilterForm onSearch={onSearch} resetKey={1} />); });
-    act(() => { rerender(<PlayerFilterForm onSearch={onSearch} resetKey={2} />); });
+    act(() => {
+      rerender(<PlayerFilterForm onSearch={onSearch} resetKey={1} />);
+    });
+    act(() => {
+      rerender(<PlayerFilterForm onSearch={onSearch} resetKey={2} />);
+    });
 
     expect(onSearch).toHaveBeenCalledTimes(2);
-    expect(onSearch).toHaveBeenNthCalledWith(1, { region: undefined, position: undefined, minLevel: 0 });
-    expect(onSearch).toHaveBeenNthCalledWith(2, { region: undefined, position: undefined, minLevel: 0 });
+    expect(onSearch).toHaveBeenNthCalledWith(1, {
+      region: undefined,
+      position: undefined,
+      minLevel: 0,
+    });
+    expect(onSearch).toHaveBeenNthCalledWith(2, {
+      region: undefined,
+      position: undefined,
+      minLevel: 0,
+    });
   });
 });

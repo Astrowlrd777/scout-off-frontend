@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { AFRICAN_REGIONS } from '@/lib/regions';
+import { AFRICAN_REGIONS_GROUPED } from '@/lib/regions';
 import { FOOTBALL_POSITIONS } from '@/lib/positions';
 import type { PlayerFilter, ProgressLevel } from '@/types';
 
@@ -50,7 +50,7 @@ export default function PlayerFilterForm({
   const [filter, setFilter] = useState<FilterState>(() => ({
     region: searchParams.get('region') ?? DEFAULTS.region,
     position: searchParams.get('position') ?? DEFAULTS.position,
-    level: (Number(searchParams.get('level') ?? DEFAULTS.level)) as ProgressLevel,
+    level: Number(searchParams.get('level') ?? DEFAULTS.level) as ProgressLevel,
   }));
 
   // Cancel pending debounce on unmount
@@ -65,14 +65,6 @@ export default function PlayerFilterForm({
     onSearch(toPlayerFilter(filter));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // When the parent increments resetKey, reset controls and immediately search defaults.
-  const prevResetKey = useRef(resetKey);
-  useEffect(() => {
-    if (prevResetKey.current === resetKey) return;
-    prevResetKey.current = resetKey;
-    handleReset();
-  }, [resetKey, handleReset]);
 
   const updateURL = useCallback(
     (next: FilterState) => {
@@ -97,8 +89,7 @@ export default function PlayerFilterForm({
 
   const handleChange = useCallback(
     (field: keyof FilterState, raw: string) => {
-      const value =
-        field === 'level' ? (Number(raw) as ProgressLevel) : raw;
+      const value = field === 'level' ? (Number(raw) as ProgressLevel) : raw;
       const next = { ...filter, [field]: value } as FilterState;
       setFilter(next);
       updateURL(next);
@@ -113,6 +104,14 @@ export default function PlayerFilterForm({
     updateURL(DEFAULTS);
     onSearch(toPlayerFilter(DEFAULTS));
   }, [onSearch, updateURL]);
+
+  // When the parent increments resetKey, reset controls and immediately search defaults.
+  const prevResetKey = useRef(resetKey);
+  useEffect(() => {
+    if (prevResetKey.current === resetKey) return;
+    prevResetKey.current = resetKey;
+    handleReset();
+  }, [resetKey, handleReset]);
 
   return (
     <div
@@ -135,10 +134,14 @@ export default function PlayerFilterForm({
           onChange={(e) => handleChange('region', e.target.value)}
         >
           <option value="">All regions</option>
-          {AFRICAN_REGIONS.map(({ label, value }) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
+          {Object.entries(AFRICAN_REGIONS_GROUPED).map(([group, regions]) => (
+            <optgroup key={group} label={group}>
+              {regions.map(({ label, value }) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
       </div>

@@ -3,6 +3,8 @@
   "nav": {
     "scout_dashboard": "Dashibodi ya Scout",
     "player_dashboard": "Dashibodi ya Mchezaji",
+    "sponsorship": "TODO: Machine-translated - Ufadhili",
+    "soon": "TODO: Machine-translated - Hivi Karibuni",
     "maintenance_warning": "ScoutOff iko chini ya matengenezo sasa. Vitendo vya kuandika vimezimwa kwa sasa."
   },
   "common": {
@@ -46,10 +48,16 @@
     "player_not_found": "TODO: Machine-translated - Mchezaji hajafikiwa",
     "no_players": "TODO: Machine-translated - Hakuna wachezaji waliopatikana"
   },
+  "player_profile": {
+    "back_to_scout_dashboard": "← Rudi kwenye Dashibodi ya Scout"
+  },
   "player_dashboard": {
     "title": "Dashibodi ya Mchezaji",
     "welcome": "TODO: Machine-translated - Karibu kwenye dashibodi ya mchezaji",
     "description": "TODO: Machine-translated - Tazama profili yako na maendeleo",
+    "tab_register": "Jiandikisha",
+    "tab_profile": "Wasifu Wangu",
+    "register_prompt": "Jiandikisha kwanza ili kuona wasifu wako.",
     "profile": "Wasifu",
     "milestones": "Miikukuu",
     "achievements": "Mafanikio",
@@ -67,10 +75,16 @@
     "installMobile": "Nyongeza ya kivinjari / simu",
     "cancel": "Ghairi",
     "noWalletDetected": "Hakuna pochi iliyogunduliwa. Tafadhali sakinisha nyongeza ya pochi ya Stellar.",
+    "noWalletInstalledBanner": "TODO: Machine-translated - Hakuna pochi ya Stellar iliyogunduliwa. Sakinisha mojawapo ya chaguo hapa chini kuanza.",
+    "notInstalled": "TODO: Machine-translated - Haijasakinishwa",
+    "installLink": "TODO: Machine-translated - Sakinisha",
     "balance": "Salio",
     "address": "Anwani",
     "invalid_address": "TODO: Machine-translated - Anwani ya Stellar sio sahihi",
-    "connection_failed": "TODO: Machine-translated - Kushindwa kuunganisha pochi"
+    "connection_failed": "TODO: Machine-translated - Kushindwa kuunganisha pochi",
+    "balanceError": "TODO: Machine-translated - Salio halipatikani — kosa la mtandao",
+    "ledgerConnect": "TODO: Machine-translated - Pochi ya vifaa — unganisha kupitia USB",
+    "ledgerInstructions": "TODO: Machine-translated - Unganisha kifaa chako cha Ledger kupitia USB na ufungue programu ya Stellar."
   },
   "errors": {
     "not_found": "Haijafikiwa",
@@ -89,6 +103,35 @@
     "upload": "TODO: Machine-translated - Pakua",
     "view_details": "TODO: Machine-translated - Tazama Maelezo",
     "view_more": "TODO: Machine-translated - Tazama Zaidi"
+  },
+  "sponsorship": {
+    "badge": "TODO: Machine-translated - Inakuja Hivi Karibuni",
+    "title": "TODO: Machine-translated - Ufadhili wa Tokeni za Wachezaji",
+    "description": "TODO: Machine-translated - Mashabiki na wawekezaji hivi karibuni wataweza kununua \"Tokeni za Mchezaji\" kufadhili mafunzo na usafiri wa mchezaji — huku mapato yakirejeshwa kwa uwazi kwenye blockchain.",
+    "howItWorksTitle": "TODO: Machine-translated - Jinsi itakavyofanya kazi",
+    "howItWorksDescription": "TODO: Machine-translated - Wafadhili watanunua Tokeni za Mchezaji zinazowakilisha hisa katika mapato ya baadaye ya mchezaji. Fedha zilizokusanywa zinaelekezwa moja kwa moja kwenye mafunzo, usafiri, na maendeleo, huku sehemu ya mapato ya baadaye ya mchezaji kwenye blockchain ikirejeshwa kwa wamiliki wa tokeni — yote yakisimamiwa na mikataba mahiri ya Soroban.",
+    "notice": "TODO: Machine-translated - Ukurasa huu ni nafasi ya muda. Hakuna tokeni zinazoweza kununuliwa bado na hakuna mwingiliano wa blockchain unaopatikana hapa."
+  },
+  "footer": {
+    "changelog": "TODO: Machine-translated - Mabadiliko"
+  },
+  "changelog": {
+    "back_to_home": "TODO: Machine-translated - Rudi kwenye mwanzo",
+    "page_title": "TODO: Machine-translated - Mabadiliko",
+    "page_description": "TODO: Machine-translated - Mabadiliko na maboresho ya hivi karibuni ya jukwaa.",
+    "eyebrow": "TODO: Machine-translated - Mabadiliko ya jukwaa",
+    "english_notice": "TODO: Machine-translated - Changelog hii inapatikana kwa Kiingereza pekee kwa sasa.",
+    "added": "TODO: Machine-translated - Iliyoongezwa",
+    "improved": "TODO: Machine-translated - Iliboreshwa",
+    "fixed": "TODO: Machine-translated - Iliyorekebishwa",
+    "empty_title": "TODO: Machine-translated - Mabadiliko hayapatikani",
+    "empty_description": "TODO: Machine-translated - Hatukuweza kupakia mabadiliko kwa sasa. Tafadhali angalia tena baadaye."
+  },
+  "progress_levels": {
+    "level0": "Haijathibitishwa",
+    "level1": "Imethibitishwa",
+    "level2": "Utendaji",
+    "level3": "Bora"
   },
   "contractErrors": {
     "AlreadyInitialized": "Mchezaji huyu ameshasajiliwa.",

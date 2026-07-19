@@ -1,192 +1,214 @@
 'use client';
-import { useState, useRef, useEffect } from 'react';
+
+import { useState, useRef, FormEvent } from 'react';
 import { useWallet } from '@/hooks/useWallet';
-import useIsPaused from '@/hooks/useIsPaused';
 import { useValidator } from '@/hooks/useValidator';
+import useIsPaused from '@/hooks/useIsPaused';
+import { buildRevokeMilestone } from '@/lib/contract';
+import { parseContractError } from '@/lib/contractErrorMessage';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
-import type { Player, Milestone } from '@/types';
+import type { Player } from '@/types';
 
-const ADMIN = process.env.NEXT_PUBLIC_ADMIN_ADDRESS ?? '';
-
-function formatDate(unix: number) {
-  return new Date(unix * 1000).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-}
-
-interface Props {
-  player: Player;
+interface RevokeFormProps {
+  player?: Player;
   onSuccess: () => void;
 }
 
-export default function RevokeForm({ player, onSuccess }: Props) {
-  const { publicKey } = useWallet();
-  const { isValidator, checking, revokeMilestone, loading, error } =
-    useValidator();
-
-  const [selected, setSelected] = useState<Milestone | null>(null);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [txError, setTxError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-
-  const errorSummaryRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (txError || error) {
-      errorSummaryRef.current?.focus();
-    }
-  }, [txError, error]);
-
-  const isAdmin = !!publicKey && publicKey === ADMIN;
+export default function RevokeForm({ player, onSuccess }: RevokeFormProps) {
+  const { publicKey, signAndSubmit } = useWallet();
+  const { revokeMilestone, loading: validatorLoading } = useValidator();
   const paused = useIsPaused();
 
-  function canRevoke(m: Milestone) {
-    if (!publicKey) return false;
-    return isAdmin || (isValidator && publicKey === m.validator);
+  // Player-mode state
+  const [selected, setSelected] = useState<string | null>(null);
+
+  // Text-input mode state
+  const [playerId, setPlayerId] = useState('');
+  const [milestoneId, setMilestoneId] = useState('');
+  const [validationErrors, setValidationErrors] = useState<{
+    playerId?: string;
+    milestoneId?: string;
+  }>({});
+
+  // Shared state
+  const [isLoading, setIsLoading] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [txError, setTxError] = useState<string | null>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
+
+  if (player) {
+    const handleRevokeClick = () => {
+      if (!selected) return;
+      setShowConfirm(true);
+    };
+
+    const handlePlayerConfirm = async () => {
+      if (!selected) return;
+      try {
+        setTxError(null);
+        await revokeMilestone(player.id, selected);
+        onSuccess();
+      } catch (err) {
+        const msg = parseContractError(err);
+        setTxError(msg);
+        setTimeout(() => errorRef.current?.focus(), 0);
+      }
+      setShowConfirm(false);
+    };
+
+    return (
+      <>
+        {txError && (
+          <div
+            id="revoke-error-summary"
+            role="alert"
+            aria-label="Revocation error"
+            ref={errorRef}
+            tabIndex={-1}
+          >
+            {txError}
+          </div>
+        )}
+        <ul>
+          {player.milestones.map((m) => (
+            <li key={m.id}>
+              <button
+                type="button"
+                onClick={() => setSelected(m.id)}
+                aria-pressed={selected === m.id}
+              >
+                {m.description}
+              </button>
+            </li>
+          ))}
+        </ul>
+        <button
+          type="button"
+          disabled={!selected || validatorLoading || paused}
+          onClick={handleRevokeClick}
+          aria-describedby={txError ? 'revoke-error-summary' : undefined}
+        >
+          {validatorLoading ? 'Revoking…' : 'Revoke Selected Milestone'}
+        </button>
+        <ConfirmDialog
+          isOpen={showConfirm}
+          onConfirm={handlePlayerConfirm}
+          onCancel={() => setShowConfirm(false)}
+          title="Revoke Milestone"
+          message="Are you sure you want to revoke this milestone? This action cannot be undone."
+          confirmLabel="Confirm"
+          cancelLabel="Cancel"
+          loading={validatorLoading}
+        />
+      </>
+    );
   }
 
-  const walletAuthorized = !!publicKey && (isAdmin || isValidator);
+  // Text-input mode: form with player ID and milestone ID inputs
 
-  async function handleConfirm() {
-    if (!selected) return;
-    setTxError(null);
-    try {
-      await revokeMilestone(player.id, selected.id);
-      setConfirmOpen(false);
-      setSelected(null);
-      setSuccess(true);
-      onSuccess();
-    } catch (e: any) {
-      setTxError(e.message ?? 'Transaction failed');
-      setConfirmOpen(false);
+  const validate = () => {
+    const errors: { playerId?: string; milestoneId?: string } = {};
+    if (!playerId.trim()) errors.playerId = 'Player ID is required';
+    if (!milestoneId.trim()) errors.milestoneId = 'Milestone ID is required';
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!validate()) return;
+    if (!publicKey) {
+      setError('Wallet not connected');
+      return;
     }
-  }
+    setShowConfirm(true);
+  };
 
-  if (checking) {
-    return <p className="text-sm text-gray-400">Checking authorization…</p>;
-  }
-
-  if (player.milestones.length === 0) {
-    return <p className="text-sm text-gray-500">No milestones to revoke.</p>;
-  }
+  const handleConfirm = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const xdr = await buildRevokeMilestone(publicKey!, playerId, milestoneId);
+      await signAndSubmit(xdr);
+      onSuccess();
+      setPlayerId('');
+      setMilestoneId('');
+    } catch (err) {
+      setError(parseContractError(err));
+    } finally {
+      setIsLoading(false);
+      setShowConfirm(false);
+    }
+  };
 
   return (
-    <div className="flex flex-col gap-5">
-      {paused && (
-        <div className="rounded-lg border border-yellow-700 bg-yellow-950 px-4 py-3 text-sm text-yellow-300">
-          <strong>Transactions are currently disabled.</strong>
+    <>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label
+            htmlFor="revoke-player-id"
+            className="block text-sm font-medium text-gray-300 mb-1"
+          >
+            Player ID
+          </label>
+          <input
+            id="revoke-player-id"
+            type="text"
+            value={playerId}
+            onChange={(e) => setPlayerId(e.target.value)}
+            className={`input ${validationErrors.playerId ? 'border-red-500' : ''}`}
+            placeholder="Enter player ID"
+          />
+          {validationErrors.playerId && (
+            <p className="text-sm text-red-500 mt-1">
+              {validationErrors.playerId}
+            </p>
+          )}
         </div>
-      )}
-      {/* Warning banner */}
-      <div
-        className="flex items-start gap-2 rounded-lg border border-yellow-700 bg-yellow-950 px-4 py-3 text-sm text-yellow-300"
-      >
-        <span aria-hidden>⚠️</span>
-        <span>
-          Revoking a milestone may reduce the player&apos;s progress level.
-        </span>
-      </div>
+        <div>
+          <label
+            htmlFor="revoke-milestone-id"
+            className="block text-sm font-medium text-gray-300 mb-1"
+          >
+            Milestone ID
+          </label>
+          <input
+            id="revoke-milestone-id"
+            type="text"
+            value={milestoneId}
+            onChange={(e) => setMilestoneId(e.target.value)}
+            className={`input ${validationErrors.milestoneId ? 'border-red-500' : ''}`}
+            placeholder="Enter milestone ID"
+          />
+          {validationErrors.milestoneId && (
+            <p className="text-sm text-red-500 mt-1">
+              {validationErrors.milestoneId}
+            </p>
+          )}
+        </div>
 
-      {/* Error summary */}
-      {(error || txError) && (
-        <div
-          ref={errorSummaryRef}
-          id="revoke-error-summary"
-          role="alert"
-          aria-label="Revocation error"
-          tabIndex={-1}
-          className="rounded-md border border-red-500 bg-red-950/30 p-3 outline-none"
+        {error && <p className="text-sm text-red-500">{error}</p>}
+
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          <p className="text-sm text-red-400">{txError ?? error}</p>
-        </div>
-      )}
-
-      {/* Milestone list */}
-      <fieldset disabled={!walletAuthorized || loading || paused}>
-        <legend className="sr-only">Select a milestone to revoke</legend>
-        <ul className="flex flex-col gap-3">
-          {player.milestones.map((m) => {
-            const authorized = canRevoke(m);
-            const isSelected = selected?.id === m.id;
-            return (
-              <li key={m.id}>
-                <button
-                  type="button"
-                  disabled={!authorized || loading}
-                  onClick={() => setSelected(isSelected ? null : m)}
-                  aria-pressed={isSelected}
-                  className={[
-                    'w-full text-left rounded-xl border px-4 py-3 transition',
-                    isSelected
-                      ? 'border-red-500 bg-red-950'
-                      : authorized
-                        ? 'border-gray-700 bg-brand-card hover:border-gray-500'
-                        : 'border-gray-800 bg-gray-900 opacity-50 cursor-not-allowed',
-                  ].join(' ')}
-                >
-                  <p className="font-medium text-white text-sm">
-                    {m.description}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    Approved by{' '}
-                    <span className="font-mono" title={m.validator}>
-                      {m.validator.slice(0, 6)}…{m.validator.slice(-4)}
-                    </span>{' '}
-                    · {formatDate(m.timestamp)}
-                  </p>
-                  {!authorized && (
-                    <p className="text-xs text-gray-600 mt-1">
-                      Not authorized to revoke this milestone
-                    </p>
-                  )}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </fieldset>
-
-      {/* Disabled notice */}
-      {!walletAuthorized && (
-        <p className="text-sm text-gray-500" role="status">
-          Your wallet is not authorized to revoke milestones.
-        </p>
-      )}
-
-      {/* Success */}
-      {success && (
-        <p role="status" className="text-sm text-brand-green">
-          Milestone revoked successfully.
-        </p>
-      )}
-
-      {/* Revoke button */}
-      <button
-        type="button"
-        disabled={!selected || !walletAuthorized || loading}
-        onClick={() => setConfirmOpen(true)}
-        aria-describedby={(error || txError) ? 'revoke-error-summary' : undefined}
-        className="self-start rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
-      >
-        {loading ? 'Revoking…' : 'Revoke Selected Milestone'}
-      </button>
-
-      {/* Confirmation dialog */}
+          {isLoading ? 'Revoking…' : 'Revoke Milestone'}
+        </button>
+      </form>
       <ConfirmDialog
-        isOpen={confirmOpen}
-        onCancel={() => setConfirmOpen(false)}
+        isOpen={showConfirm}
         onConfirm={handleConfirm}
+        onCancel={() => setShowConfirm(false)}
         title="Revoke Milestone"
-        message={
-          selected
-            ? `Are you sure you want to revoke "${selected.description}"? This may reduce the player's progress level and cannot be undone.`
-            : ''
-        }
-        confirmLabel="Yes, Revoke"
-        loading={loading}
+        message="Are you sure you want to revoke this milestone? This action cannot be undone."
+        confirmLabel="Revoke"
+        cancelLabel="Cancel"
+        loading={isLoading}
       />
-    </div>
+    </>
   );
 }

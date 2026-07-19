@@ -1,9 +1,16 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { axe, toHaveNoViolations } from 'jest-axe';
+
+expect.extend(toHaveNoViolations);
 
 jest.mock('@/hooks/useWallet', () => ({
   useWallet: jest.fn(),
+}));
+
+jest.mock('@/components/ui/Toast', () => ({
+  useToast: jest.fn().mockReturnValue({ show: jest.fn() }),
 }));
 
 jest.mock('next/navigation', () => ({
@@ -17,7 +24,11 @@ jest.mock('next/navigation', () => ({
 }));
 
 jest.mock('@/hooks/useContractStatus', () => ({
-  useContractStatus: () => ({ isPaused: false, isHealthy: true, isLoading: false }),
+  useContractStatus: () => ({
+    isPaused: false,
+    isHealthy: true,
+    isLoading: false,
+  }),
 }));
 
 jest.mock('next/link', () => {
@@ -43,9 +54,11 @@ jest.mock('next/link', () => {
 import Navbar from '@/components/Navbar';
 import { useWallet } from '@/hooks/useWallet';
 import { usePathname } from 'next/navigation';
+import { useToast } from '@/components/ui/Toast';
 
 const mockUseWallet = useWallet as unknown as jest.Mock;
 const mockUsePathname = usePathname as unknown as jest.Mock;
+const mockUseToast = useToast as jest.Mock;
 
 function setup(pathname: string) {
   mockUseWallet.mockReturnValue({
@@ -62,6 +75,7 @@ function setup(pathname: string) {
 describe('Navbar', () => {
   beforeEach(() => {
     jest.resetAllMocks();
+    mockUseToast.mockReturnValue({ show: jest.fn() });
   });
 
   test('renders the ScoutOff logo/link', () => {
@@ -110,10 +124,56 @@ describe('Navbar', () => {
     render(<Navbar />);
 
     const truncated = `${publicKey.slice(0, 4)}…${publicKey.slice(-4)}`;
-    // accessible name includes appended balance text, so use a partial match
     expect(
       screen.getByRole('button', { name: new RegExp(truncated) }),
     ).toBeInTheDocument();
+  });
+
+  test('shows copy address button when wallet is connected', () => {
+    const publicKey = 'GABCDEF1234567890XYZ';
+    mockUseWallet.mockReturnValue({
+      publicKey,
+      isConnecting: false,
+      connect: jest.fn(),
+      disconnect: jest.fn(),
+      signAndSubmit: jest.fn(),
+    });
+    mockUsePathname.mockReturnValue('/');
+
+    render(<Navbar />);
+
+    expect(
+      screen.getByRole('button', { name: /Copy wallet address/i }),
+    ).toBeInTheDocument();
+  });
+
+  test('clicking copy button copies full address to clipboard', async () => {
+    const publicKey = 'GABCDEF1234567890XYZ';
+    // userEvent.setup() installs its own navigator.clipboard stub, so spy on
+    // it afterwards rather than replacing navigator.clipboard beforehand.
+    const user = userEvent.setup({ delay: null });
+    const writeText = jest
+      .spyOn(navigator.clipboard, 'writeText')
+      .mockResolvedValue(undefined);
+
+    mockUseWallet.mockReturnValue({
+      publicKey,
+      isConnecting: false,
+      connect: jest.fn(),
+      disconnect: jest.fn(),
+      signAndSubmit: jest.fn(),
+    });
+    mockUsePathname.mockReturnValue('/');
+
+    render(<Navbar />);
+
+    const copyBtn = screen.getByRole('button', {
+      name: /Copy wallet address/i,
+    });
+    await user.click(copyBtn);
+
+    expect(writeText).toHaveBeenCalledTimes(1);
+    expect(writeText).toHaveBeenCalledWith(publicKey);
   });
 
   test('active route link has aria-current="page"', () => {
@@ -222,7 +282,11 @@ describe('Navbar', () => {
   test('shows maintenance banner when contract is paused', () => {
     const { useContractStatus } = require('@/hooks/useContractStatus');
     jest.doMock('@/hooks/useContractStatus', () => ({
-      useContractStatus: () => ({ isPaused: true, isHealthy: true, isLoading: false }),
+      useContractStatus: () => ({
+        isPaused: true,
+        isHealthy: true,
+        isLoading: false,
+      }),
     }));
 
     mockUseWallet.mockReturnValue({
@@ -237,5 +301,26 @@ describe('Navbar', () => {
     // The top-level mock returns isPaused:false, so the banner must be absent.
     render(<Navbar />);
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  // ── Accessibility ──────────────────────────────────────────────────────────
+  // Issue #722: audit of the app's branding/logo area (the ScoutOff wordmark
+  // link) for accessibility violations, including missing alt text on any
+  // future image-based logo.
+
+  test('has no accessibility violations', async () => {
+    mockUseWallet.mockReturnValue({
+      publicKey: null,
+      isConnecting: false,
+      connect: jest.fn(),
+      disconnect: jest.fn(),
+      signAndSubmit: jest.fn(),
+    });
+    mockUsePathname.mockReturnValue('/en');
+
+    const { container } = render(<Navbar />);
+
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });

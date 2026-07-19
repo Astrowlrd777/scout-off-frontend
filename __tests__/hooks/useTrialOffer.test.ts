@@ -17,7 +17,8 @@ import { buildLogTrialOffer } from '@/lib/contract';
 const mockUseWallet = useWallet as jest.Mock;
 const mockBuildLogTrialOffer = buildLogTrialOffer as jest.Mock;
 
-const PUBLIC_KEY = 'GABCDE1234567890ABCDE1234567890ABCDE1234567890ABCDE1234567890';
+const PUBLIC_KEY =
+  'GABCDE1234567890ABCDE1234567890ABCDE1234567890ABCDE1234567890';
 const PLAYER_ID = 'player-abc';
 const DETAILS = { clubName: 'FC Test', offerType: 'trial' as const };
 const MOCK_XDR = 'AAAAAwAAAAA...xdr...';
@@ -25,10 +26,17 @@ const MOCK_HASH = 'abcdef1234567890';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function makeDeferred<T>(): { promise: Promise<T>; resolve: (v: T) => void; reject: (e: any) => void } {
+function makeDeferred<T>(): {
+  promise: Promise<T>;
+  resolve: (v: T) => void;
+  reject: (e: any) => void;
+} {
   let resolve!: (v: T) => void;
   let reject!: (e: any) => void;
-  const promise = new Promise<T>((res, rej) => { resolve = res; reject = rej; });
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
   return { promise, resolve, reject };
 }
 
@@ -104,7 +112,11 @@ describe('useTrialOffer', () => {
       await result.current.logTrialOffer(PLAYER_ID, DETAILS);
     });
 
-    expect(mockBuildLogTrialOffer).toHaveBeenCalledWith(PUBLIC_KEY, PLAYER_ID, DETAILS);
+    expect(mockBuildLogTrialOffer).toHaveBeenCalledWith(
+      PUBLIC_KEY,
+      PLAYER_ID,
+      DETAILS,
+    );
   });
 
   it('passes the built XDR to signAndSubmit', async () => {
@@ -176,8 +188,35 @@ describe('useTrialOffer', () => {
     expect(result.current.error).toBe('Transaction failed');
   });
 
+  it('maps ContractPaused error (code 9) to human-readable message', async () => {
+    mockBuildLogTrialOffer.mockRejectedValue(new Error('ContractPaused'));
+
+    const { result } = renderHook(() => useTrialOffer());
+
+    await act(async () => {
+      await result.current.logTrialOffer(PLAYER_ID, DETAILS);
+    });
+
+    expect(result.current.error).toBeDefined();
+  });
+
+  it('maps Unauthorized error (code 10) to human-readable message', async () => {
+    mockBuildLogTrialOffer.mockRejectedValue(new Error('Unauthorized'));
+
+    const { result } = renderHook(() => useTrialOffer());
+
+    await act(async () => {
+      await result.current.logTrialOffer(PLAYER_ID, DETAILS);
+    });
+
+    expect(result.current.error).toBeDefined();
+  });
+
   it('throws when the wallet is not connected', async () => {
-    mockUseWallet.mockReturnValue({ publicKey: null, signAndSubmit: mockSignAndSubmit });
+    mockUseWallet.mockReturnValue({
+      publicKey: null,
+      signAndSubmit: mockSignAndSubmit,
+    });
 
     const { result } = renderHook(() => useTrialOffer());
 
@@ -245,11 +284,15 @@ describe('useTrialOffer', () => {
 
     // Start call 1
     let call1!: Promise<void>;
-    act(() => { call1 = result.current.logTrialOffer(PLAYER_ID, DETAILS); });
+    act(() => {
+      call1 = result.current.logTrialOffer(PLAYER_ID, DETAILS);
+    });
 
     // Start call 2 before call 1 resolves
     let call2!: Promise<void>;
-    act(() => { call2 = result.current.logTrialOffer(PLAYER_ID, DETAILS); });
+    act(() => {
+      call2 = result.current.logTrialOffer(PLAYER_ID, DETAILS);
+    });
 
     // Resolve call 2 first (it's the "newer" one)
     await act(async () => {

@@ -3,6 +3,8 @@
   "nav": {
     "scout_dashboard": "Scout Dashboard",
     "player_dashboard": "Player Dashboard",
+    "sponsorship": "Sponsorship",
+    "soon": "Soon",
     "maintenance_warning": "ScoutOff is currently under maintenance. Write actions are temporarily disabled."
   },
   "common": {
@@ -46,10 +48,16 @@
     "player_not_found": "Player not found",
     "no_players": "No players found"
   },
+  "player_profile": {
+    "back_to_scout_dashboard": "← Back to Scout Dashboard"
+  },
   "player_dashboard": {
     "title": "Player Dashboard",
     "welcome": "Welcome to Player Dashboard",
     "description": "View your profile and progress",
+    "tab_register": "Register",
+    "tab_profile": "My Profile",
+    "register_prompt": "Register first to view your profile.",
     "profile": "Profile",
     "milestones": "Milestones",
     "achievements": "Achievements",
@@ -67,10 +75,16 @@
     "installMobile": "Browser extension / mobile",
     "cancel": "Cancel",
     "noWalletDetected": "No wallet detected. Please install a Stellar wallet extension.",
+    "noWalletInstalledBanner": "No Stellar wallet detected. Install one of the options below to get started.",
+    "notInstalled": "Not installed",
+    "installLink": "Install",
     "balance": "Balance",
     "address": "Address",
     "invalid_address": "Invalid Stellar address",
-    "connection_failed": "Failed to connect wallet"
+    "connection_failed": "Failed to connect wallet",
+    "balanceError": "Balance unavailable — network error",
+    "ledgerConnect": "Hardware wallet — connect via USB",
+    "ledgerInstructions": "Connect your Ledger device via USB and open the Stellar app."
   },
   "errors": {
     "not_found": "Not found",
@@ -89,6 +103,35 @@
     "upload": "Upload",
     "view_details": "View Details",
     "view_more": "View More"
+  },
+  "sponsorship": {
+    "badge": "Coming Soon",
+    "title": "Fractionalized Player Sponsorship",
+    "description": "Fans and investors will soon be able to buy \"Player Tokens\" to fund a player's training and travel — with revenue routed transparently back on-chain.",
+    "howItWorksTitle": "How it will work",
+    "howItWorksDescription": "Sponsors will purchase fractional Player Tokens representing a stake in a player's future earnings. Funds raised go directly toward training, travel, and development costs, while a share of the player's future on-chain revenue is routed back to token holders — all enforced by Soroban smart contracts.",
+    "notice": "This page is a placeholder. No tokens can be purchased yet and no blockchain interaction is available here."
+  },
+  "footer": {
+    "changelog": "Changelog"
+  },
+  "changelog": {
+    "back_to_home": "Back to home",
+    "page_title": "Changelog",
+    "page_description": "Recent platform updates and improvements.",
+    "eyebrow": "Platform updates",
+    "english_notice": "This changelog is currently available in English only.",
+    "added": "Added",
+    "improved": "Improved",
+    "fixed": "Fixed",
+    "empty_title": "Changelog unavailable",
+    "empty_description": "We couldn't load the changelog right now. Please check back later."
+  },
+  "progress_levels": {
+    "level0": "Unverified",
+    "level1": "Verified",
+    "level2": "Performance",
+    "level3": "Elite"
   },
   "contractErrors": {
     "AlreadyInitialized": "This player is already registered.",

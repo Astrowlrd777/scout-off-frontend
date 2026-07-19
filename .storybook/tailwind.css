@@ -1,4 +1,6 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
   --bg: #0a0f1e;
@@ -10,10 +12,4 @@ body {
   background-color: var(--bg);
   color: #f9fafb;
   font-family: Inter, system-ui, sans-serif;
-}
-
-@theme inline {
-  --color-brand-green: #00C853;
-  --color-brand-dark: #0A0F1E;
-  --color-brand-card: #111827;
 }

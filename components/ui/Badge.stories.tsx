@@ -50,11 +50,11 @@ export const AllVariants: Story = {
   name: 'All Variants',
   render: () => (
     <div className="flex flex-wrap gap-3">
-      {(['level0', 'level1', 'level2', 'level3', 'position', 'region'] as const).map(
-        (v) => (
-          <Badge key={v} variant={v} label={v} size="md" />
-        ),
-      )}
+      {(
+        ['level0', 'level1', 'level2', 'level3', 'position', 'region'] as const
+      ).map((v) => (
+        <Badge key={v} variant={v} label={v} size="md" />
+      ))}
     </div>
   ),
 };

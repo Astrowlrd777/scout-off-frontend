@@ -25,7 +25,11 @@ const Options = () => (
 );
 
 export const Default: Story = {
-  render: () => <Select><Options /></Select>,
+  render: () => (
+    <Select>
+      <Options />
+    </Select>
+  ),
 };
 
 export const WithLabel: Story = {

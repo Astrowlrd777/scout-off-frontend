@@ -1,16 +1,28 @@
 'use client';
 import { useState, useCallback, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useRequireWallet } from '@/hooks/useRequireWallet';
+import { useRequireSubscription } from '@/hooks/useRequireSubscription';
 import { useScout } from '@/hooks/useScout';
+import { useSubscription } from '@/hooks/useSubscription';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
+import { useDebounce } from '@/hooks/useDebounce';
+import { useOnboardingTour } from '@/hooks/useOnboardingTour';
 import { getPlayer } from '@/lib/contract';
 import PlayerCard from '@/components/PlayerCard';
 import PlayerCardSkeleton from '@/components/PlayerCardSkeleton';
 import PlayerFilterForm from '@/components/scout/PlayerFilterForm';
 import EmptyState from '@/components/ui/EmptyState';
+import Spinner from '@/components/ui/Spinner';
+import ReferralPanel from '@/components/scout/ReferralPanel';
+import OnboardingTour from '@/components/ui/OnboardingTour';
+import { scoutTourSteps, SCOUT_TOUR_ID } from '@/lib/tourSteps';
 import type { Player, PlayerFilter } from '@/types';
+import PullToRefresh from '@/components/ui/PullToRefresh';
+import ScrollToTop from '@/components/ui/ScrollToTop';
 
-export const PAGE_SIZE = 12;
+const PAGE_SIZE = 12;
 
 function isStellarKey(v: string) {
   return /^G[A-Z2-7]{55}$/.test(v);
@@ -18,16 +30,27 @@ function isStellarKey(v: string) {
 
 export default function ScoutDashboardContent() {
   const { walletAddress: publicKey } = useRequireWallet();
+  const { isProtected, loading: subscriptionLoading } =
+    useRequireSubscription();
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const { players, loading, search } = useScout();
+  const tour = useOnboardingTour(SCOUT_TOUR_ID, scoutTourSteps, publicKey);
+
+  const { players, loading, search, searchByName, refetch } = useScout();
+  const { subscription } = useSubscription();
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
   const hasLoaded = useRef(false);
   const loadingEverStarted = useRef(false);
   const [searchHasCompleted, setSearchHasCompleted] = useState(false);
   const [resetKey, setResetKey] = useState(0);
 
-  // Wallet search state
   const [walletQuery, setWalletQuery] = useState('');
   const [searchResult, setSearchResult] = useState<
     Player | null | 'not-found' | 'invalid'
@@ -35,17 +58,26 @@ export default function ScoutDashboardContent() {
   const [searchLoading, setSearchLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const page = Math.max(1, Number(searchParams.get('page') ?? '1'));
-  const totalPages = Math.max(1, Math.ceil(players.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const paginated = players.slice(
-    (safePage - 1) * PAGE_SIZE,
-    safePage * PAGE_SIZE,
-  );
+  const [nameQuery, setNameQuery] = useState('');
+  const debouncedName = useDebounce(nameQuery, 300);
+
+  const {
+    visibleItems: visiblePlayers,
+    isFetchingMore,
+    isExhausted,
+    sentinelRef,
+    goToPage,
+    currentPage,
+    totalPages,
+  } = useInfiniteScroll<Player>({ items: players, pageSize: PAGE_SIZE });
+
+  const pageParam = Math.max(1, Number(searchParams.get('page') ?? '1'));
 
   function setPage(p: number) {
+    const clamped = Math.max(1, Math.min(p, totalPages));
+    goToPage(clamped);
     const params = new URLSearchParams(searchParams.toString());
-    params.set('page', String(p));
+    params.set('page', String(clamped));
     router.replace(`?${params.toString()}`);
   }
 
@@ -58,7 +90,6 @@ export default function ScoutDashboardContent() {
     }
   }, [loading]);
 
-  // Debounced wallet search
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
@@ -89,8 +120,19 @@ export default function ScoutDashboardContent() {
     };
   }, [walletQuery]);
 
+  useEffect(() => {
+    if (debouncedName) {
+      hasLoaded.current = false;
+      setSearchHasCompleted(false);
+      searchByName(debouncedName);
+    } else {
+      searchByName('');
+    }
+  }, [debouncedName, searchByName]);
+
   const handleSearch = useCallback(
     (filter: PlayerFilter) => {
+      setNameQuery('');
       hasLoaded.current = false;
       search(filter);
     },
@@ -98,20 +140,94 @@ export default function ScoutDashboardContent() {
   );
 
   const handleClearFilters = useCallback(() => {
+    setNameQuery('');
     setResetKey((k) => k + 1);
   }, []);
 
   if (!publicKey) return null;
+  if (subscriptionLoading || !isProtected) return null;
 
   const showSkeletons = loading && !hasLoaded.current;
   const showEmptyState = searchHasCompleted && !loading && players.length === 0;
 
   return (
-    <div className="flex flex-col gap-8">
+    <PullToRefresh onRefresh={refetch} isLoading={loading}>
+      <OnboardingTour
+        isVisible={tour.isVisible}
+        currentStep={tour.currentStep}
+        currentStepData={tour.currentStepData}
+        steps={tour.steps}
+        onNext={tour.nextStep}
+        onPrev={tour.prevStep}
+        onDismiss={tour.dismissTour}
+        onSkip={tour.skipTour}
+        onComplete={tour.completeTour}
+      />
+      <div className="flex flex-col gap-8">
       <h1 className="text-3xl font-bold text-white">Scout Dashboard</h1>
 
-      {/* Wallet address search */}
-      <div className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-3">
+      {subscription &&
+        (() => {
+          const daysRemaining = Math.floor(
+            (subscription.expiresAt - now / 1000) / 86400,
+          );
+          const tierLabel =
+            subscription.tier.charAt(0).toUpperCase() +
+            subscription.tier.slice(1);
+
+          if (daysRemaining <= 0) {
+            return (
+              <div
+                data-tour="subscription-status"
+                className="flex items-center gap-3 rounded-xl border border-red-500 bg-brand-card px-4 py-3 text-sm"
+              >
+                <span className="text-red-400">Subscription expired</span>
+                <Link
+                  href="/scout/subscribe"
+                  className="ml-auto text-brand-green underline hover:opacity-80 transition"
+                >
+                  Renew
+                </Link>
+              </div>
+            );
+          }
+
+          if (daysRemaining <= 7) {
+            return (
+              <div
+                data-tour="subscription-status"
+                className="flex items-center gap-3 rounded-xl border border-orange-400 bg-brand-card px-4 py-3 text-sm text-gray-200"
+              >
+                <span>
+                  {tierLabel} — expires in {daysRemaining} day
+                  {daysRemaining !== 1 ? 's' : ''}
+                </span>
+                <Link
+                  href="/scout/subscribe"
+                  className="ml-auto text-brand-green underline hover:opacity-80 transition"
+                >
+                  Renew
+                </Link>
+              </div>
+            );
+          }
+
+          return (
+            <div
+              data-tour="subscription-status"
+              className="flex items-center gap-3 rounded-xl border border-brand-green bg-brand-card px-4 py-3 text-sm text-gray-200"
+            >
+              {tierLabel} — {daysRemaining} days remaining
+            </div>
+          );
+        })()}
+
+      <ReferralPanel />
+
+      <div
+        className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-3"
+        data-tour="search-section"
+      >
         <label
           className="text-sm font-medium text-gray-300"
           htmlFor="wallet-search"
@@ -156,12 +272,39 @@ export default function ScoutDashboardContent() {
         )}
       </div>
 
-      {/* Filter bar */}
-      <div className="bg-brand-card border border-gray-800 rounded-xl p-5">
+      <div className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-3">
+        <label
+          className="text-sm font-medium text-gray-300"
+          htmlFor="name-search"
+        >
+          Search by Player Name
+        </label>
+        <input
+          id="name-search"
+          className="input"
+          placeholder="e.g. Amara Diallo"
+          value={nameQuery}
+          onChange={(e) => setNameQuery(e.target.value)}
+          autoComplete="off"
+        />
+        {nameQuery &&
+          !loading &&
+          players.length === 0 &&
+          searchHasCompleted && (
+            <EmptyState
+              title="No players found"
+              description={`No players match "${nameQuery}".`}
+            />
+          )}
+      </div>
+
+      <div
+        className={`bg-brand-card border border-gray-800 rounded-xl p-5${nameQuery ? ' opacity-50 pointer-events-none' : ''}`}
+        data-tour="filter-section"
+      >
         <PlayerFilterForm onSearch={handleSearch} resetKey={resetKey} />
       </div>
 
-      {/* Results */}
       {showSkeletons ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {Array.from({ length: PAGE_SIZE }).map((_, i) => (
@@ -197,34 +340,71 @@ export default function ScoutDashboardContent() {
               {players.length} player{players.length !== 1 ? 's' : ''} found
             </p>
           )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {paginated.map((p) => (
+            {visiblePlayers.map((p) => (
               <PlayerCard key={p.id} player={p} />
             ))}
           </div>
-          {players.length > PAGE_SIZE && (
-            <div className="flex items-center justify-center gap-4">
-              <button
-                onClick={() => setPage(safePage - 1)}
-                disabled={safePage <= 1}
-                className="px-4 py-2 rounded-lg border border-gray-700 text-gray-300 disabled:opacity-40 hover:border-brand-green transition"
-              >
-                Previous
-              </button>
-              <span className="text-sm text-gray-400">
-                Page {safePage} of {totalPages}
-              </span>
-              <button
-                onClick={() => setPage(safePage + 1)}
-                disabled={safePage >= totalPages}
-                className="px-4 py-2 rounded-lg border border-gray-700 text-gray-300 disabled:opacity-40 hover:border-brand-green transition"
-              >
-                Next
-              </button>
+
+          <div ref={sentinelRef} aria-hidden="true" />
+
+          {isFetchingMore && (
+            <div className="flex justify-center py-4">
+              <Spinner size="md" />
             </div>
+          )}
+
+          {isExhausted && players.length > PAGE_SIZE && (
+            <p
+              role="status"
+              aria-live="polite"
+              className="text-center text-sm text-gray-500 py-2"
+            >
+              No more results
+            </p>
+          )}
+
+          {players.length > PAGE_SIZE && (
+            <nav
+              aria-label="Player list pagination"
+              className="flex flex-col items-center gap-3"
+            >
+              <p className="sr-only">
+                Keyboard pagination — use these buttons if you prefer not to
+                scroll
+              </p>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => setPage(currentPage - 1)}
+                  disabled={currentPage <= 1}
+                  aria-label="Previous page"
+                  className="px-4 py-2 rounded-lg border border-gray-700 text-gray-300 disabled:opacity-40 hover:border-brand-green transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-green"
+                >
+                  Previous
+                </button>
+                <span
+                  className="text-sm text-gray-400"
+                  aria-live="polite"
+                  aria-atomic="true"
+                >
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setPage(currentPage + 1)}
+                  disabled={currentPage >= totalPages}
+                  aria-label="Next page"
+                  className="px-4 py-2 rounded-lg border border-gray-700 text-gray-300 disabled:opacity-40 hover:border-brand-green transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-green"
+                >
+                  Next
+                </button>
+              </div>
+            </nav>
           )}
         </>
       )}
     </div>
+    <ScrollToTop />
+    </PullToRefresh>
   );
 }

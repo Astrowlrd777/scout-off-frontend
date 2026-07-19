@@ -1,116 +1,92 @@
 'use client';
 
+/**
+ * MilestoneList
+ *
+ * A flat, scrollable list of a player's approved milestones ordered
+ * chronologically (oldest first). Each row includes:
+ *   – Level badge
+ *   – Milestone description
+ *   – Date
+ *   – ValidatorChip (active/former status + tooltip with milestone count)
+ *
+ * Used on profile pages where scouts need a compact milestone history without
+ * the interactive timeline visualization.
+ */
+
 import type { Milestone, ProgressLevel } from '@/types';
+import { PROGRESS_LABELS } from '@/types';
 import Badge from '@/components/ui/Badge';
-import EmptyState from '@/components/ui/EmptyState';
-import Tooltip from '@/components/ui/Tooltip';
-import { useToast } from '@/components/ui/Toast';
+import ValidatorChip from '@/components/player/ValidatorChip';
 
-// Maps a milestone's position in verified-history to the level badge variant.
-// Milestones approved by validators are at least level 2.
-const LEVEL_VARIANT = ['level0', 'level1', 'level2', 'level3'] as const;
-const LEVEL_LABELS = [
-  'Unverified',
-  'Verified',
-  'Performance',
-  'Elite',
-] as const;
+const BADGE_VARIANT = ['level0', 'level1', 'level2', 'level3'] as const;
 
-function truncateAddress(addr: string): string {
-  return `${addr.slice(0, 8)}…${addr.slice(-4)}`;
-}
-
-function formatFull(ts: number): string {
-  return new Date(ts * 1000).toLocaleString(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
+function formatDate(ts: number): string {
+  return new Date(ts * 1000).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
   });
-}
-
-function formatRelative(ts: number): string {
-  const diffSec = Math.floor(Date.now() / 1000) - ts;
-  if (diffSec < 60) return 'just now';
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin} minute${diffMin !== 1 ? 's' : ''} ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr} hour${diffHr !== 1 ? 's' : ''} ago`;
-  const diffDay = Math.floor(diffHr / 24);
-  if (diffDay < 30) return `${diffDay} day${diffDay !== 1 ? 's' : ''} ago`;
-  const diffMo = Math.floor(diffDay / 30);
-  if (diffMo < 12) return `${diffMo} month${diffMo !== 1 ? 's' : ''} ago`;
-  const diffYr = Math.floor(diffMo / 12);
-  return `${diffYr} year${diffYr !== 1 ? 's' : ''} ago`;
 }
 
 interface MilestoneListProps {
   milestones: Milestone[];
-  /** Override the level badge based on milestone index (defaults to level2). */
-  level?: ProgressLevel;
 }
 
-export default function MilestoneList({
-  milestones,
-  level = 2,
-}: MilestoneListProps) {
-  const { show } = useToast();
-
+export default function MilestoneList({ milestones }: MilestoneListProps) {
   if (milestones.length === 0) {
     return (
-      <EmptyState
-        title="No milestones yet"
-        description="Verified milestones from approved validators will appear here."
-      />
+      <p className="text-sm text-gray-500 py-4">No milestones approved yet.</p>
     );
   }
 
-  const sorted = [...milestones].sort((a, b) => b.timestamp - a.timestamp);
-
-  async function copyAddress(addr: string) {
-    try {
-      await navigator.clipboard.writeText(addr);
-      show({ message: 'Copied', variant: 'success' });
-    } catch {
-      show({ message: 'Copy failed', variant: 'error' });
-    }
-  }
-
-  const badgeVariant = LEVEL_VARIANT[level];
-  const badgeLabel = LEVEL_LABELS[level];
+  const sorted = [...milestones].sort((a, b) => a.timestamp - b.timestamp);
 
   return (
-    <ul className="flex flex-col gap-3" aria-label="Milestone history">
-      {sorted.map((m) => (
-        <li
-          key={m.id}
-          className="text-sm text-gray-300 border-l-2 border-brand-green pl-3 flex flex-col gap-1"
-        >
-          <span>{m.description}</span>
+    <ol
+      aria-label="Milestone history"
+      className="flex flex-col divide-y divide-gray-800"
+    >
+      {sorted.map((milestone, idx) => {
+        // Milestone index 0 → level 1, index 1 → level 2, etc.
+        const level = Math.min(idx + 1, 3) as ProgressLevel;
 
-          <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
-            <Badge variant={badgeVariant} label={badgeLabel} size="sm" />
+        return (
+          <li
+            key={milestone.id}
+            className="flex flex-col gap-2 py-4 sm:flex-row sm:items-start sm:gap-4"
+          >
+            {/* Level badge */}
+            <div className="flex-shrink-0 pt-0.5">
+              <Badge
+                variant={BADGE_VARIANT[level]}
+                label={PROGRESS_LABELS[level]}
+                size="sm"
+              />
+            </div>
 
-            <Tooltip content={`Full address: ${m.validator}`}>
-              <button
-                type="button"
-                onClick={() => copyAddress(m.validator)}
-                className="font-mono hover:text-brand-green focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-green rounded transition"
-                aria-label={`Copy validator address ${m.validator}`}
-              >
-                {truncateAddress(m.validator)}
-              </button>
-            </Tooltip>
+            {/* Content */}
+            <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+              <p className="text-sm font-medium text-white leading-snug">
+                {milestone.description}
+              </p>
 
-            <Tooltip content={formatFull(m.timestamp)}>
-              <time
-                dateTime={new Date(m.timestamp * 1000).toISOString()}
-                className="cursor-default"
-              >
-                {formatRelative(m.timestamp)}
-              </time>
-            </Tooltip>
-          </div>
-        </li>
-      ))}
-    </ul>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                {/* Validator reputation chip */}
+                <ValidatorChip address={milestone.validator} />
+
+                {/* Date */}
+                <time
+                  dateTime={new Date(milestone.timestamp * 1000).toISOString()}
+                  className="text-xs text-gray-500"
+                >
+                  {formatDate(milestone.timestamp)}
+                </time>
+              </div>
+            </div>
+          </li>
+        );
+      })}
+    </ol>
   );
 }

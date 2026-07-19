@@ -156,10 +156,7 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
       )}
 
       <div className="flex flex-col gap-1">
-        <label
-          htmlFor="approve-player-id"
-          className="text-xs text-gray-400"
-        >
+        <label htmlFor="approve-player-id" className="text-xs text-gray-400">
           Player ID
         </label>
         <div className="flex gap-2">
@@ -172,7 +169,9 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
             onChange={(e) => setPlayerId(e.target.value)}
             required
             aria-invalid={playerError ? true : undefined}
-            aria-describedby={playerError ? 'approve-player-id-error' : undefined}
+            aria-describedby={
+              playerError ? 'approve-player-id-error' : undefined
+            }
           />
           <button
             type="button"
@@ -184,7 +183,11 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
           </button>
         </div>
         {playerError && (
-          <p id="approve-player-id-error" role="alert" className="text-red-400 text-xs">
+          <p
+            id="approve-player-id-error"
+            role="alert"
+            className="text-red-400 text-xs"
+          >
             {playerError}
           </p>
         )}
@@ -209,10 +212,7 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
       )}
 
       <div className="flex flex-col gap-1">
-        <label
-          htmlFor="approve-description"
-          className="text-xs text-gray-400"
-        >
+        <label htmlFor="approve-description" className="text-xs text-gray-400">
           Milestone Description
         </label>
         <textarea
@@ -226,10 +226,7 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
       </div>
 
       <div className="flex flex-col gap-1">
-        <label
-          htmlFor="approve-evidence-url"
-          className="text-xs text-gray-400"
-        >
+        <label htmlFor="approve-evidence-url" className="text-xs text-gray-400">
           Evidence URL
         </label>
         <input
@@ -244,7 +241,11 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
           aria-describedby={urlError ? 'approve-url-error' : undefined}
         />
         {urlError && (
-          <p id="approve-url-error" role="alert" className="text-red-400 text-xs">
+          <p
+            id="approve-url-error"
+            role="alert"
+            className="text-red-400 text-xs"
+          >
             {urlError}
           </p>
         )}
@@ -259,7 +260,8 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
 
       <button
         type="submit"
-        disabled={submitting || !!urlError}
+        disabled={submitting || !!urlError || isPaused}
+        title={isPaused ? 'Contract is currently paused' : undefined}
         className="bg-brand-green text-black font-semibold py-2 rounded-lg hover:opacity-90 transition disabled:opacity-50"
       >
         {submitting ? 'Submitting\u2026' : 'Approve Milestone'}

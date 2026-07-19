@@ -1,4 +1,5 @@
 const createNextIntlPlugin = require('next-intl/plugin');
+const { withSentryConfig } = require('@sentry/nextjs');
 
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 
@@ -49,27 +50,49 @@ const withPWA = require('next-pwa')({
 
 const nextConfig = {
   images: {
-    domains: ['ipfs.io', 'gateway.pinata.cloud'],
-  },
-  webpack(config, { isServer }) {
-    // @sentry/nextjs is an optional peer dep used only in production.
-    // Mark it as external so webpack doesn't try to bundle it when the
-    // package isn't installed locally (e.g. CI / contributor machines).
-    config.externals = [
-      ...(Array.isArray(config.externals)
-        ? config.externals
-        : config.externals
-          ? [config.externals]
-          : []),
-      ({ request }, callback) => {
-        if (request === '@sentry/nextjs')
-          return callback(null, 'commonjs @sentry/nextjs');
-        callback();
+    /**
+     * remotePatterns replaces the deprecated `domains` array.
+     * Each entry covers one IPFS gateway that may appear in NEXT_PUBLIC_IPFS_GATEWAY.
+     *
+     * Pinata dedicated gateway:  https://gateway.pinata.cloud/ipfs/<cid>
+     * Pinata dedicated gateway (custom subdomain): https://<name>.mypinata.cloud/ipfs/<cid>
+     * Public IPFS gateway:       https://ipfs.io/ipfs/<cid>
+     * Cloudflare IPFS gateway:   https://cloudflare-ipfs.com/ipfs/<cid>
+     * Dweb.link gateway:         https://dweb.link/ipfs/<cid>
+     *
+     * Adding a new gateway only requires a new entry here — no other changes needed.
+     */
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'gateway.pinata.cloud',
+        pathname: '/ipfs/**',
       },
-    ];
-    return config;
+      {
+        protocol: 'https',
+        hostname: '**.mypinata.cloud',
+        pathname: '/ipfs/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'ipfs.io',
+        pathname: '/ipfs/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cloudflare-ipfs.com',
+        pathname: '/ipfs/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'dweb.link',
+        pathname: '/ipfs/**',
+      },
+    ],
   },
   async headers() {
+    const isDev = process.env.NODE_ENV === 'development';
+
     // Get environment variables with defaults for development
     const ipfsGateway =
       process.env.NEXT_PUBLIC_IPFS_GATEWAY ||
@@ -94,11 +117,17 @@ const nextConfig = {
     const sorobanDomain = extractDomain(sorobanRpc);
     const horizonDomain = extractDomain(horizonUrl);
 
+    // Next.js dev tooling (react-refresh/runtime overlays) relies on inline
+    // scripts and eval. Keep production CSP strict.
+    const scriptSrc = isDev
+      ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+      : "script-src 'self'";
+
     // Build Content Security Policy header
     const cspHeader = [
       "default-src 'self'",
-      "script-src 'self'",
-      `img-src 'self' ${ipfsGatewayDomain}`,
+      scriptSrc,
+      `img-src 'self' data: ${ipfsGatewayDomain}`,
       `connect-src 'self' ${sorobanDomain} ${horizonDomain}`,
       "style-src 'self' 'unsafe-inline'",
       "font-src 'self' data:",
@@ -139,4 +168,25 @@ const nextConfig = {
   },
 };
 
-module.exports = withPWA(nextConfig);
+// @sentry/nextjs's build-time plugin uploads source maps and tags the
+// release for every build. It no-ops (with a warning) when SENTRY_AUTH_TOKEN
+// isn't set, so local/contributor builds are unaffected.
+const sentryBuildOptions = {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+  release: {
+    // Falls back to the plugin's own git-HEAD auto-detection when unset.
+    name: process.env.SENTRY_RELEASE,
+  },
+  sourcemaps: {
+    deleteSourcemapsAfterUpload: true,
+  },
+};
+
+module.exports = withSentryConfig(
+  withNextIntl(withPWA(nextConfig)),
+  sentryBuildOptions,
+);

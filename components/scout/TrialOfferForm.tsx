@@ -1,6 +1,9 @@
 'use client';
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useCallback } from 'react';
 import { useTrialOffer } from '@/hooks/useTrialOffer';
+import TransactionStatus, {
+  type TxStatus,
+} from '@/components/ui/TransactionStatus';
 import Button from '@/components/ui/Button';
 import type { TrialOfferType } from '@/types';
 
@@ -12,15 +15,20 @@ const OFFER_TYPES: { value: TrialOfferType; label: string }[] = [
 
 interface TrialOfferFormProps {
   playerId: string;
+  onSuccess?: () => void;
 }
 
-export default function TrialOfferForm({ playerId }: TrialOfferFormProps) {
+export default function TrialOfferForm({
+  playerId,
+  onSuccess,
+}: TrialOfferFormProps) {
   const { logTrialOffer, loading, error, txHash } = useTrialOffer();
 
   const [clubName, setClubName] = useState('');
   const [offerType, setOfferType] = useState<TrialOfferType>('trial');
   const [message, setMessage] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [txStatus, setTxStatus] = useState<TxStatus | null>(null);
 
   function validate(): boolean {
     const errs: Record<string, string> = {};
@@ -32,30 +40,27 @@ export default function TrialOfferForm({ playerId }: TrialOfferFormProps) {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!validate()) return;
-    await logTrialOffer(playerId, {
-      clubName: clubName.trim(),
-      offerType,
-      message: message.trim() || undefined,
-    });
+
+    setTxStatus('pending');
+    try {
+      await logTrialOffer(playerId, {
+        clubName: clubName.trim(),
+        offerType,
+        message: message.trim() || undefined,
+      });
+      setTxStatus('success');
+      setClubName('');
+      setOfferType('trial');
+      setMessage('');
+      onSuccess?.();
+    } catch {
+      setTxStatus('error');
+    }
   }
 
-  if (txHash) {
-    return (
-      <div
-        role="status"
-        aria-live="polite"
-        className="rounded-xl border border-brand-green bg-brand-card p-5 flex flex-col gap-3"
-      >
-        <p className="text-sm font-medium text-brand-green">
-          Trial offer logged successfully.
-        </p>
-        <p className="text-xs text-gray-400 break-all">
-          Transaction:{' '}
-          <span className="font-mono text-gray-300">{txHash}</span>
-        </p>
-      </div>
-    );
-  }
+  const handleHideStatus = useCallback(() => {
+    setTxStatus(null);
+  }, []);
 
   return (
     <form
@@ -65,10 +70,7 @@ export default function TrialOfferForm({ playerId }: TrialOfferFormProps) {
     >
       {/* Club name */}
       <div className="flex flex-col gap-1">
-        <label
-          htmlFor="tof-club"
-          className="text-sm font-medium text-gray-300"
-        >
+        <label htmlFor="tof-club" className="text-sm font-medium text-gray-300">
           Club Name *
         </label>
         <input
@@ -93,10 +95,7 @@ export default function TrialOfferForm({ playerId }: TrialOfferFormProps) {
 
       {/* Offer type */}
       <div className="flex flex-col gap-1">
-        <label
-          htmlFor="tof-type"
-          className="text-sm font-medium text-gray-300"
-        >
+        <label htmlFor="tof-type" className="text-sm font-medium text-gray-300">
           Offer Type *
         </label>
         <select
@@ -120,8 +119,7 @@ export default function TrialOfferForm({ playerId }: TrialOfferFormProps) {
           htmlFor="tof-message"
           className="text-sm font-medium text-gray-300"
         >
-          Message{' '}
-          <span className="text-gray-500 font-normal">(optional)</span>
+          Message <span className="text-gray-500 font-normal">(optional)</span>
         </label>
         <textarea
           id="tof-message"
@@ -134,11 +132,12 @@ export default function TrialOfferForm({ playerId }: TrialOfferFormProps) {
         />
       </div>
 
-      {error && (
-        <p role="alert" className="text-sm text-red-500">
-          {error}
-        </p>
-      )}
+      <TransactionStatus
+        status={txStatus}
+        txHash={txHash}
+        error={error}
+        onHide={handleHideStatus}
+      />
 
       <Button
         type="submit"
