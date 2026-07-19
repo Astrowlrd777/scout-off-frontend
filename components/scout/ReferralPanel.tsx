@@ -8,6 +8,7 @@ import {
 import { useWallet } from '@/hooks/useWallet';
 import type { ReferralCode, ReferralStats } from '@/types';
 import { Copy, Check } from 'lucide-react';
+import { buildReferralCodesCsv } from '@/lib/referralCsv';
 
 const COPIED_RESET_MS = 2000;
 const PAGE_SIZE = 5;
@@ -100,6 +101,21 @@ export default function ReferralPanel() {
       ? `${window.location.protocol}//${window.location.host}`
       : '';
 
+  const handleExportCsv = useCallback(() => {
+    if (codes.length === 0) return;
+
+    const csvContent = buildReferralCodesCsv(codes, baseUrl);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'referral-codes.csv';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }, [baseUrl, codes]);
+
   return (
     <div className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-4">
       <div className="flex items-center justify-between">
@@ -116,35 +132,45 @@ export default function ReferralPanel() {
         link, you will be credited with a referral.
       </p>
 
-      <button
-        onClick={handleGenerate}
-        disabled={generating || !publicKey}
-        className="self-start px-4 py-2 rounded-lg bg-brand-green text-black font-medium transition hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
-      >
-        {generating && (
-          <svg
-            className="animate-spin h-4 w-4"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            />
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-            />
-          </svg>
-        )}
-        {generating ? 'Generating…' : 'Generate Invite Link'}
-      </button>
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          onClick={handleGenerate}
+          disabled={generating || !publicKey}
+          className="self-start px-4 py-2 rounded-lg bg-brand-green text-black font-medium transition hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
+        >
+          {generating && (
+            <svg
+              className="animate-spin h-4 w-4"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              />
+            </svg>
+          )}
+          {generating ? 'Generating…' : 'Generate Invite Link'}
+        </button>
+
+        <button
+          onClick={handleExportCsv}
+          disabled={codesLoading || codes.length === 0 || !publicKey}
+          className="self-start px-4 py-2 rounded-lg border border-gray-700 bg-gray-900 text-sm font-medium text-gray-200 transition hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Export as CSV
+        </button>
+      </div>
 
       {codesLoading && codes.length === 0 ? (
         <p className="text-sm text-gray-500">Loading your invite links…</p>
