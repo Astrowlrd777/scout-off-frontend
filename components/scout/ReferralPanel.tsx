@@ -5,6 +5,7 @@ import {
   getReferralStats,
   listReferralCodes,
 } from '@/lib/api';
+import { useWallet } from '@/hooks/useWallet';
 import type { ReferralCode, ReferralStats } from '@/types';
 import { Copy, Check } from 'lucide-react';
 import { buildReferralCodesCsv } from '@/lib/referralCsv';
@@ -19,6 +20,7 @@ function copyToClipboard(text: string) {
 }
 
 export default function ReferralPanel() {
+  const { publicKey } = useWallet();
   const [codes, setCodes] = useState<ReferralCode[]>([]);
   const [codesLoading, setCodesLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -46,28 +48,30 @@ export default function ReferralPanel() {
   }, []);
 
   const loadStats = useCallback(async () => {
+    if (!publicKey) return;
     setLoading(true);
     try {
-      const [s] = await Promise.all([getReferralStats()]);
+      const [s] = await Promise.all([getReferralStats(publicKey)]);
       setStats(s);
     } catch {
       // silently fail
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [publicKey]);
 
   const loadCodes = useCallback(async () => {
+    if (!publicKey) return;
     setCodesLoading(true);
     try {
-      const list = await listReferralCodes();
+      const list = await listReferralCodes(publicKey);
       setCodes(list);
     } catch {
       // silently fail — the "generate" flow still works without history
     } finally {
       setCodesLoading(false);
     }
-  }, []);
+  }, [publicKey]);
 
   useEffect(() => {
     loadStats();
@@ -75,9 +79,10 @@ export default function ReferralPanel() {
   }, [loadStats, loadCodes]);
 
   const handleGenerate = useCallback(async () => {
+    if (!publicKey) return;
     setGenerating(true);
     try {
-      const referral = await generateReferralCode();
+      const referral = await generateReferralCode(publicKey);
       setCodes((prev) => [referral, ...prev]);
       await loadStats();
     } catch {
@@ -85,7 +90,7 @@ export default function ReferralPanel() {
     } finally {
       setGenerating(false);
     }
-  }, [loadStats]);
+  }, [publicKey, loadStats]);
 
   const handleShowMore = useCallback(() => {
     setVisibleCount((count) => count + PAGE_SIZE);
@@ -130,7 +135,7 @@ export default function ReferralPanel() {
       <div className="flex flex-wrap items-center gap-2">
         <button
           onClick={handleGenerate}
-          disabled={generating}
+          disabled={generating || !publicKey}
           className="self-start px-4 py-2 rounded-lg bg-brand-green text-black font-medium transition hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
         >
           {generating && (
@@ -160,7 +165,7 @@ export default function ReferralPanel() {
 
         <button
           onClick={handleExportCsv}
-          disabled={codes.length === 0}
+          disabled={codesLoading || codes.length === 0 || !publicKey}
           className="self-start px-4 py-2 rounded-lg border border-gray-700 bg-gray-900 text-sm font-medium text-gray-200 transition hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Export as CSV
