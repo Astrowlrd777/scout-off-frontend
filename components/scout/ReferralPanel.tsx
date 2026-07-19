@@ -2,6 +2,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { generateReferralCode, getReferralStats } from '@/lib/api';
 import type { ReferralCode, ReferralStats } from '@/types';
+import { Copy, Check } from 'lucide-react';
 
 function copyToClipboard(text: string) {
   if (navigator.clipboard) {
@@ -114,9 +115,19 @@ export default function ReferralPanel() {
                     setCopiedIndex(i);
                     setTimeout(() => setCopiedIndex(null), 2000);
                   }}
-                  className="shrink-0 rounded px-2 py-1 text-xs font-medium transition bg-gray-700 text-gray-300 hover:bg-gray-600"
+                  className="shrink-0 flex items-center gap-1.5 rounded px-2 py-1 text-xs font-medium transition bg-gray-700 text-gray-300 hover:bg-gray-600"
                 >
-                  {copiedIndex === i ? 'Copied!' : 'Copy'}
+                  {copiedIndex === i ? (
+                    <>
+                      <Check className="w-3.5 h-3.5" aria-hidden="true" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" aria-hidden="true" />
+                      Copy
+                    </>
+                  )}
                 </button>
               </div>
             );

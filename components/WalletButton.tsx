@@ -12,6 +12,7 @@ import Spinner from '@/components/ui/Spinner';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
 import type { WalletProvider } from '@/context/WalletContext';
+import { Copy, Check } from 'lucide-react';
 
 async function copyToClipboard(text: string): Promise<boolean> {
   if (navigator.clipboard?.writeText) {
@@ -50,28 +51,11 @@ function CopyButton({ text }: { text: string }) {
       aria-label={copied ? 'Address copied' : 'Copy wallet address'}
       className="p-1 rounded hover:bg-brand-green/20 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-green"
     >
-      <svg
-        aria-hidden="true"
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        {copied ? (
-          <>
-            <polyline points="20 6 9 17 4 12" />
-          </>
-        ) : (
-          <>
-            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-          </>
-        )}
-      </svg>
+      {copied ? (
+        <Check className="w-4 h-4" aria-hidden="true" />
+      ) : (
+        <Copy className="w-4 h-4" aria-hidden="true" />
+      )}
     </button>
   );
 }
