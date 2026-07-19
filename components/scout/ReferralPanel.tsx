@@ -116,7 +116,11 @@ export default function ReferralPanel() {
         {generating ? 'Generating…' : 'Generate Invite Link'}
       </button>
 
-      {codes.length > 0 && (
+      {codes.length === 0 ? (
+        <p className="text-sm text-gray-500">
+          Your generated invite links will appear here.
+        </p>
+      ) : (
         <div className="flex flex-col gap-2">
           {codes.slice(0, 5).map((ref, i) => {
             const inviteUrl = `${baseUrl}/scout/subscribe?ref=${ref.code}`;
