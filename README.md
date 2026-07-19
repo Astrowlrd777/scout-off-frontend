@@ -370,6 +370,15 @@ cp .env.example .env.local
 # Frontend tests
 npm run test
 
+# Frontend tests in watch mode
+npm run test:watch
+
+# Frontend tests with coverage
+npm run test:coverage
+
+# Type checking
+npm run typecheck
+
 # Validate env vars
 node scripts/validate-env.js
 
