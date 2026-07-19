@@ -55,6 +55,17 @@ export function getCodesByScout(scoutWallet: string): ReferralCode[] {
   return store.codes.filter((c) => c.scoutWallet === scoutWallet);
 }
 
+/**
+ * Returns every referral code across every scout wallet.
+ *
+ * Unlike {@link getCodesByScout}, this has visibility across the whole
+ * store rather than one wallet — needed for cross-wallet analysis (see
+ * lib/fraudDetection.ts) that can't be done from a single scout's view.
+ */
+export function getAllCodes(): ReferralCode[] {
+  return readStore().codes;
+}
+
 export function getReferralCount(scoutWallet: string): number {
   const store = readStore();
   return store.codes.filter(
