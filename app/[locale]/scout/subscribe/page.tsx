@@ -8,6 +8,7 @@ import TransactionStatus from '@/components/ui/TransactionStatus';
 import type { TxStatus } from '@/components/ui/TransactionStatus';
 import useIsPaused from '@/hooks/useIsPaused';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useWallet } from '@/hooks/useWallet';
 import { redeemReferralCode } from '@/lib/api';
 import type { SubscriptionTier } from '@/types';
 
@@ -68,6 +69,7 @@ function SubscribeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isPaused = useIsPaused();
+  const { publicKey } = useWallet();
   const { subscription, isExpired, subscribe, loading, error } =
     useSubscription();
   const [txStatus, setTxStatus] = useState<TxStatus | null>(null);
@@ -137,8 +139,8 @@ function SubscribeContent() {
 
     try {
       await subscribe(tier);
-      if (referralCode) {
-        redeemReferralCode(referralCode).catch(() => {});
+      if (referralCode && publicKey) {
+        redeemReferralCode(referralCode, publicKey).catch(() => {});
       }
       const plan = TIERS.find((p) => p.tier === tier);
       // price is like "5 XLM" — strip the " XLM" suffix for feePaid
