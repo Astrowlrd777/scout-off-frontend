@@ -30,6 +30,7 @@ import {
 import type { ValidatorInfo, ReferralOverview } from '@/types';
 import TruncatedAddress from '@/components/ui/TruncatedAddress';
 import { parseContractError } from '@/lib/contractErrorMessage';
+import ConfigStatus from '@/components/admin/ConfigStatus';
 
 const ADMIN_ADDRESS = process.env.NEXT_PUBLIC_ADMIN_ADDRESS;
 const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID ?? '';
@@ -344,6 +345,9 @@ function AdminDashboardContent() {
           }}
         />
       </section>
+
+      {/* Runtime Configuration Status */}
+      <ConfigStatus />
 
       {/* Add Validator */}
       <section className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
