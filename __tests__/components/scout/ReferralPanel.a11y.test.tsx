@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import ReferralPanel from '@/components/scout/ReferralPanel';
+import { ToastProvider } from '@/components/ui/Toast';
 import {
   generateReferralCode,
   getReferralStats,
@@ -38,6 +39,14 @@ const mockListReferralCodes = listReferralCodes as jest.MockedFunction<
 
 const STATS: ReferralStats = { totalCodes: 2, successfulReferrals: 1 };
 
+function renderReferralPanel() {
+  return render(
+    <ToastProvider>
+      <ReferralPanel />
+    </ToastProvider>,
+  );
+}
+
 function makeCode(code: string): ReferralCode {
   return {
     code,
@@ -57,7 +66,7 @@ beforeEach(() => {
 
 describe('ReferralPanel accessibility', () => {
   it('gives each per-row copy button a distinct, code-specific aria-label', async () => {
-    render(<ReferralPanel />);
+    renderReferralPanel();
 
     await screen.findByRole('button', { name: 'Generate Invite Link' });
 
@@ -97,7 +106,7 @@ describe('ReferralPanel accessibility', () => {
 
   it('has no axe violations once codes are present', async () => {
     mockGenerateReferralCode.mockResolvedValueOnce(makeCode('AXECODE'));
-    const { container } = render(<ReferralPanel />);
+    const { container } = renderReferralPanel();
 
     const generateButton = await screen.findByRole('button', {
       name: 'Generate Invite Link',

@@ -10,7 +10,7 @@ import { useWallet } from '@/hooks/useWallet';
 import type { ReferralCode, ReferralStats } from '@/types';
 import { Copy, Check } from 'lucide-react';
 import { buildReferralCodesCsv } from '@/lib/referralCsv';
-import Turnstile from '@/components/ui/Turnstile';
+import { useToast } from '@/components/ui/Toast';
 
 const COPIED_RESET_MS = 2000;
 const PAGE_SIZE = 5;
@@ -27,6 +27,7 @@ function copyToClipboard(text: string) {
 
 export default function ReferralPanel() {
   const { publicKey } = useWallet();
+  const { show } = useToast();
   const [codes, setCodes] = useState<ReferralCode[]>([]);
   const [codesLoading, setCodesLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -63,11 +64,11 @@ export default function ReferralPanel() {
       const [s] = await Promise.all([getReferralStats(publicKey)]);
       setStats(s);
     } catch {
-      // silently fail
+      show({ message: 'Failed to load referral stats.', variant: 'error' });
     } finally {
       setLoading(false);
     }
-  }, [publicKey]);
+  }, [publicKey, show]);
 
   const loadCodes = useCallback(async () => {
     if (!publicKey) return;
@@ -100,13 +101,11 @@ export default function ReferralPanel() {
       );
       setCodes((prev) => [referral, ...prev]);
       await loadStats();
-    } catch (err) {
-      const serverMessage = axios.isAxiosError(err)
-        ? (err.response?.data as { error?: string } | undefined)?.error
-        : undefined;
-      setGenerateError(
-        serverMessage || 'Failed to generate invite link. Please try again.',
-      );
+    } catch {
+      show({
+        message: 'Failed to generate an invite link. Please try again.',
+        variant: 'error',
+      });
     } finally {
       setGenerating(false);
       // Turnstile tokens are single-use — force a fresh widget/token for
@@ -114,7 +113,7 @@ export default function ReferralPanel() {
       setTurnstileToken(null);
       setTurnstileKey((k) => k + 1);
     }
-  }, [publicKey, loadStats, turnstileToken]);
+  }, [publicKey, loadStats, show]);
 
   const handleShowMore = useCallback(() => {
     setVisibleCount((count) => count + PAGE_SIZE);
