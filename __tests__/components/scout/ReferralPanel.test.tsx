@@ -14,6 +14,12 @@ jest.mock('@/lib/api', () => ({
   listReferralCodes: jest.fn(),
 }));
 
+const mockShow = jest.fn();
+
+jest.mock('@/components/ui/Toast', () => ({
+  useToast: () => ({ show: mockShow }),
+}));
+
 // ReferralPanel reads the connected wallet directly via useWallet(), which
 // needs a WalletProvider ancestor — mock it so the panel can generate/load
 // codes for a fixed scout wallet without rendering a real provider.
@@ -49,6 +55,47 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockGetReferralStats.mockResolvedValue(STATS);
   mockListReferralCodes.mockResolvedValue([]);
+  mockGenerateReferralCode.mockResolvedValue(makeCode('DEFAULT'));
+});
+
+describe('ReferralPanel toast errors', () => {
+  it('shows an error toast when referral stats fail to load', async () => {
+    mockGetReferralStats.mockRejectedValueOnce(new Error('stats failed'));
+
+    render(<ReferralPanel />);
+
+    await waitFor(() => {
+      expect(mockShow).toHaveBeenCalledWith({
+        message: 'Failed to load referral stats.',
+        variant: 'error',
+      });
+    });
+  });
+
+  it('shows an error toast and clears generating state when invite-link generation fails', async () => {
+    mockGenerateReferralCode.mockRejectedValueOnce(
+      new Error('generate failed'),
+    );
+
+    render(<ReferralPanel />);
+
+    const generateButton = await screen.findByRole('button', {
+      name: 'Generate Invite Link',
+    });
+
+    fireEvent.click(generateButton);
+
+    expect(generateButton).toBeDisabled();
+
+    await waitFor(() => {
+      expect(mockShow).toHaveBeenCalledWith({
+        message: 'Failed to generate an invite link. Please try again.',
+        variant: 'error',
+      });
+    });
+
+    await waitFor(() => expect(generateButton).not.toBeDisabled());
+  });
 });
 
 describe('ReferralPanel invite URL format', () => {
