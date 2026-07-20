@@ -32,7 +32,13 @@ export function middleware(request: NextRequest) {
   );
 
   if (pathnameHasLocale) {
-    return NextResponse.next();
+    // Forward the current pathname via a custom request header so the locale
+    // layout (app/[locale]/layout.tsx) can construct canonical URLs from it.
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set('x-pathname', pathname);
+    return NextResponse.next({
+      request: { headers: requestHeaders },
+    });
   }
 
   const locale = getLocale(request);

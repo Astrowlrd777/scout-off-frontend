@@ -7,6 +7,27 @@ jest.mock('@/hooks/useIsPaused', () => ({
   default: jest.fn(),
 }));
 
+jest.mock('next/navigation', () => ({
+  usePathname: jest.fn(() => '/en'),
+}));
+
+jest.mock('next/link', () => {
+  const React = require('react');
+  return {
+    __esModule: true,
+    default: function Link({
+      href,
+      children,
+      ...props
+    }: {
+      href: string;
+      children: React.ReactNode;
+    }) {
+      return React.createElement('a', { href, ...props }, children);
+    },
+  };
+});
+
 import useIsPaused from '@/hooks/useIsPaused';
 import ContractPausedBanner from '@/components/ContractPausedBanner';
 
@@ -38,6 +59,9 @@ describe('ContractPausedBanner', () => {
     expect(
       screen.getByRole('link', { name: /get updates on discord/i }),
     ).toHaveAttribute('href', SUPPORT_URL);
+    expect(
+      screen.getByRole('link', { name: /check status/i }),
+    ).toHaveAttribute('href', '/en/status');
     expect(
       screen.getByRole('button', { name: /dismiss/i }),
     ).toBeInTheDocument();

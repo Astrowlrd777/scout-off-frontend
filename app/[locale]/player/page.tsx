@@ -11,6 +11,7 @@ import PlayerProfileForm from '@/components/player/PlayerProfileForm';
 import UpdateProfileForm from '@/components/player/UpdateProfileForm';
 import MilestoneTimeline from '@/components/player/MilestoneTimeline';
 import ArchiveProfileModal from '@/components/player/ArchiveProfileModal';
+import BackupWalletModal from '@/components/player/BackupWalletModal';
 import OnboardingTour from '@/components/ui/OnboardingTour';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import { playerTourSteps, PLAYER_TOUR_ID } from '@/lib/tourSteps';
@@ -66,6 +67,7 @@ function PlayerDashboardContent() {
   /** True while we're waiting for on-chain confirmation of a just-registered profile */
   const [isPendingConfirmation, setIsPendingConfirmation] = useState(false);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [showBackupWalletModal, setShowBackupWalletModal] = useState(false);
 
   const isRegistered = !!player;
 
@@ -349,6 +351,12 @@ function PlayerDashboardContent() {
               >
                 {player.archived ? 'Restore profile' : 'Archive profile'}
               </button>
+              <button
+                onClick={() => setShowBackupWalletModal(true)}
+                className="text-xs text-gray-400 hover:text-gray-300 transition self-start px-2 py-1.5 rounded hover:bg-gray-800/50"
+              >
+                Recovery settings
+              </button>
             </div>
 
             <div
@@ -377,6 +385,16 @@ function PlayerDashboardContent() {
         player={player}
         isOpen={showArchiveModal}
         onClose={() => setShowArchiveModal(false)}
+        onSuccess={(updated) => {
+          optimisticUpdate(updated);
+          refetch();
+        }}
+      />
+
+      <BackupWalletModal
+        player={player}
+        isOpen={showBackupWalletModal}
+        onClose={() => setShowBackupWalletModal(false)}
         onSuccess={(updated) => {
           optimisticUpdate(updated);
           refetch();

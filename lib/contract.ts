@@ -766,6 +766,25 @@ export async function getSubscription(scout: string) {
   ]);
 }
 
+/**
+ * Reads the contract's currently configured `pay_to_contact` fee, in XLM.
+ *
+ * {@link PLATFORM_CONTACT_FEE_XLM} is a build-time constant baked into the
+ * frontend; the contract's actual fee configuration can change independently
+ * of a frontend deploy. Callers displaying the fee to a scout immediately
+ * before they confirm a `pay_to_contact` transaction should prefer this over
+ * the static constant, and fall back to labeling the constant as an estimate
+ * if this call fails.
+ *
+ * This is a read-only simulation — no transaction is built or submitted.
+ *
+ * @returns A Promise resolving to the current contact fee, in XLM.
+ * @throws {Error} If the RPC simulation request fails or returns an unexpected result.
+ */
+export async function getContactFee(): Promise<number> {
+  return simulateTx('get_contact_fee', []);
+}
+
 // ── Admin ─────────────────────────────────────────────────────────────────────
 
 /**

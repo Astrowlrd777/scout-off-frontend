@@ -4,11 +4,42 @@ This guide walks you from a freshly cloned repository to a fully running local s
 
 ---
 
+## Docker Compose Quick Start (recommended for first-time contributors)
+
+The full manual setup below (Stellar CLI, a live testnet contract deploy, a real backend API, Pinata credentials) is the most accurate way to develop against real infrastructure, but it's a lot to provision just to make a small frontend change. `docker-compose.yml` brings up a complete local stack — the frontend, the indexer, and mocked local versions of the Soroban RPC and backend API — with a single command and **no external credentials**.
+
+```bash
+docker compose up --build
+```
+
+Then open **http://localhost:3000**.
+
+This starts four containers:
+
+| Service    | Port | What it is                                                                             |
+| ---------- | ---- | ---------------------------------------------------------------------------------------- |
+| `frontend` | 3000 | This Next.js app, built and served in production mode against the mocks below            |
+| `indexer`  | 3001 | `packages/indexer`'s HTTP server (`/health`, `/metrics`)                                   |
+| `mock-rpc` | 8000 | A local mock of the Soroban RPC endpoints `lib/stellar.ts`/`lib/contract.ts` call         |
+| `mock-api` | 4000 | A local mock of the backend REST API `lib/api.ts` calls (`NEXT_PUBLIC_API_URL`)           |
+
+**What works out of the box:** browsing player profiles and lists, milestone history, validator lists, contract health/paused banners, scout dashboards and profiles, and full write flows (register a player, approve a milestone, subscribe, pay-to-contact) — `mock-rpc` decodes the real transaction XDR your wallet builds and returns a canned-but-valid response, including simulate → sign (with Freighter, pointed at a custom network matching `mock-rpc`'s passphrase) → submit → confirm.
+
+**Known limitations of the mocks** (see `docker/mock-rpc/server.js` and `docker/mock-api/server.js` for exactly what's implemented):
+
+- `mock-rpc` doesn't execute real contract logic or persist ledger state across restarts — it returns fixed/generated data keyed off which contract method was called, not the actual on-chain rules (e.g. it won't really enforce "only the admin can withdraw fees").
+- `mock-api` responses are static fixtures; nothing you write through it is actually persisted.
+- This compose stack builds and serves the frontend with `next build && next start` (production mode), not `next dev` — there's no hot-reloading. If you're actively editing frontend code, run `docker compose up mock-rpc mock-api` for just the mocks, then `npm run dev` locally with `.env.local` pointed at `http://localhost:8000` / `http://localhost:4000`; that gives you the credential-free mocks with normal hot-reload.
+
+For anything that depends on real contract behavior or a real backend (integration testing before a release, verifying an actual Soroban migration), fall back to the manual setup below.
+
+---
+
 ## Prerequisites
 
 | Tool                         | Version / Requirement                                            | Check                            |
 | ---------------------------- | ---------------------------------------------------------------- | -------------------------------- |
-| **Node.js**                  | 20.x or later                                                    | `node --version`                 |
+| **Node.js**                  | 24.x (matches CI — use `nvm use` if you have nvm)                | `node --version`                 |
 | **npm**                      | 10.x or later (bundled with Node)                                | `npm --version`                  |
 | **Rust** (stable)            | 1.70+                                                            | `rustc --version`                |
 | **wasm32 target**            | `wasm32-unknown-unknown`                                         | `rustup target list --installed` |
@@ -58,6 +89,8 @@ projects/
 
 ```bash
 cd scout-off-frontend
+# If you use nvm, switch to the project's Node version first:
+nvm use
 npm install
 ```
 
@@ -167,11 +200,20 @@ Run validation again:
 node scripts/validate-env.js
 ```
 
-### 8. Start the backend API (if available)
+### 8. Start the backend API
 
-The frontend expects a backend API at `NEXT_PUBLIC_API_URL` (default `http://localhost:4000`). If the backend API repository is available, start it in a separate terminal. The frontend will function without it for read-only operations; write operations (player registration, milestone approval) require the API for off-chain data.
+The frontend expects a backend API at `NEXT_PUBLIC_API_URL` (default `http://localhost:4000`). This lives in `server/` in this same repo — see `server/README.md` for details. Start it in a separate terminal:
 
-If you don't have the backend, you can still browse the UI and interact with the contract directly via the Stellar SDK calls in the frontend hooks.
+```bash
+cd server
+npm install
+cp .env.example .env
+npm start              # or `npm run dev` for auto-restart on file changes
+```
+
+The frontend will function without it for read-only operations; write operations (player registration, milestone approval, referrals) require the API for off-chain data. Off-chain, non-blockchain state (referral codes today; chat history and player/scout comments next, per the architecture diagram above) lives here — `server/README.md` documents the pattern to follow when adding the next such feature.
+
+If you don't have the backend running, you can still browse the UI and interact with the contract directly via the Stellar SDK calls in the frontend hooks.
 
 ### 9. Start the frontend
 
@@ -348,3 +390,5 @@ Public player profiles (`app/[locale]/player/[id]`) previously rendered `<img>`/
 - [README.md](README.md) — project overview, architecture, and smart contract API
 - [CONTRIBUTING.md](CONTRIBUTING.md) — contribution workflow and branch conventions
 - [DEPLOYMENT.md](DEPLOYMENT.md) — production deployment notes (Vercel, analytics)
+- [e2e/README.md](e2e/README.md) — Playwright E2E suite and wallet-mocking harness
+- [docs/fraud-detection.md](docs/fraud-detection.md) — referral/pay-to-contact abuse heuristics and admin flag review

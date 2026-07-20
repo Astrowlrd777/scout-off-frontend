@@ -50,6 +50,7 @@ import {
   fetchChatHistory,
   postChatMessage,
   searchPlayersByName,
+  SearchRateLimitedError,
   fetchScoutStats,
   fetchActivityEvents,
   fetchValidatorMilestoneCount,
@@ -176,18 +177,59 @@ describe('fetchChatHistory (getMessages)', () => {
 // ── searchPlayersByName ───────────────────────────────────────────────────────
 
 describe('searchPlayersByName', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    global.fetch = jest.fn();
+  });
 
-  it('calls GET /players/search with the name param and returns data', async () => {
+  it('calls GET /api/players/search with the name param and returns data', async () => {
     const mockData = [{ id: 'player-1', name: 'Alice' }];
-    mockGet.mockResolvedValueOnce({ data: mockData });
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => mockData,
+      headers: new Headers(),
+    });
 
     const result = await searchPlayersByName('Alice');
 
-    expect(mockGet).toHaveBeenCalledWith('/players/search', {
-      params: { name: 'Alice' },
-    });
+    expect(global.fetch).toHaveBeenCalledWith('/api/players/search?name=Alice');
     expect(result).toEqual(mockData);
+  });
+
+  it('throws SearchRateLimitedError with retryAfterSec when rate-limited', async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      status: 429,
+      headers: new Headers({ 'Retry-After': '7' }),
+      json: async () => ({ error: 'Too many search requests. Please slow down.' }),
+    });
+
+    await expect(searchPlayersByName('Alice')).rejects.toThrow(
+      SearchRateLimitedError,
+    );
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      status: 429,
+      headers: new Headers({ 'Retry-After': '7' }),
+      json: async () => ({ error: 'Too many search requests. Please slow down.' }),
+    });
+    const err = await searchPlayersByName('Alice').catch((e) => e);
+    expect(err).toBeInstanceOf(SearchRateLimitedError);
+    expect(err.retryAfterSec).toBe(7);
+  });
+
+  it('throws a generic error for other failed responses', async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      headers: new Headers(),
+      json: async () => ({}),
+    });
+
+    await expect(searchPlayersByName('Alice')).rejects.toThrow(
+      'Failed to search players',
+    );
   });
 });
 
