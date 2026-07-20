@@ -1,5 +1,6 @@
 const express = require('express');
 const referralService = require('../referralService');
+const verifyTurnstile = require('../middleware/turnstile');
 
 const router = express.Router();
 
@@ -8,8 +9,12 @@ function isNonEmptyString(value) {
 }
 
 // POST /referrals/generate
-// Body: { scoutWallet: string }
-router.post('/generate', (req, res) => {
+// Body: { scoutWallet: string, turnstileToken?: string }
+//
+// Unauthenticated — a connected wallet address costs nothing to obtain, so
+// this endpoint is gated behind a Turnstile challenge to deter bulk/bot
+// code generation (see issue #626).
+router.post('/generate', verifyTurnstile, (req, res) => {
   const { scoutWallet } = req.body ?? {};
   if (!isNonEmptyString(scoutWallet)) {
     return res.status(400).json({ error: 'scoutWallet is required' });
