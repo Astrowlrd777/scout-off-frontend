@@ -16,7 +16,7 @@ function makeFile(
   name = 'photo.jpg',
   type = 'image/jpeg',
 ): File {
-  return new File([bytes], name, { type });
+  return new File([bytes.buffer as ArrayBuffer], name, { type });
 }
 
 function makeRequest(

@@ -1,5 +1,4 @@
 import '@testing-library/jest-dom';
-import { jest } from '@jest/globals';
 
 process.env.NEXT_PUBLIC_SOROBAN_RPC = 'https://soroban-testnet.stellar.org';
 process.env.NEXT_PUBLIC_NETWORK = 'testnet';

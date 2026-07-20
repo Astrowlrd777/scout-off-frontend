@@ -4,10 +4,17 @@ import userEvent from '@testing-library/user-event';
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn() }),
+  useSearchParams: () => ({ get: () => null, toString: () => '' }),
 }));
 
 jest.mock('@/hooks/useSubscription', () => ({
   useSubscription: jest.fn(),
+}));
+
+jest.mock('@/hooks/useWallet', () => ({
+  useWallet: () => ({
+    publicKey: 'GABC1234567890ABCDE1234567890ABCDE1234567890ABCDE123456',
+  }),
 }));
 
 jest.mock('@/components/ui/ErrorBoundary', () => ({

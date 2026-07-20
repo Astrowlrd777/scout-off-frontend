@@ -146,7 +146,8 @@ The repository exposes the following test-related commands:
 - `npm run test` — run Jest tests
 - `npm run test:watch` — run Jest tests in watch mode
 - `npm run test:coverage` — run Jest tests with coverage collection enabled
-- `npm run typecheck` — run the TypeScript compiler in `--noEmit` mode to check for type errors
+- `npm run typecheck` — run the TypeScript compiler in `--noEmit` mode to check for type errors (full repo, including tests)  
+- `npm run type-check` — same as above but excludes test and story files; runs as a standalone job in CI
 - `npm run format` — format files with Prettier
 - `npm run format:check` — check formatting with Prettier
 - `npm run prepare` — install Husky hooks

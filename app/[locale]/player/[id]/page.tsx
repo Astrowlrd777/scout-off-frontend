@@ -1,5 +1,5 @@
 'use client';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -7,12 +7,13 @@ import { useWallet } from '@/hooks/useWallet';
 import { usePlayer } from '@/hooks/usePlayer';
 import { usePayToContact } from '@/hooks/usePayToContact';
 import { useSubscription } from '@/hooks/useSubscription';
-import { PLATFORM_CONTACT_FEE_XLM } from '@/lib/contract';
+import { PLATFORM_CONTACT_FEE_XLM, getContactFee } from '@/lib/contract';
 import ProgressBar from '@/components/ProgressBar';
 import PlayerProfileSkeleton from '@/components/PlayerProfileSkeleton';
 import PlayerStatsCard from '@/components/player/PlayerStatsCard';
 import IPFSMediaGallery from '@/components/player/IPFSMediaGallery';
 import TrialOfferForm from '@/components/scout/TrialOfferForm';
+import ContactModal from '@/components/scout/ContactModal';
 import Button from '@/components/ui/Button';
 import QRModal from '@/components/ui/QRModal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
@@ -25,7 +26,8 @@ export default function PlayerProfile() {
   const { publicKey } = useWallet();
   const t = useTranslations('player_profile');
   const { player, loading: playerLoading, refetch } = usePlayer(id ?? null);
-  const { unlock, loading: contacting } = usePayToContact();
+  const { unlock, loading: contacting } = usePayToContact(id ?? '');
+  const [contactModalOpen, setContactModalOpen] = useState(false);
   const {
     subscription,
     isExpired,
@@ -34,15 +36,64 @@ export default function PlayerProfile() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
   const [contactTxStatus, setContactTxStatus] = useState<TxStatus | null>(null);
+  const [liveFee, setLiveFee] = useState<number | null>(null);
+  const [feeCheckStatus, setFeeCheckStatus] = useState<
+    'idle' | 'checking' | 'ok' | 'error'
+  >('idle');
   const shareButtonRef = useRef<HTMLButtonElement>(null);
   const milestones = player?.milestones ?? [];
   const profileUrl = typeof window !== 'undefined' ? window.location.href : '';
 
+  // Re-check the live contact fee every time the confirmation dialog opens,
+  // so a scout is never confirming against a stale, build-time constant.
+  useEffect(() => {
+    if (!confirmOpen) return;
+    let cancelled = false;
+    setLiveFee(null);
+    setFeeCheckStatus('checking');
+    getContactFee()
+      .then((fee) => {
+        if (cancelled) return;
+        setLiveFee(fee);
+        setFeeCheckStatus('ok');
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setFeeCheckStatus('error');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [confirmOpen]);
+
+  const feeMismatch =
+    feeCheckStatus === 'ok' &&
+    liveFee !== null &&
+    liveFee !== PLATFORM_CONTACT_FEE_XLM;
+  const displayFee = feeCheckStatus === 'ok' && liveFee !== null
+    ? liveFee
+    : PLATFORM_CONTACT_FEE_XLM;
+
+  const confirmMessage = (() => {
+    if (!player) return '';
+    if (feeCheckStatus === 'checking') {
+      return `Unlock contact details for ${player.vitals.name}? Confirming the current fee before you sign…`;
+    }
+    if (feeMismatch) {
+      return `Unlock contact details for ${player.vitals.name}? The live contact fee is now ${liveFee} XLM — different from the ${PLATFORM_CONTACT_FEE_XLM} XLM shown initially. Confirming will charge ${liveFee} XLM.`;
+    }
+    if (feeCheckStatus === 'error') {
+      return `Unlock contact details for ${player.vitals.name}? Fee: ~${PLATFORM_CONTACT_FEE_XLM} XLM (estimate — could not confirm the live rate) will be deducted from your wallet.`;
+    }
+    return `Unlock contact details for ${player.vitals.name}? Fee: ${displayFee} XLM will be deducted from your wallet.`;
+  })();
+
   async function handleConfirm() {
     setContactTxStatus('pending');
     try {
-      await unlock(id);
+      await unlock();
       setContactTxStatus('success');
+      setContactModalOpen(true);
     } catch {
       setContactTxStatus('error');
     }
@@ -100,7 +151,7 @@ export default function PlayerProfile() {
         <div className="rounded-xl border border-yellow-500/40 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-300">
           <p className="font-semibold">This profile is currently private</p>
           <p className="text-xs text-yellow-300/80 mt-1">
-            The player has archived their profile and it's not visible in search results.
+            The player has archived their profile and it&apos;s not visible in search results.
           </p>
         </div>
       )}
@@ -191,15 +242,13 @@ export default function PlayerProfile() {
           >
             {contacting
               ? 'Processing…'
-              : `Pay to Contact (${PLATFORM_CONTACT_FEE_XLM} XLM)`}
+              : `Pay to Contact (~${PLATFORM_CONTACT_FEE_XLM} XLM)`}
           </button>
           {contactTxStatus && (
             <TransactionStatus
               status={contactTxStatus}
               feePaid={
-                contactTxStatus === 'success'
-                  ? String(PLATFORM_CONTACT_FEE_XLM)
-                  : undefined
+                contactTxStatus === 'success' ? String(displayFee) : undefined
               }
               onHide={() => setContactTxStatus(null)}
             />
@@ -209,9 +258,14 @@ export default function PlayerProfile() {
             onConfirm={handleConfirm}
             onCancel={() => setConfirmOpen(false)}
             title="Contact Player"
-            message={`Unlock contact details for ${player.vitals.name}? Fee: ${PLATFORM_CONTACT_FEE_XLM} XLM will be deducted from your wallet.`}
+            message={confirmMessage}
             confirmLabel="Confirm"
-            loading={contacting}
+            loading={feeCheckStatus === 'checking' || contacting}
+          />
+          <ContactModal
+            isOpen={contactModalOpen}
+            onClose={() => setContactModalOpen(false)}
+            playerId={id ?? ''}
           />
         </>
       )}

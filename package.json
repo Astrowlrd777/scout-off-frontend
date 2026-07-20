@@ -14,6 +14,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --passWithNoTests --maxWorkers=2 --workerIdleMemoryLimit=512MB --coverage",
     "typecheck": "tsc --noEmit",
+    "type-check": "tsc --noEmit --project tsconfig.typecheck.json",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,md,mdx}\"",
     "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,css,md,mdx}\"",
     "prepare": "node -e \"if (process.env.CI !== 'true') { require('child_process').execSync('husky install', {stdio: 'inherit'}) }\"",
@@ -32,6 +33,7 @@
     "@stellar/stellar-sdk": "12.1.0",
     "@vercel/analytics": "^2.0.0",
     "axios": "1.7.2",
+    "better-sqlite3": "^12.11.1",
     "dompurify": "^3.4.12",
     "lucide-react": "^1.17.0",
     "next": "14.2.35",
@@ -46,6 +48,7 @@
   },
   "devDependencies": {
     "@axe-core/react": "4.9.1",
+    "@playwright/test": "^1.61.1",
     "@storybook/addon-essentials": "^8.6.14",
     "@storybook/builder-vite": "^8.6.18",
     "@storybook/nextjs": "^8.6.18",
@@ -55,8 +58,10 @@
     "@testing-library/jest-dom": "6.4.6",
     "@testing-library/react": "16.0.0",
     "@testing-library/user-event": "14.4.3",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/dompurify": "^3.2.0",
     "@types/jest": "29.5.5",
+    "@types/jest-axe": "^3.5.9",
     "@types/minimatch": "^5.1.2",
     "@types/node": "20.14.2",
     "@types/qrcode": "1.5.6",
@@ -77,6 +82,9 @@
     "typescript": "^6.0.3",
     "vite": "^6.3.5",
     "vite-tsconfig-paths": "^6.1.1"
+  },
+  "engines": {
+    "node": ">=24"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [

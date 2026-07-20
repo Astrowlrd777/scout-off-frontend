@@ -1,9 +1,18 @@
-## Summary
+﻿## Summary
 
 Please provide a concise description of the change and why it was made.
 
 - What does this PR change?
 - Why is this change needed?
+
+## Type
+
+- `feat`, `fix`, `docs`, `test`, `chore`, or `refactor`
+
+## Scope
+
+- What is included in this PR?
+- Does it affect frontend only, contracts, backend, or docs?
 
 ## Related Issue
 

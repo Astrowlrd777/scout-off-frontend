@@ -2,7 +2,7 @@
 import { useState, useCallback } from 'react';
 import useSWR, { mutate as globalMutate } from 'swr';
 import { filterPlayers } from '@/lib/contract';
-import { searchPlayersByName } from '@/lib/api';
+import { searchPlayersByName, SearchRateLimitedError } from '@/lib/api';
 import type { Player, PlayerFilter } from '@/types';
 
 /**
@@ -28,7 +28,7 @@ export function invalidateScoutSearch(filter: PlayerFilter): Promise<void> {
 export function useScout() {
   const [searchKey, setSearchKey] = useState<string | null>(null);
 
-  const { data, error, isValidating } = useSWR<Player[]>(
+  const { data, error, isValidating, mutate } = useSWR<Player[]>(
     searchKey,
     async (key: string) => {
       if (key.startsWith('scout:name:')) {
@@ -66,8 +66,11 @@ export function useScout() {
     players: data ?? [],
     loading: isValidating,
     error: error?.message ?? null,
+    isRateLimited: error instanceof SearchRateLimitedError,
+    retryAfterSec:
+      error instanceof SearchRateLimitedError ? error.retryAfterSec : null,
     search,
     searchByName,
-    refetch: () => mutate(),
+    refetch: () => mutate() as Promise<void>,
   };
 }

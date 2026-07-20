@@ -113,7 +113,8 @@
     "notice": "TODO: Machine-translated - Ukurasa huu ni nafasi ya muda. Hakuna tokeni zinazoweza kununuliwa bado na hakuna mwingiliano wa blockchain unaopatikana hapa."
   },
   "footer": {
-    "changelog": "TODO: Machine-translated - Mabadiliko"
+    "changelog": "TODO: Machine-translated - Mabadiliko",
+    "status": "TODO: Machine-translated - Hali"
   },
   "changelog": {
     "back_to_home": "TODO: Machine-translated - Rudi kwenye mwanzo",
@@ -126,6 +127,22 @@
     "fixed": "TODO: Machine-translated - Iliyorekebishwa",
     "empty_title": "TODO: Machine-translated - Mabadiliko hayapatikani",
     "empty_description": "TODO: Machine-translated - Hatukuweza kupakia mabadiliko kwa sasa. Tafadhali angalia tena baadaye."
+  },
+  "status": {
+    "back_to_home": "TODO: Machine-translated - Rudi kwenye mwanzo",
+    "page_title": "TODO: Machine-translated - Hali ya Mfumo",
+    "page_description": "TODO: Machine-translated - Angalia kama tatizo unaloona ni hitilafu inayojulikana ya jukwaa lote na kagua matukio ya awali.",
+    "eyebrow": "TODO: Machine-translated - Hali ya jukwaa",
+    "dependencies_title": "TODO: Machine-translated - Utegemezi unaofuatiliwa",
+    "dependency_frontend": "TODO: Machine-translated - Frontend",
+    "dependency_backend": "TODO: Machine-translated - API ya nyuma",
+    "dependency_rpc": "TODO: Machine-translated - Soroban RPC / Horizon",
+    "live_status_title": "TODO: Machine-translated - Hali ya moja kwa moja na historia ya matukio",
+    "live_status_description": "TODO: Machine-translated - Hali ya wakati halisi na muhtasari wa historia ya matukio ya ScoutOff hufuatiliwa kwenye ukurasa wetu wa nje wa hali, unaosasishwa kiotomatiki matatizo yanapogunduliwa na kutatuliwa.",
+    "live_status_cta": "TODO: Machine-translated - Tazama ukurasa wa hali ya moja kwa moja",
+    "incident_history_note": "TODO: Machine-translated - Matukio ya awali na utatuzi wake yameorodheshwa kwenye ukurasa wa hali hapo juu.",
+    "empty_title": "TODO: Machine-translated - Ukurasa wa hali bado haujawekwa",
+    "empty_description": "TODO: Machine-translated - Ukurasa wa hali ya moja kwa moja bado haujaunganishwa. Tafadhali angalia Discord ya ScoutOff kwa masasisho wakati huo huo."
   },
   "progress_levels": {
     "level0": "Haijathibitishwa",

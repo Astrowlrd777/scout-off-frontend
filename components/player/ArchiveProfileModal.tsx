@@ -74,7 +74,7 @@ export default function ArchiveProfileModal({
                 </p>
                 <p className="text-xs text-gray-500">
                   Your data and milestones are preserved — nothing is deleted. Direct links to your
-                  profile will show a 'currently private' message.
+                  profile will show a &apos;currently private&apos; message.
                 </p>
               </>
             )}
