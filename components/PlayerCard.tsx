@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { mutate } from 'swr';
 import type { Player, ProgressLevel } from '@/types';
 import { getProgressLabel } from '@/lib/progress';
+import { getMediaProxyUrl } from '@/lib/mediaUrl';
 import ProgressBar from './ProgressBar';
 import Badge from '@/components/ui/Badge';
 
@@ -114,7 +115,7 @@ function PlayerCard({ player }: { player: Player }) {
       >
         {ipfsHash && (
           <Image
-            src={`${process.env.NEXT_PUBLIC_IPFS_GATEWAY}/${ipfsHash}`}
+            src={getMediaProxyUrl(ipfsHash)}
             alt={vitals.name}
             width={64}
             height={64}

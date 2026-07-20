@@ -1,5 +1,6 @@
 'use client';
 import { useState, useCallback, useEffect, useRef } from 'react';
+import axios from 'axios';
 import {
   generateReferralCode,
   getReferralStats,
@@ -9,9 +10,14 @@ import { useWallet } from '@/hooks/useWallet';
 import type { ReferralCode, ReferralStats } from '@/types';
 import { Copy, Check } from 'lucide-react';
 import { buildReferralCodesCsv } from '@/lib/referralCsv';
+import { useToast } from '@/components/ui/Toast';
 
 const COPIED_RESET_MS = 2000;
 const PAGE_SIZE = 5;
+
+// Unset in local dev/tests to skip the challenge entirely — mirrors the
+// project's "leave blank to disable" convention for optional integrations.
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
 function copyToClipboard(text: string) {
   if (navigator.clipboard) {
@@ -21,7 +27,7 @@ function copyToClipboard(text: string) {
 
 export default function ReferralPanel({ scoutId }: { scoutId?: string } = {}) {
   const { publicKey } = useWallet();
-  const effectivePublicKey = scoutId ?? publicKey;
+  const { show } = useToast();
   const [codes, setCodes] = useState<ReferralCode[]>([]);
   const [codesLoading, setCodesLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -29,6 +35,9 @@ export default function ReferralPanel({ scoutId }: { scoutId?: string } = {}) {
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileKey, setTurnstileKey] = useState(0);
+  const [generateError, setGenerateError] = useState<string | null>(null);
   const copyResetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(
@@ -55,11 +64,11 @@ export default function ReferralPanel({ scoutId }: { scoutId?: string } = {}) {
       const [s] = await Promise.all([getReferralStats(effectivePublicKey)]);
       setStats(s);
     } catch {
-      // silently fail
+      show({ message: 'Failed to load referral stats.', variant: 'error' });
     } finally {
       setLoading(false);
     }
-  }, [effectivePublicKey]);
+  }, [publicKey, show]);
 
   const loadCodes = useCallback(async () => {
     if (!effectivePublicKey) return;
@@ -80,18 +89,31 @@ export default function ReferralPanel({ scoutId }: { scoutId?: string } = {}) {
   }, [loadStats, loadCodes]);
 
   const handleGenerate = useCallback(async () => {
-    if (!effectivePublicKey) return;
+    if (!publicKey) return;
+    if (TURNSTILE_SITE_KEY && !turnstileToken) return;
+
     setGenerating(true);
+    setGenerateError(null);
     try {
-      const referral = await generateReferralCode(effectivePublicKey);
+      const referral = await generateReferralCode(
+        publicKey,
+        turnstileToken ?? undefined,
+      );
       setCodes((prev) => [referral, ...prev]);
       await loadStats();
     } catch {
-      // silently fail
+      show({
+        message: 'Failed to generate an invite link. Please try again.',
+        variant: 'error',
+      });
     } finally {
       setGenerating(false);
+      // Turnstile tokens are single-use — force a fresh widget/token for
+      // the next attempt regardless of outcome.
+      setTurnstileToken(null);
+      setTurnstileKey((k) => k + 1);
     }
-  }, [effectivePublicKey, loadStats]);
+  }, [publicKey, loadStats, show]);
 
   const handleShowMore = useCallback(() => {
     setVisibleCount((count) => count + PAGE_SIZE);
@@ -133,10 +155,28 @@ export default function ReferralPanel({ scoutId }: { scoutId?: string } = {}) {
         link, you will be credited with a referral.
       </p>
 
+      {TURNSTILE_SITE_KEY && (
+        <Turnstile
+          key={turnstileKey}
+          siteKey={TURNSTILE_SITE_KEY}
+          onVerify={setTurnstileToken}
+          onExpire={() => setTurnstileToken(null)}
+          onError={() => setTurnstileToken(null)}
+        />
+      )}
+
+      {generateError && (
+        <p role="alert" className="text-sm text-red-400">
+          {generateError}
+        </p>
+      )}
+
       <div className="flex flex-wrap items-center gap-2">
         <button
           onClick={handleGenerate}
-          disabled={generating || !effectivePublicKey}
+          disabled={
+            generating || !publicKey || (!!TURNSTILE_SITE_KEY && !turnstileToken)
+          }
           className="self-start px-4 py-2 rounded-lg bg-brand-green text-black font-medium transition hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
         >
           {generating && (

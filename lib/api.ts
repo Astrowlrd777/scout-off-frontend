@@ -1,8 +1,17 @@
 import axios from 'axios';
 import type { Player } from '@/types';
 
+// `API_URL_INTERNAL` (server-only, no NEXT_PUBLIC_ prefix) lets a Server
+// Component's SSR-time fetch reach the backend via a container-internal
+// hostname (e.g. Docker Compose's `http://mock-api:4000`) while the browser
+// bundle still uses the public `NEXT_PUBLIC_API_URL` — since it isn't
+// NEXT_PUBLIC_-prefixed, this only ever resolves server-side; the browser
+// bundle sees `undefined` here and falls through. See docker-compose.yml.
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000',
+  baseURL:
+    process.env.API_URL_INTERNAL ??
+    process.env.NEXT_PUBLIC_API_URL ??
+    'http://localhost:4000',
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -143,8 +152,11 @@ import type {
 
 export const generateReferralCode = (
   scoutWallet: string,
+  turnstileToken?: string,
 ): Promise<ReferralCode> =>
-  api.post('/referrals/generate', { scoutWallet }).then((r) => r.data);
+  api
+    .post('/referrals/generate', { scoutWallet, turnstileToken })
+    .then((r) => r.data);
 
 export const getReferralStats = (
   scoutWallet: string,
@@ -186,6 +198,87 @@ export const fetchFraudFlags = async (): Promise<{
   const res = await fetch('/api/admin/fraud-flags');
   if (!res.ok) throw new Error('Failed to fetch fraud flags');
   return res.json();
+};
+
+// Academies (issue #663) — off-chain grouping of validator wallets under one
+// institutional identity. Admin-write endpoints go through the session-cookie-
+// gated Next.js proxy (app/api/admin/academies/**), matching the referrals
+// admin pattern above. The wallet-lookup read is public and unauthenticated,
+// hitting the backend directly (matching fetchValidatorMilestoneCount below).
+import type { Academy } from '@/types';
+
+async function parseErrorMessage(res: Response, fallback: string): Promise<string> {
+  try {
+    const body = await res.json();
+    return typeof body?.error === 'string' ? body.error : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+export const fetchAcademies = async (): Promise<Academy[]> => {
+  const res = await fetch('/api/admin/academies');
+  if (!res.ok) throw new Error(await parseErrorMessage(res, 'Failed to fetch academies'));
+  return res.json();
+};
+
+export const createAcademy = async (
+  name: string,
+  ownerWallet: string,
+): Promise<Academy> => {
+  const res = await fetch('/api/admin/academies', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, ownerWallet }),
+  });
+  if (!res.ok) throw new Error(await parseErrorMessage(res, 'Failed to create academy'));
+  return res.json();
+};
+
+export const addAcademyMember = async (
+  academyId: string,
+  wallet: string,
+): Promise<Academy> => {
+  const res = await fetch(
+    `/api/admin/academies/${encodeURIComponent(academyId)}/members`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wallet }),
+    },
+  );
+  if (!res.ok) throw new Error(await parseErrorMessage(res, 'Failed to add signer wallet'));
+  return res.json();
+};
+
+export const removeAcademyMember = async (
+  academyId: string,
+  wallet: string,
+): Promise<void> => {
+  const res = await fetch(
+    `/api/admin/academies/${encodeURIComponent(academyId)}/members/${encodeURIComponent(wallet)}`,
+    { method: 'DELETE' },
+  );
+  if (!res.ok) throw new Error(await parseErrorMessage(res, 'Failed to remove signer wallet'));
+};
+
+/**
+ * Looks up the academy a validator wallet is registered under, for
+ * milestone-attribution display. Returns `null` when the wallet isn't part
+ * of any academy or the lookup fails, so callers (e.g. ValidatorChip) can
+ * fall back to address-only display — this is enrichment, not a gate.
+ */
+export const fetchAcademyForWallet = async (
+  wallet: string,
+): Promise<Academy | null> => {
+  try {
+    const data = await api
+      .get(`/academies/wallet/${encodeURIComponent(wallet)}`)
+      .then((r) => r.data);
+    return data ?? null;
+  } catch {
+    return null;
+  }
 };
 
 export default api;

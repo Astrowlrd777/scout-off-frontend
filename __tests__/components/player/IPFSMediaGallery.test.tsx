@@ -73,13 +73,10 @@ describe('IPFSMediaGallery', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('renders an image tile for a non-video CID', () => {
+  it('renders an image tile for a non-video CID, routed through the media proxy', () => {
     render(<IPFSMediaGallery cids={['QmImageCid123']} />);
     const img = screen.getByAltText('IPFS media QmImageCid123');
-    expect(img).toHaveAttribute(
-      'src',
-      'https://gateway.pinata.cloud/ipfs/QmImageCid123',
-    );
+    expect(img).toHaveAttribute('src', '/api/media/QmImageCid123');
   });
 
   it('renders a grid of tiles, one per CID', () => {
@@ -174,10 +171,7 @@ describe('IPFSMediaGallery', () => {
 
     const source = container.querySelector('source');
     expect(source).toBeInTheDocument();
-    expect(source).toHaveAttribute(
-      'src',
-      'https://gateway.pinata.cloud/ipfs/QmClip.mp4',
-    );
+    expect(source).toHaveAttribute('src', '/api/media/QmClip.mp4');
     expect(source).toHaveAttribute('type', 'video/mp4');
   });
 

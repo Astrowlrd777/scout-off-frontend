@@ -1,7 +1,9 @@
 import * as http from 'http';
 import { IndexerMetrics } from './metrics/IndexerMetrics';
 import { getLastLedgerInfo, getLedgerLag } from './ledgerTracker';
-import { startEventPolling } from './eventPoller';
+import { startEventPolling, isEventType } from './eventPoller';
+import { EventStore, type QueryFilter } from './db/eventStore';
+import type { EventType } from './metrics/IndexerMetrics';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3001;
 
@@ -60,14 +62,84 @@ function handleMetrics(res: http.ServerResponse): void {
   res.end(lines.join('\n') + '\n');
 }
 
+const PLAYER_EVENTS_PATH = /^\/players\/([^/]+)\/events$/;
+
+function sendJson(res: http.ServerResponse, status: number, body: unknown): void {
+  res.writeHead(status, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify(body));
+}
+
+/** Parses and validates the shared `type`/`limit`/`before` query params for the event endpoints. */
+function parseQueryFilter(
+  searchParams: URLSearchParams,
+): { ok: true; filter: QueryFilter } | { ok: false; error: string } {
+  const filter: QueryFilter = {};
+
+  const type = searchParams.get('type');
+  if (type !== null) {
+    if (!isEventType(type)) {
+      return { ok: false, error: `Unknown event type: ${type}` };
+    }
+    filter.type = type as EventType;
+  }
+
+  const limitParam = searchParams.get('limit');
+  if (limitParam !== null) {
+    const limit = Number(limitParam);
+    if (!Number.isInteger(limit) || limit <= 0) {
+      return { ok: false, error: 'limit must be a positive integer' };
+    }
+    filter.limit = limit;
+  }
+
+  const beforeParam = searchParams.get('before');
+  if (beforeParam !== null) {
+    const before = Number(beforeParam);
+    if (!Number.isInteger(before) || before < 0) {
+      return { ok: false, error: 'before must be a non-negative integer ledger sequence' };
+    }
+    filter.before = before;
+  }
+
+  return { ok: true, filter };
+}
+
+function handleEventsQuery(
+  url: URL,
+  res: http.ServerResponse,
+  playerId?: string,
+): void {
+  const parsed = parseQueryFilter(url.searchParams);
+  if (!parsed.ok) {
+    return sendJson(res, 400, { error: parsed.error });
+  }
+
+  const store = EventStore.getInstance();
+  const result = playerId
+    ? store.getEventsByPlayer(playerId, parsed.filter)
+    : store.getEvents(parsed.filter);
+
+  sendJson(res, 200, result);
+}
+
 export const server = http.createServer(
   (req: http.IncomingMessage, res: http.ServerResponse) => {
-    if (req.method === 'GET' && req.url === '/health') {
+    const url = new URL(req.url ?? '/', 'http://localhost');
+
+    if (req.method === 'GET' && url.pathname === '/health') {
       return handleHealth(res);
     }
-    if (req.method === 'GET' && req.url === '/metrics') {
+    if (req.method === 'GET' && url.pathname === '/metrics') {
       return handleMetrics(res);
     }
+    if (req.method === 'GET' && url.pathname === '/events') {
+      return handleEventsQuery(url, res);
+    }
+    const playerMatch = url.pathname.match(PLAYER_EVENTS_PATH);
+    if (req.method === 'GET' && playerMatch) {
+      return handleEventsQuery(url, res, decodeURIComponent(playerMatch[1]));
+    }
+
     res.writeHead(404);
     res.end('Not Found');
   },

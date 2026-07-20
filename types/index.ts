@@ -70,6 +70,32 @@ export interface ValidatorInfo {
   addedBy: string;
 }
 
+// ── Academy ──────────────────────────────────────────────────────────────────
+/**
+ * An off-chain grouping of validator wallets under one institutional
+ * identity (e.g. a football academy with several coaching staff). This is
+ * purely an off-chain overlay — each member wallet must still be
+ * individually authorized on-chain via `add_validator` for its milestone
+ * approvals to be valid. See docs/academy-validator-model.md.
+ */
+export interface Academy {
+  id: string;
+  name: string;
+  /** Stellar public key of the wallet that owns/manages this academy record. */
+  ownerWallet: string;
+  createdAt: number;
+  members: AcademyMember[];
+}
+
+/** One wallet registered as a signer under an {@link Academy}. */
+export interface AcademyMember {
+  wallet: string;
+  academyId: string;
+  addedAt: number;
+  /** Stellar public key of the admin who registered this wallet under the academy. */
+  addedBy: string;
+}
+
 // ── Scout ─────────────────────────────────────────────────────────────────────
 export type SubscriptionTier = 'basic' | 'pro' | 'elite';
 

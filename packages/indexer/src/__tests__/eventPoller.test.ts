@@ -13,6 +13,7 @@ import {
 } from '../eventPoller';
 import { IndexerMetrics } from '../metrics/IndexerMetrics';
 import { getLastLedgerInfo, resetLedgerState } from '../ledgerTracker';
+import { EventStore } from '../db/eventStore';
 
 const CONTRACT_ID = 'CABCDEF1234567890CONTRACTID1234567890XXXXXXXXXXXXXXXX';
 
@@ -41,14 +42,19 @@ function baseConfig(overrides: Partial<PollerConfig> = {}): PollerConfig {
   };
 }
 
+let store: EventStore;
+
 beforeEach(() => {
   IndexerMetrics.resetInstance();
   resetLedgerState();
+  EventStore.resetInstance();
+  store = EventStore.getInstance(':memory:');
 });
 
 afterEach(() => {
   IndexerMetrics.resetInstance();
   resetLedgerState();
+  EventStore.resetInstance();
   jest.useRealTimers();
 });
 
@@ -112,7 +118,7 @@ describe('pollOnce', () => {
     };
     const metrics = IndexerMetrics.getInstance();
 
-    await pollOnce(baseConfig(), rpc, metrics, 0);
+    await pollOnce(baseConfig(), rpc, metrics, 0, store);
 
     expect(rpc.getEvents).toHaveBeenCalledWith(
       expect.objectContaining({ startLedger: 5000 }),
@@ -132,7 +138,7 @@ describe('pollOnce', () => {
     const metrics = IndexerMetrics.getInstance();
     const recordSuccessSpy = jest.spyOn(metrics, 'recordSuccess');
 
-    const nextCursor = await pollOnce(baseConfig(), rpc, metrics, 1200);
+    const nextCursor = await pollOnce(baseConfig(), rpc, metrics, 1200, store);
 
     expect(recordSuccessSpy).toHaveBeenCalledWith(
       'player_contacted',
@@ -141,6 +147,30 @@ describe('pollOnce', () => {
     );
     expect(nextCursor).toBe(1235);
     expect(getLastLedgerInfo().lastLedger).toBe(1234);
+
+    const { events } = store.getEvents({ type: 'player_contacted' });
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      type: 'player_contacted',
+      playerId: 'p1',
+      scout: 'G1',
+      ledger: 1234,
+    });
+  });
+
+  it('does not persist an event that failed to decode', async () => {
+    const badRaw = makeRawEvent('not_a_real_event', {}, { ledger: 777 });
+    const rpc: jest.Mocked<RpcClient> = {
+      getLatestLedger: jest.fn().mockResolvedValue({ sequence: 777 }),
+      getEvents: jest
+        .fn()
+        .mockResolvedValue({ latestLedger: 777, events: [badRaw] }),
+    };
+    const metrics = IndexerMetrics.getInstance();
+
+    await pollOnce(baseConfig(), rpc, metrics, 700, store);
+
+    expect(store.getEvents().events).toHaveLength(0);
   });
 
   it('calls updateNetworkLedger with the RPC-reported network tip even while behind it', async () => {
@@ -150,7 +180,7 @@ describe('pollOnce', () => {
     };
     const metrics = IndexerMetrics.getInstance();
 
-    await pollOnce(baseConfig(), rpc, metrics, 9500);
+    await pollOnce(baseConfig(), rpc, metrics, 9500, store);
 
     expect(getLastLedgerInfo().networkLedger).toBe(9999);
   });
@@ -162,7 +192,7 @@ describe('pollOnce', () => {
     };
     const metrics = IndexerMetrics.getInstance();
 
-    const nextCursor = await pollOnce(baseConfig(), rpc, metrics, 100);
+    const nextCursor = await pollOnce(baseConfig(), rpc, metrics, 100, store);
 
     expect(nextCursor).toBe(501);
   });
@@ -178,7 +208,7 @@ describe('pollOnce', () => {
     const metrics = IndexerMetrics.getInstance();
     const recordFailureSpy = jest.spyOn(metrics, 'recordFailure');
 
-    const nextCursor = await pollOnce(baseConfig(), rpc, metrics, 700);
+    const nextCursor = await pollOnce(baseConfig(), rpc, metrics, 700, store);
 
     expect(recordFailureSpy).toHaveBeenCalled();
     expect(nextCursor).toBe(778);
@@ -192,7 +222,7 @@ describe('pollOnce', () => {
     const metrics = IndexerMetrics.getInstance();
     const recordFailureSpy = jest.spyOn(metrics, 'recordFailure');
 
-    const nextCursor = await pollOnce(baseConfig(), rpc, metrics, 42);
+    const nextCursor = await pollOnce(baseConfig(), rpc, metrics, 42, store);
 
     expect(recordFailureSpy).toHaveBeenCalled();
     expect(nextCursor).toBe(42);
@@ -207,7 +237,7 @@ describe('pollOnce', () => {
     const metrics = IndexerMetrics.getInstance();
     const recordFailureSpy = jest.spyOn(metrics, 'recordFailure');
 
-    const nextCursor = await pollOnce(baseConfig(), rpc, metrics, 42);
+    const nextCursor = await pollOnce(baseConfig(), rpc, metrics, 42, store);
 
     expect(recordFailureSpy).toHaveBeenCalled();
     expect(nextCursor).toBe(42);
@@ -222,7 +252,7 @@ describe('pollOnce', () => {
     for (let i = 0; i < 5; i++) metrics.recordFailure(1);
     expect(metrics.snapshot().isHealthy).toBe(false);
 
-    await pollOnce(baseConfig(), rpc, metrics, 0);
+    await pollOnce(baseConfig(), rpc, metrics, 0, store);
 
     expect(metrics.snapshot().isHealthy).toBe(true);
   });

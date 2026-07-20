@@ -3,6 +3,7 @@
 .next/
 node_modules/
 out/
+dist/
 *.tsbuildinfo
 # Jest coverage output (issue #108)
 coverage/
@@ -21,3 +22,10 @@ pr-*.md
 
 # Local referral-store data (lib/referralStore.ts writes here in dev)
 .data/
+
+# Local indexer SQLite event store (packages/indexer/src/db/eventStore.ts writes here in dev)
+packages/indexer/data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm

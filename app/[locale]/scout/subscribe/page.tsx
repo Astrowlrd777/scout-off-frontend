@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Button from '@/components/ui/Button';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
@@ -342,7 +342,9 @@ function SubscribeContent() {
 export default function ScoutSubscribePage() {
   return (
     <ErrorBoundary>
-      <SubscribeContent />
+      <Suspense fallback={null}>
+        <SubscribeContent />
+      </Suspense>
     </ErrorBoundary>
   );
 }
