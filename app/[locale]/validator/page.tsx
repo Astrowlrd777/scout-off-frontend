@@ -5,6 +5,7 @@ import { checkIsValidator } from '@/lib/contract';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import EmptyState from '@/components/ui/EmptyState';
 import ValidatorPlayerSearch from '@/components/validator/ValidatorPlayerSearch';
+import ApprovedPlayersRoster from '@/components/validator/ApprovedPlayersRoster';
 import ApproveForm from '@/components/validator/ApproveForm';
 import RevokeForm from '@/components/validator/RevokeForm';
 import type { Player } from '@/types';
@@ -72,6 +73,9 @@ function ValidatorDashboardContent() {
         <h2 className="text-lg font-semibold text-white mb-4">Find a Player</h2>
         <ValidatorPlayerSearch onSelect={handlePlayerSelected} />
       </div>
+
+      {/* Approved players roster */}
+      <ApprovedPlayersRoster validatorAddress={publicKey} />
 
       {/* Selected player section */}
       {selectedPlayer && (

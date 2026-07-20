@@ -52,6 +52,14 @@ export const fetchPlayerEvents = (
     .get(`/players/${encodeURIComponent(playerId)}/events`, { params })
     .then((r) => r.data);
 
+export const fetchValidatorEvents = (
+  validatorAddress: string,
+  params: EventQueryParams = {},
+): Promise<IndexedEventsPage> =>
+  indexerApi
+    .get(`/validators/${encodeURIComponent(validatorAddress)}/events`, { params })
+    .then((r) => r.data);
+
 const MAX_PAGES = 10; // caps at 10 * 200 = 2000 events per player before giving up
 
 /**

@@ -63,6 +63,7 @@ function handleMetrics(res: http.ServerResponse): void {
 }
 
 const PLAYER_EVENTS_PATH = /^\/players\/([^/]+)\/events$/;
+const VALIDATOR_EVENTS_PATH = /^\/validators\/([^/]+)\/events$/;
 
 function sendJson(res: http.ServerResponse, status: number, body: unknown): void {
   res.writeHead(status, { 'Content-Type': 'application/json' });
@@ -122,6 +123,22 @@ function handleEventsQuery(
   sendJson(res, 200, result);
 }
 
+function handleValidatorEventsQuery(
+  url: URL,
+  res: http.ServerResponse,
+  validatorAddress: string,
+): void {
+  const parsed = parseQueryFilter(url.searchParams);
+  if (!parsed.ok) {
+    return sendJson(res, 400, { error: parsed.error });
+  }
+
+  const store = EventStore.getInstance();
+  const result = store.getEvents({ ...parsed.filter, validator: validatorAddress });
+
+  sendJson(res, 200, result);
+}
+
 export const server = http.createServer(
   (req: http.IncomingMessage, res: http.ServerResponse) => {
     const url = new URL(req.url ?? '/', 'http://localhost');
@@ -138,6 +155,10 @@ export const server = http.createServer(
     const playerMatch = url.pathname.match(PLAYER_EVENTS_PATH);
     if (req.method === 'GET' && playerMatch) {
       return handleEventsQuery(url, res, decodeURIComponent(playerMatch[1]));
+    }
+    const validatorMatch = url.pathname.match(VALIDATOR_EVENTS_PATH);
+    if (req.method === 'GET' && validatorMatch) {
+      return handleValidatorEventsQuery(url, res, decodeURIComponent(validatorMatch[1]));
     }
 
     res.writeHead(404);
