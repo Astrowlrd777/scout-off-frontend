@@ -3,6 +3,7 @@ import axios from 'axios';
 import { assembleFile, cleanupSession } from '@/lib/chunkedUploadStore';
 import { hasValidMagicBytes, bufToHex } from '@/lib/fileSignature';
 import { getClientIp, createRateLimiter } from '@/lib/uploadRateLimit';
+import { createRequestLogger } from '@/lib/logger';
 
 export const runtime = 'nodejs';
 
@@ -21,6 +22,7 @@ const checkRateLimit = createRateLimiter(20, 60 * 1000);
 const ALLOWED_MIME_PREFIXES = ['image/', 'video/'];
 
 export async function POST(req: NextRequest) {
+  const log = createRequestLogger(req);
   const ip = getClientIp(req);
   const rl = checkRateLimit(ip);
   if (rl.limited) {
@@ -69,9 +71,7 @@ export async function POST(req: NextRequest) {
   const header = new Uint8Array(buffer.subarray(0, 12));
   if (!hasValidMagicBytes(header)) {
     cleanupSession(sessionId);
-    console.warn(
-      `[IPFS chunked upload] Rejected spoofed MIME type: type=${fileType} ip=${ip} header=${bufToHex(header)}`,
-    );
+    log.warn('Rejected spoofed MIME type', { type: fileType, ip, header: bufToHex(header) });
     return NextResponse.json(
       { error: 'File content does not match its declared type. Upload rejected.' },
       { status: 400 },
@@ -102,7 +102,10 @@ export async function POST(req: NextRequest) {
     // Deliberately don't clean up the session here: the assembled chunks are
     // still valid, so a client retrying /complete after a transient Pinata
     // failure shouldn't have to re-upload every chunk.
-    console.error(`[IPFS chunked upload] Pinata error: ip=${ip}`, err);
+    log.error('Pinata upload failed', {
+      ip,
+      reason: err instanceof Error ? err.message : String(err),
+    });
     return NextResponse.json({ error: 'Failed to upload file to IPFS' }, { status: 502 });
   }
 }

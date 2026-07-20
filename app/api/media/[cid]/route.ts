@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyMediaUrlSignature } from '@/lib/mediaUrlSigning';
+import { createRequestLogger } from '@/lib/logger';
 
 /**
  * GET /api/media/[cid]
@@ -93,6 +94,7 @@ export async function GET(
   req: NextRequest,
   { params }: { params: { cid: string } },
 ) {
+  const log = createRequestLogger(req);
   const cid = params.cid;
   if (!cid) {
     return NextResponse.json({ error: 'Missing cid' }, { status: 400 });
@@ -100,7 +102,7 @@ export async function GET(
 
   const ip = getClientIp(req);
   if (isRateLimited(ip)) {
-    console.warn(`[media proxy] rate limit exceeded ip=${ip} cid=${cid}`);
+    log.warn('Rate limit exceeded', { ip, cid });
     return NextResponse.json(
       { error: 'Too many requests' },
       { status: 429, headers: { 'Retry-After': '60' } },
@@ -162,9 +164,9 @@ export async function GET(
     }
   }
 
-  console.error(
-    `[media proxy] all gateways exhausted for cid=${cid}`,
-    lastError,
-  );
+  log.error('All IPFS gateways exhausted', {
+    cid,
+    reason: lastError instanceof Error ? lastError.message : String(lastError),
+  });
   return NextResponse.json({ error: 'Media not available' }, { status: 502 });
 }

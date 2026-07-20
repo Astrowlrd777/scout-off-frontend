@@ -3,6 +3,7 @@ import axios from 'axios';
 import { sanitize } from '@/lib/sanitize';
 import { hasValidMagicBytes, bufToHex } from '@/lib/fileSignature';
 import { getClientIp, createRateLimiter } from '@/lib/uploadRateLimit';
+import { createRequestLogger } from '@/lib/logger';
 
 /**
  * POST /api/ipfs/upload
@@ -27,12 +28,13 @@ const MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024;
 const ALLOWED_MIME_PREFIXES = ['image/', 'video/'];
 
 export async function POST(req: NextRequest) {
+  const log = createRequestLogger(req);
   const ip = getClientIp(req);
 
   // Rate limiting check
   const rl = checkRateLimit(ip);
   if (rl.limited) {
-    console.warn(`[IPFS rate limit] Too many uploads from IP: ${ip}`);
+    log.warn('Rate limit exceeded', { ip });
     const retryAfter = rl.retryAfterSec ?? 60;
     return NextResponse.json(
       { error: 'Too many requests' },
@@ -67,9 +69,7 @@ export async function POST(req: NextRequest) {
 
   // ── 2. Size check (issue #119) ──────────────────────────────────────────────
   if (file.size > MAX_FILE_SIZE_BYTES) {
-    console.warn(
-      `[IPFS upload] Rejected oversized file: size=${file.size} type=${file.type} ip=${ip}`,
-    );
+    log.warn('Rejected oversized file', { size: file.size, type: file.type, ip });
     return NextResponse.json(
       {
         error: `File exceeds the 100 MB size limit (received ${(file.size / 1024 / 1024).toFixed(1)} MB)`,
@@ -84,9 +84,7 @@ export async function POST(req: NextRequest) {
     mimeType.startsWith(prefix),
   );
   if (!mimeAllowed) {
-    console.warn(
-      `[IPFS upload] Rejected disallowed MIME type: type=${file.type} size=${file.size} ip=${ip}`,
-    );
+    log.warn('Rejected disallowed MIME type', { type: file.type, size: file.size, ip });
     return NextResponse.json(
       {
         error: `File type "${file.type}" is not allowed. Only image/* and video/* files are accepted.`,
@@ -101,9 +99,12 @@ export async function POST(req: NextRequest) {
   const headerBuffer = new Uint8Array(await headerSlice.arrayBuffer());
 
   if (!hasValidMagicBytes(headerBuffer)) {
-    console.warn(
-      `[IPFS upload] Rejected spoofed MIME type: type=${file.type} size=${file.size} ip=${ip} header=${bufToHex(headerBuffer)}`,
-    );
+    log.warn('Rejected spoofed MIME type', {
+      type: file.type,
+      size: file.size,
+      ip,
+      header: bufToHex(headerBuffer),
+    });
     return NextResponse.json(
       {
         error:
@@ -131,7 +132,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ cid: data.IpfsHash });
   } catch (err) {
-    console.error(`[IPFS upload] Pinata error: ip=${ip}`, err);
+    log.error('Pinata upload failed', {
+      ip,
+      reason: err instanceof Error ? err.message : String(err),
+    });
     return NextResponse.json(
       { error: 'Failed to upload file to IPFS' },
       { status: 502 },
