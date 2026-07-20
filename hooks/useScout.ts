@@ -28,7 +28,7 @@ export function invalidateScoutSearch(filter: PlayerFilter): Promise<void> {
 export function useScout() {
   const [searchKey, setSearchKey] = useState<string | null>(null);
 
-  const { data, error, isValidating } = useSWR<Player[]>(
+  const { data, error, isValidating, mutate } = useSWR<Player[]>(
     searchKey,
     async (key: string) => {
       if (key.startsWith('scout:name:')) {
@@ -71,6 +71,6 @@ export function useScout() {
       error instanceof SearchRateLimitedError ? error.retryAfterSec : null,
     search,
     searchByName,
-    refetch: () => mutate(),
+    refetch: () => mutate() as Promise<void>,
   };
 }

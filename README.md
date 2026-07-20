@@ -369,7 +369,8 @@ npm run test:watch
 npm run test:coverage
 
 # Type checking
-npm run typecheck
+npm run typecheck  
+npm run type-check    # Standalone CI job, excludes test files
 
 # Validate env vars
 node scripts/validate-env.js

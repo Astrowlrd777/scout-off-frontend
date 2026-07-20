@@ -58,9 +58,9 @@ export function usePlayer(walletOrId: string | null) {
    */
   const refetch = (options?: { discardOptimistic?: boolean }) => {
     if (options?.discardOptimistic) {
-      return mutate(undefined, { revalidate: true });
+      return mutate(undefined, { revalidate: true }).then(() => {});
     } else {
-      return mutate();
+      return mutate().then(() => {});
     }
   };
 

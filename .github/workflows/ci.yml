@@ -19,6 +19,7 @@ jobs:
       - run: npm install
       - run: npm run format:check
       - run: npm run lint
+      - run: npm run type-check
       - run: npm run test
       - run: node scripts/validate-env.js
       - name: Verify PWA icons exist
