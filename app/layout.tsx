@@ -4,6 +4,7 @@ import Navbar from '@/components/Navbar';
 import { ToastProvider } from '@/components/ui/Toast';
 import { WalletProvider } from '@/context/WalletContext';
 import ContractPausedBanner from '@/components/ContractPausedBanner';
+import ContractIncompatibleBanner from '@/components/ContractIncompatibleBanner';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 
@@ -77,6 +78,7 @@ export default async function RootLayout({
           <WalletProvider>
             <ToastProvider>
               <Navbar />
+              <ContractIncompatibleBanner />
               <ContractPausedBanner />
               <main id="main-content" className="max-w-6xl mx-auto px-4 py-8">
                 {children}

@@ -324,6 +324,30 @@ Net effect: the "You were referred" banner on `/scout/subscribe` renders based p
 
 ---
 
+## Contract Version Compatibility
+
+`lib/contract.ts` assumes the deployed Soroban contract matches the function signatures and return shapes this file was written against. Since the contract can be upgraded or migrated independently of the frontend, a mismatch is checked for explicitly rather than left to fail deep inside a transaction build.
+
+### How it works
+
+- `EXPECTED_CONTRACT_VERSION` in `lib/contract.ts` is the ABI version this file's `build*`/`simulateTx` calls target.
+- `getContractVersion()` reads the deployed contract's self-reported version via a `get_contract_version` read-only call.
+- `checkContractCompatibility()` compares the two and returns one of three statuses, cached for 5 minutes:
+  - `'compatible'` — versions match, proceed normally.
+  - `'unknown'` — the contract doesn't expose a version query (e.g. an older deployment). Treated as "proceed with caution", not blocked, so this check never locks out a contract that predates it.
+  - `'incompatible'` — versions differ. A clear, actionable message is generated for display in the UI.
+- `assertContractCompatible()` throws `ContractIncompatibleError` (see `lib/errors.ts`) when the status is `'incompatible'`. It's called at the top of `buildTx`, so every write helper (`buildRegisterPlayer`, `buildApproveMilestone`, `buildPayToContact`, etc.) short-circuits before any RPC round-trip — a user never gets through uploading media or filling out a form only to fail at the signing step.
+- `hooks/useContractCompatibility.ts` + `components/ContractIncompatibleBanner.tsx` run the check on app load (mounted in `app/layout.tsx`) and show a blocking banner if incompatible, so the problem surfaces before a user starts a flow at all.
+
+### Updating this when the contract changes
+
+1. When a contract migration changes a method signature, argument order, or return shape that `lib/contract.ts` relies on, bump `EXPECTED_CONTRACT_VERSION` in the same PR that updates the corresponding `build*`/`simulateTx` calls.
+2. Coordinate with the contract side so `get_contract_version` returns the new number at (or before) the deployment that ships the breaking change — the frontend should never expect a version the contract hasn't shipped yet.
+3. Call `clearContractCompatibilityCache()` (exported from `lib/contract.ts`) after a manual redeploy in a long-running session (e.g. a debugging tool) to force an immediate re-check instead of waiting out the 5-minute cache.
+4. If the contract doesn't implement `get_contract_version` at all yet, confirm with the smart-contract side whether adding one is feasible — this frontend-side layer is only as useful as the on-chain query it checks against.
+
+---
+
 ## Related Documentation
 
 - [README.md](README.md) — project overview, architecture, and smart contract API
