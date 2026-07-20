@@ -147,13 +147,13 @@ describe('PlayerCard — rendering', () => {
     expect(viewProfileLink).toHaveAttribute('href', `/player/${mockPlayer.id}`);
   });
 
-  it('renders the player image when an IPFS hash is present', () => {
+  it('renders the player image when an IPFS hash is present, via the media proxy route', () => {
     render(<PlayerCard player={mockPlayer} />);
     const image = screen.getByAltText(mockPlayer.vitals.name);
     expect(image).toBeInTheDocument();
     expect(image).toHaveAttribute(
       'src',
-      `${process.env.NEXT_PUBLIC_IPFS_GATEWAY}/${mockPlayer.ipfsHash}`,
+      `/api/media/${mockPlayer.ipfsHash}`,
     );
   });
 

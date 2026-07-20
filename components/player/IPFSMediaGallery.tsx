@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useState } from 'react';
 import Image from 'next/image';
+import { getMediaProxyUrl } from '@/lib/mediaUrl';
 
 /**
  * 10×10 gray WebP encoded as base64.
@@ -62,7 +63,7 @@ function IPFSMediaItem({ cid }: IPFSMediaItemProps) {
   }, []);
 
   const isVideo = cid.endsWith('.mp4') || cid.endsWith('.webm');
-  const mediaUrl = `${process.env.NEXT_PUBLIC_IPFS_GATEWAY}/${cid}`;
+  const mediaUrl = getMediaProxyUrl(cid);
 
   if (isVideo) {
     return (
