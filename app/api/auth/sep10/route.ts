@@ -1,5 +1,6 @@
 import { WebAuth, Networks, Keypair } from '@stellar/stellar-sdk';
 import { NextRequest, NextResponse } from 'next/server';
+import { createRequestLogger, withRequestId } from '@/lib/logger';
 
 function getAllowedOrigin(req: NextRequest): string | null {
   const configured = process.env.NEXT_PUBLIC_BASE_URL;
@@ -12,6 +13,7 @@ function getAllowedOrigin(req: NextRequest): string | null {
 }
 
 export async function POST(req: NextRequest) {
+  const log = createRequestLogger(req);
   const origin = req.headers.get('origin');
   const allowed = getAllowedOrigin(req);
 
@@ -66,17 +68,23 @@ export async function POST(req: NextRequest) {
       sameSite: 'strict',
       path: '/',
     });
-    return response;
+    return withRequestId(response, log.requestId);
   } catch (error) {
-    console.error('SEP-10 Verification Error:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Verification failed' },
-      { status: 401 },
+    log.error('SEP-10 verification failed', {
+      reason: error instanceof Error ? error.message : String(error),
+    });
+    return withRequestId(
+      NextResponse.json(
+        { error: error instanceof Error ? error.message : 'Verification failed' },
+        { status: 401 },
+      ),
+      log.requestId,
     );
   }
 }
 
 export async function GET(req: NextRequest) {
+  const log = createRequestLogger(req);
   const account = req.nextUrl.searchParams.get('account');
   if (!account) {
     return NextResponse.json(
@@ -113,10 +121,15 @@ export async function GET(req: NextRequest) {
     );
     return NextResponse.json({ transaction: challengeXdr });
   } catch (error) {
-    console.error('SEP-10 Challenge Error:', error);
-    return NextResponse.json(
-      { error: 'Failed to generate challenge' },
-      { status: 500 },
+    log.error('SEP-10 challenge generation failed', {
+      reason: error instanceof Error ? error.message : String(error),
+    });
+    return withRequestId(
+      NextResponse.json(
+        { error: 'Failed to generate challenge' },
+        { status: 500 },
+      ),
+      log.requestId,
     );
   }
 }

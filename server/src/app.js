@@ -1,5 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+const requestLogger = require('./middleware/requestLogger');
+const { createRequestLogger } = require('./logger');
 const referralsRouter = require('./routes/referrals');
 const academiesRouter = require('./routes/academies');
 
@@ -11,6 +13,9 @@ function createApp() {
       origin: process.env.CORS_ORIGIN ?? 'http://localhost:3000',
     }),
   );
+  // Ahead of express.json() so req.log exists even for requests that fail
+  // to parse (a malformed body throws before any later middleware runs).
+  app.use(requestLogger);
   app.use(express.json());
 
   app.get('/health', (req, res) => res.json({ status: 'ok' }));
@@ -28,7 +33,10 @@ function createApp() {
 
   // eslint-disable-next-line no-unused-vars
   app.use((err, req, res, next) => {
-    console.error(err);
+    const log = req.log ?? createRequestLogger(req);
+    log.error('Unhandled request error', {
+      reason: err instanceof Error ? err.message : String(err),
+    });
     res.status(500).json({ error: 'Internal server error' });
   });
 
