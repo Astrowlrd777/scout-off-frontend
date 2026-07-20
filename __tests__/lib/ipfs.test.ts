@@ -115,6 +115,22 @@ describe('lib/ipfs', () => {
       expect(onProgress).toHaveBeenLastCalledWith(1);
     });
 
+    it('reports the uploading phase up front and the processing phase before /complete', async () => {
+      const file = makeFile('clip.mp4', 'video/mp4', 1024);
+      (axios.post as jest.Mock)
+        .mockResolvedValueOnce({ data: { sessionId: 'sess-phase' } }) // init
+        .mockResolvedValueOnce({ data: { receivedChunks: [0], totalChunks: 1 } }) // chunk
+        .mockResolvedValueOnce({ data: { cid: 'QmPhase' } }); // complete
+
+      const onPhaseChange = jest.fn();
+      await uploadToIPFSChunked(file, { onPhaseChange });
+
+      expect(onPhaseChange.mock.calls.map((c) => c[0])).toEqual([
+        'uploading',
+        'processing',
+      ]);
+    });
+
     it('splits a multi-chunk file into CHUNK_SIZE_BYTES pieces and uploads each', async () => {
       const file = makeFile('clip.mp4', 'video/mp4', CHUNK_SIZE_BYTES * 2 + 100);
       (axios.post as jest.Mock)

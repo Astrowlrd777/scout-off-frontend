@@ -48,8 +48,15 @@ export default function VideoUpload({
 }: VideoUploadProps) {
   const [fileName, setFileName] = useState<string>('');
   const [localError, setLocalError] = useState<string | null>(null);
-  const { progress, uploading: isUploading, canResume, upload, resume } =
-    useChunkedUpload();
+  const {
+    progress,
+    phase,
+    uploading: isUploading,
+    canResume,
+    upload,
+    resume,
+  } = useChunkedUpload();
+  const isProcessing = isUploading && phase === 'processing';
 
   const displayError = error ?? localError;
   const errorId = displayError ? 'video-upload-error' : undefined;
@@ -144,7 +151,9 @@ export default function VideoUpload({
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 ></path>
               </svg>
-              <span className="text-sm">Uploading... {progress}%</span>
+              <span className="text-sm">
+                {isProcessing ? 'Processing…' : `Uploading... ${progress}%`}
+              </span>
             </div>
           </div>
         )}
@@ -152,15 +161,19 @@ export default function VideoUpload({
       {isUploading && (
         <div
           role="progressbar"
-          aria-valuenow={progress}
+          aria-valuenow={isProcessing ? undefined : progress}
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-label="Upload progress"
+          aria-label={
+            isProcessing ? 'Processing upload' : 'Upload progress'
+          }
           className="h-1.5 w-full rounded-full bg-gray-800 overflow-hidden"
         >
           <div
-            className="h-full bg-brand-green transition-[width] duration-200"
-            style={{ width: `${progress}%` }}
+            className={`h-full bg-brand-green transition-[width] duration-200 ${
+              isProcessing ? 'animate-pulse w-full' : ''
+            }`}
+            style={isProcessing ? undefined : { width: `${progress}%` }}
           />
         </div>
       )}

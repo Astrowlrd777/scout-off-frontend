@@ -79,9 +79,20 @@ export class ChunkedUploadError extends Error {
   }
 }
 
+/**
+ * `uploading` covers the byte-transfer of chunks to our server, which has
+ * real, granular progress. `processing` covers the server assembling the
+ * chunks and pinning the result to IPFS/Pinata via `/complete` — a single
+ * request with no sub-progress, so it's surfaced as a distinct phase rather
+ * than a progress percentage that would otherwise appear stuck at 100%.
+ */
+export type ChunkedUploadPhase = 'uploading' | 'processing';
+
 export interface ChunkedUploadOptions {
   /** Called after each chunk is confirmed uploaded, with overall progress in [0, 1]. */
   onProgress?: (fraction: number) => void;
+  /** Called when the upload transitions between phases. */
+  onPhaseChange?: (phase: ChunkedUploadPhase) => void;
   /**
    * Resume a previously started (and since-failed) session instead of
    * calling /init again — skips straight to uploading whatever chunks the
@@ -148,6 +159,8 @@ export async function uploadToIPFSChunked(
 ): Promise<string> {
   const totalChunks = Math.max(1, Math.ceil(file.size / CHUNK_SIZE_BYTES));
 
+  options.onPhaseChange?.('uploading');
+
   let sessionId = options.resumeSessionId;
   let startChunk = 0;
 
@@ -184,6 +197,7 @@ export async function uploadToIPFSChunked(
     options.onProgress?.((i + 1) / totalChunks);
   }
 
+  options.onPhaseChange?.('processing');
   const { data } = await axios.post('/api/ipfs/upload/complete', { sessionId });
   return data.cid as string;
 }

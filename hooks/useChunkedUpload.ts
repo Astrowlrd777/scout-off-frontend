@@ -1,7 +1,11 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
-import { uploadToIPFSChunked, ChunkedUploadError } from '@/lib/ipfs';
+import {
+  uploadToIPFSChunked,
+  ChunkedUploadError,
+  type ChunkedUploadPhase,
+} from '@/lib/ipfs';
 
 export interface UploadOutcome {
   cid: string | null;
@@ -9,8 +13,10 @@ export interface UploadOutcome {
 }
 
 export interface UseChunkedUploadResult {
-  /** Upload progress in [0, 100]. */
+  /** Upload progress in [0, 100]. Only meaningful during the 'uploading' phase. */
   progress: number;
+  /** 'uploading' (chunks in transit) vs 'processing' (server pinning to IPFS). */
+  phase: ChunkedUploadPhase;
   uploading: boolean;
   error: string | null;
   /** True after an interrupted upload that can continue from its last chunk. */
@@ -36,6 +42,7 @@ export interface UseChunkedUploadResult {
  */
 export function useChunkedUpload(): UseChunkedUploadResult {
   const [progress, setProgress] = useState(0);
+  const [phase, setPhase] = useState<ChunkedUploadPhase>('uploading');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [canResume, setCanResume] = useState(false);
@@ -51,6 +58,7 @@ export function useChunkedUpload(): UseChunkedUploadResult {
         const cid = await uploadToIPFSChunked(file, {
           resumeSessionId,
           onProgress: (fraction) => setProgress(Math.round(fraction * 100)),
+          onPhaseChange: setPhase,
         });
         resumeStateRef.current = null;
         setCanResume(false);
@@ -91,5 +99,5 @@ export function useChunkedUpload(): UseChunkedUploadResult {
     return runUpload(state.file, state.sessionId);
   }, [runUpload]);
 
-  return { progress, uploading, error, canResume, upload, resume };
+  return { progress, phase, uploading, error, canResume, upload, resume };
 }

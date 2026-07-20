@@ -14,6 +14,7 @@ const mockUpload = jest.fn();
 const mockResume = jest.fn();
 let mockHookState = {
   progress: 0,
+  phase: 'uploading' as 'uploading' | 'processing',
   uploading: false,
   error: null as string | null,
   canResume: false,
@@ -132,7 +133,13 @@ describe('VideoUpload component', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockHookState = { progress: 0, uploading: false, error: null, canResume: false };
+    mockHookState = {
+      progress: 0,
+      phase: 'uploading',
+      uploading: false,
+      error: null,
+      canResume: false,
+    };
     mockUpload.mockResolvedValue({ cid: 'QmMockCID123', error: null });
     mockResume.mockResolvedValue({ cid: null, error: null });
   });
@@ -242,7 +249,7 @@ describe('VideoUpload component', () => {
   });
 
   it('shows a progress bar with the current percentage while uploading', () => {
-    mockHookState = { progress: 42, uploading: true, error: null, canResume: false };
+    mockHookState = { progress: 42, phase: 'uploading', uploading: true, error: null, canResume: false };
 
     renderUpload();
 
@@ -252,11 +259,22 @@ describe('VideoUpload component', () => {
   });
 
   it('disables the file input while uploading', () => {
-    mockHookState = { progress: 10, uploading: true, error: null, canResume: false };
+    mockHookState = { progress: 10, phase: 'uploading', uploading: true, error: null, canResume: false };
 
     renderUpload();
 
     expect(screen.getByLabelText(/highlight reel/i)).toBeDisabled();
+  });
+
+  it('shows a distinct "Processing" state once chunk upload completes and pinning begins', () => {
+    mockHookState = { progress: 100, phase: 'processing', uploading: true, error: null, canResume: false };
+
+    renderUpload();
+
+    expect(screen.getByText(/processing/i)).toBeInTheDocument();
+    expect(screen.queryByText(/uploading\.\.\./i)).not.toBeInTheDocument();
+    const bar = screen.getByRole('progressbar', { name: /processing upload/i });
+    expect(bar).not.toHaveAttribute('aria-valuenow');
   });
 
   it('surfaces the chunked-upload hook error and calls onValidationError with it', async () => {
@@ -278,7 +296,7 @@ describe('VideoUpload component', () => {
 
   it('shows a Resume upload button when the hook reports a resumable failure, and calls resume() on click', async () => {
     mockUpload.mockResolvedValue({ cid: null, error: 'Upload interrupted.' });
-    mockHookState = { progress: 0, uploading: false, error: null, canResume: true };
+    mockHookState = { progress: 0, phase: 'uploading', uploading: false, error: null, canResume: true };
     mockResume.mockResolvedValue({ cid: 'QmResumedCID', error: null });
 
     renderUpload();
