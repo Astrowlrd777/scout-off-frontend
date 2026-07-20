@@ -100,7 +100,7 @@ export default function PlayerProfile() {
         <div className="rounded-xl border border-yellow-500/40 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-300">
           <p className="font-semibold">This profile is currently private</p>
           <p className="text-xs text-yellow-300/80 mt-1">
-            The player has archived their profile and it's not visible in search results.
+            The player has archived their profile and it&apos;s not visible in search results.
           </p>
         </div>
       )}
