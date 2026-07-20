@@ -1,67 +1,77 @@
 # Security Policy
 
-ScoutOff handles wallet authentication, signs and submits real-value transactions, and proxies file uploads server-side — making security a top priority.
-
 ## Supported Versions
 
-Only the **latest published release** of the frontend (this repository) receives security patches. Older versions should be upgraded promptly.
+Only the latest release of the `main` branch receives security updates.
+Older versions are not maintained and should not be used in production.
 
 | Version | Supported          |
-|---------|--------------------|
-| latest  | ✅                |
-| < latest| ❌                |
+| ------- | ------------------ |
+| latest  | :white_check_mark: |
+| < latest| :x:                |
 
 ## Scope
 
-| Component                        | In scope | Notes                                           |
-|----------------------------------|----------|-------------------------------------------------|
-| This frontend repository         | ✅       | Next.js app, API routes, components, config     |
-| Smart-contract repository        | ❌       | Separate repo — report there directly           |
-| Third-party services (Pinata,    | ❌       | Report to the respective vendor                 |
-| Stellar RPC, Sentry, etc.)       |          |                                                 |
+### In scope
 
-If you are unsure whether a vulnerability is in scope, report it anyway. We prefer over-reporting to a missed disclosure.
+- This **frontend repository** (`scout-off/scout-off-frontend`) — including:
+  - Next.js application code (`app/`, `components/`, `hooks/`, `lib/`)
+  - API routes (`app/api/`)
+  - Server-side logic (IPFS upload proxy, SEP-10 authentication, referral handling)
+  - Build and CI/CD configuration
+  - Environment variable handling and configuration validation
+
+### Out of scope
+
+- The **smart-contract repository** (`scout-off/scout-off-contracts`) — see its own security policy
+- Third-party services we depend on (Stellar network, Pinata IPFS, Sentry, Vercel)
+- Issues in dependencies that are already reported upstream
+- Theoretical attacks without a practical demonstration
 
 ## Reporting a Vulnerability
 
-### Preferred channel: GitHub Private Vulnerability Reporting
+We use **GitHub Private Vulnerability Reporting** for responsible disclosure.
+Do **not** file a public GitHub issue for a security vulnerability.
 
-GitHub's built-in private vulnerability reporting is enabled for this repository:
+### How to report
 
-➡ **https://github.com/scout-off/scout-off-frontend/security/advisories/new**
+1. Go to the **Security Advisories** page:
+   https://github.com/scout-off/scout-off-frontend/security/advisories/new
 
-This creates a private advisory that is visible only to the repository maintainers and you. It allows for secure, tracked communication without exposing the issue publicly.
+2. Fill in the details:
+   - **Title**: Brief description of the vulnerability
+   - **Description**: Steps to reproduce, impact, and any suggested fix
+   - **Severity**: Your assessment of the impact (critical, high, medium, low)
+   - **Affected versions**: Which releases are affected
 
-### Alternative channel
+3. Submit the advisory — it remains private until we resolve it.
 
-If you cannot use GitHub's private reporting for any reason, send an email to **security@scoutoff.app** with the following details:
-
-- **Subject**: `[ScoutOff Security] <brief description>`
-- **Description**: What the vulnerability is, where it occurs, and the potential impact
-- **Steps to reproduce**: Minimal proof-of-concept or steps to trigger the issue
-- **Environment**: Browser, OS, device details if applicable
-- **Attachments**: Screenshots, logs, or HAR files (avoid sharing private keys or session tokens)
+If you're unable to use the GitHub form for any reason, you may alternately
+email **security@scoutoff.app** — but the GitHub advisory is strongly
+preferred as it provides structured fields and automatic tracking.
 
 ### What to expect
 
-| Stage              | Expected time |
-|--------------------|---------------|
-| Acknowledgment     | Within **48 hours** of submission |
-| Triage & assessment| Within **5 business days** |
-| Fix & release      | Timelines vary by severity — critical issues are prioritised over general ones |
-| Public disclosure  | Coordinated with you after a fix is released |
+| Event             | Estimated time |
+|-------------------|----------------|
+| Acknowledgment    | Within 48 hours |
+| Triage & analysis | Within 5 business days |
+| Fix deployed      | Dependent on severity (critical: < 48 hours, high: < 7 days, medium: < 30 days) |
+| Public disclosure | After fix is deployed, coordinated with reporter |
 
-We will work with you to understand the impact, develop a fix, and coordinate a disclosure date. We ask that you do not disclose the vulnerability publicly until we have released a fix and given you the go-ahead.
+We will work with you to understand the issue and ensure it is addressed
+promptly. You will be credited in our security acknowledgments (unless you
+prefer to remain anonymous).
 
 ## Hall of Fame
 
-We maintain a private hall of fame for researchers who responsibly disclose valid security issues. If you would like public credit instead, we are happy to add your name to a publicly maintained list with your consent.
+We thank the following researchers for their responsible disclosures:
+
+*None yet — be the first!*
+
+---
 
 ## Security.txt
 
-This policy is also published in machine-readable format at `/.well-known/security.txt` (per [RFC 9116](https://www.rfc-editor.org/rfc/rfc9116)).
-
-## Additional resources
-
-- [GitHub private vulnerability reporting docs](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities)
-- [OWASP Cheat Sheet: Vulnerability Disclosure](https://cheatsheetseries.owasp.org/cheatsheets/Vulnerability_Disclosure_Cheat_Sheet.html)
+This project also publishes an RFC 9116 `security.txt` file at:
+https://scoutoff.app/.well-known/security.txt
