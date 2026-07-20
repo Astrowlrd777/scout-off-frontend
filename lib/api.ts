@@ -143,8 +143,11 @@ import type {
 
 export const generateReferralCode = (
   scoutWallet: string,
+  turnstileToken?: string,
 ): Promise<ReferralCode> =>
-  api.post('/referrals/generate', { scoutWallet }).then((r) => r.data);
+  api
+    .post('/referrals/generate', { scoutWallet, turnstileToken })
+    .then((r) => r.data);
 
 export const getReferralStats = (
   scoutWallet: string,
