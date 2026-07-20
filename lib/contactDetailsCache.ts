@@ -100,5 +100,5 @@ export function purgeAllContactDetails(): Promise<void> {
   purgeTimers.clear();
   return globalMutate(isContactDetailsKey, undefined, {
     revalidate: false,
-  }) as Promise<void>;
+  }) as unknown as Promise<void>;
 }

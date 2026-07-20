@@ -36,7 +36,7 @@ export default function ScoutDashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const tour = useOnboardingTour(SCOUT_TOUR_ID, scoutTourSteps, publicKey);
+  const tour = useOnboardingTour(SCOUT_TOUR_ID, scoutTourSteps, publicKey ?? undefined);
 
   const {
     players,

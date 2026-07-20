@@ -58,7 +58,7 @@ function PlayerDashboardContent() {
   const t = useTranslations('player_dashboard');
   const router = useRouter();
 
-  const tour = useOnboardingTour(PLAYER_TOUR_ID, playerTourSteps, publicKey);
+  const tour = useOnboardingTour(PLAYER_TOUR_ID, playerTourSteps, publicKey ?? undefined);
 
   const [successPlayerId, setSuccessPlayerId] = useState<string | null>(null);
   const [redirectCountdown, setRedirectCountdown] = useState(3);
@@ -381,6 +381,8 @@ function PlayerDashboardContent() {
         ) : null}
       </div>
 
+      {isRegistered && player && (
+      <>
       <ArchiveProfileModal
         player={player}
         isOpen={showArchiveModal}
@@ -400,6 +402,8 @@ function PlayerDashboardContent() {
           refetch();
         }}
       />
+      </>
+      )}
     </div>
     </PullToRefresh>
   );

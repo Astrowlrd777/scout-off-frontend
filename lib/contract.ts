@@ -646,7 +646,14 @@ export async function buildLogTrialOffer(
   playerId: string,
   details: TrialOfferDetails,
 ): Promise<string> {
-  validateTrialOfferInputs(scoutKey, playerId, details);
+  if (!isValidStellarAddress(scoutKey)) {
+    throw new ValidationError(
+      `scoutKey "${scoutKey}" is not a valid Stellar address`,
+    );
+  }
+  if (!playerId.trim()) {
+    throw new ValidationError('playerId must be a non-empty string');
+  }
   return buildTx(
     'log_trial_offer',
     [
