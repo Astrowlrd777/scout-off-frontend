@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Button from '@/components/ui/Button';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
+import RedirectReasonBanner from '@/components/ui/RedirectReasonBanner';
 import TransactionStatus from '@/components/ui/TransactionStatus';
 import type { TxStatus } from '@/components/ui/TransactionStatus';
 import useIsPaused from '@/hooks/useIsPaused';
@@ -81,6 +82,7 @@ function SubscribeContent() {
   );
   const redirectTimer = useRef<number | null>(null);
   const referralCode = searchParams.get('ref');
+  const redirectReason = searchParams.get('reason');
 
   useEffect(() => {
     return () => {
@@ -162,6 +164,8 @@ function SubscribeContent() {
 
   return (
     <div className="flex flex-col gap-8">
+      <RedirectReasonBanner reason={redirectReason} />
+
       {/* Active subscription banner */}
       {hasActiveSub && (
         <div

@@ -48,6 +48,25 @@ describe('HomePage', () => {
     expect(screen.getByText('Powered by Stellar')).toBeInTheDocument();
   });
 
+  it('shows the redirect-reason banner when reason is present in searchParams', async () => {
+    const Page = await HomePage({
+      params: { locale: 'en' },
+      searchParams: { reason: 'wallet-required' },
+    });
+    render(Page);
+
+    expect(
+      screen.getByText('You need to connect your wallet to view that page.'),
+    ).toBeInTheDocument();
+  });
+
+  it('does not show a redirect-reason banner on a direct visit', async () => {
+    const Page = await HomePage({ params: { locale: 'en' } });
+    render(Page);
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
   it('renders the footer with the current year, external links, and changelog link', async () => {
     const Page = await HomePage({ params: { locale: 'en' } });
     render(Page);
