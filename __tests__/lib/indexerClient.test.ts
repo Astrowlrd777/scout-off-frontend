@@ -22,6 +22,7 @@ jest.mock('axios', () => {
 
 import axios from 'axios';
 import {
+  fetchEvents,
   fetchPlayerEvents,
   getMilestoneHistoryFromIndexer,
 } from '@/lib/indexerClient';
@@ -42,6 +43,26 @@ describe('lib/indexerClient – axios instance configuration', () => {
         headers: { 'Content-Type': 'application/json' },
       }),
     );
+  });
+});
+
+describe('fetchEvents', () => {
+  it('GETs /events with the given query params', async () => {
+    mockGet.mockResolvedValue({ data: { events: [], nextCursor: null } });
+
+    await fetchEvents({ type: 'fees_withdrawn', limit: 200 });
+
+    expect(mockGet).toHaveBeenCalledWith('/events', {
+      params: { type: 'fees_withdrawn', limit: 200 },
+    });
+  });
+
+  it('defaults to no params', async () => {
+    mockGet.mockResolvedValue({ data: { events: [], nextCursor: null } });
+
+    await fetchEvents();
+
+    expect(mockGet).toHaveBeenCalledWith('/events', { params: {} });
   });
 });
 
