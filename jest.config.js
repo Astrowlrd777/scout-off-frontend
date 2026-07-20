@@ -9,6 +9,11 @@ const customJestConfig = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },
+  // packages/indexer is its own npm-workspace package with its own
+  // package.json/tsconfig.json/jest.config.js (see #661) — it's built and
+  // tested independently (`npm test --workspace=packages/indexer`, and the
+  // dedicated `indexer` CI job) rather than being swept in here.
+  testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/packages/'],
   // Issue #108: enforce minimum coverage thresholds
   coverageThreshold: {
     global: {
@@ -26,7 +31,6 @@ const customJestConfig = {
     'hooks/**/*.{ts,tsx}',
     'lib/**/*.{ts,tsx}',
     'context/**/*.{ts,tsx}',
-    'packages/**/*.{ts,tsx}',
     '!**/*.d.ts',
     '!**/*.stories.{ts,tsx}',
     '!**/node_modules/**',

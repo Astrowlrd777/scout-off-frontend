@@ -59,40 +59,52 @@ Key design decisions:
 - Access to a Stellar Soroban RPC endpoint (testnet or mainnet)
 - The deployed ScoutOff contract address
 
+This package is an npm workspace (declared in the repo root's `package.json`), so a single `npm install` at the repo root installs everything needed for both the frontend app and this package — there's no separate install step required here.
+
 ### Install
 
 ```bash
-# From the repo root
-npm install
-
-# Or from this package directory
-cd packages/indexer
+# From the repo root — installs the indexer's dependencies too, via workspaces
 npm install
 ```
 
 ### Build
 
 ```bash
+# From the repo root
+npm run build --workspace=packages/indexer
+
+# Or from this package directory
 cd packages/indexer
-npx tsc
-# Output written to dist/
+npm run build
+# Output written to packages/indexer/dist/
 ```
 
 ### Run
 
 ```bash
+cd packages/indexer
+
 # Default port 3001
-node dist/server.js
+npm start
+# equivalent to: node dist/index.js
 
 # Override port
-PORT=9090 node dist/server.js
+PORT=9090 npm start
 ```
 
-### Development (watch mode)
+### Test
 
 ```bash
-npx ts-node-dev src/server.ts
+# From the repo root
+npm test --workspace=packages/indexer
+
+# Or from this package directory
+cd packages/indexer
+npm test
 ```
+
+This package has its own `jest.config.js` (ts-jest, Node test environment) and runs independently of the frontend app's Jest config — see the dedicated `indexer` job in `.github/workflows/ci.yml`.
 
 ---
 

@@ -1,0 +1,17 @@
+{
+  "//": "Deliberately not extending the root tsconfig.json: that config targets the Next.js app (dom lib, jsx preserve, bundler module resolution, the `next` TS plugin) — none of which apply to this standalone Node HTTP service. This config is the indexer's own, independent of the frontend build.",
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "CommonJS",
+    "lib": ["ES2020"],
+    "types": ["node", "jest"],
+    "outDir": "dist",
+    "rootDir": "src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/__tests__/**", "node_modules", "dist"]
+}
