@@ -22,6 +22,32 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_referral_codes_scout_wallet
     ON referral_codes (scout_wallet);
+
+  -- Academy/organization identities (issue #663): groups several on-chain
+  -- validator wallets (head coach, assistant coaches, director, ...) under
+  -- one institutional identity for off-chain display/attribution. This is
+  -- purely an off-chain grouping layer — each member wallet must still be
+  -- individually authorized on-chain via add_validator for its approvals to
+  -- be valid; see docs/academy-validator-model.md in the frontend app.
+  CREATE TABLE IF NOT EXISTS academies (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    owner_wallet TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+  );
+
+  -- A wallet belongs to at most one academy at a time (PRIMARY KEY on
+  -- wallet), matching the real-world case this models: institutional staff,
+  -- not individuals holding membership in several academies simultaneously.
+  CREATE TABLE IF NOT EXISTS academy_members (
+    wallet TEXT PRIMARY KEY,
+    academy_id TEXT NOT NULL REFERENCES academies(id),
+    added_at INTEGER NOT NULL,
+    added_by TEXT NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_academy_members_academy_id
+    ON academy_members (academy_id);
 `);
 
 module.exports = db;

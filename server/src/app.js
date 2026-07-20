@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const referralsRouter = require('./routes/referrals');
+const academiesRouter = require('./routes/academies');
 
 function createApp() {
   const app = express();
@@ -19,6 +20,7 @@ function createApp() {
   // README architecture diagram) should follow the same pattern: a
   // dedicated service module + a router mounted here.
   app.use('/referrals', referralsRouter);
+  app.use('/academies', academiesRouter);
 
   app.use((req, res) => {
     res.status(404).json({ error: 'Not found' });
