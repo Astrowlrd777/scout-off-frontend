@@ -16,6 +16,42 @@ jest.mock('axios', () => {
   };
 });
 
+// The route now delegates rate limiting to the shared lib/rateLimit.ts
+// (issue #658 — see lib/rateLimit.ts and __tests__/lib/rateLimit.test.ts
+// for the Redis-backed/in-memory-fallback behavior itself). Here we only
+// need *a* working per-key/window counter so this route's existing
+// rate-limit tests still exercise real rate-limiting behavior, without
+// re-testing lib/rateLimit's store selection logic. getClientIp is left as
+// the real implementation since it's a small pure function this suite
+// already exercises directly (the x-real-ip fallback test below).
+jest.mock('@/lib/rateLimit', () => {
+  const actual = jest.requireActual('@/lib/rateLimit');
+  const state = new Map<string, { count: number; firstSeen: number }>();
+  return {
+    ...actual,
+    checkRateLimit: jest.fn(
+      async (key: string, opts: { limit: number; windowMs: number }) => {
+        const now = Date.now();
+        const entry = state.get(key);
+        if (!entry || now - entry.firstSeen > opts.windowMs) {
+          state.set(key, { count: 1, firstSeen: now });
+          return { limited: false };
+        }
+        entry.count += 1;
+        if (entry.count > opts.limit) {
+          return {
+            limited: true,
+            retryAfterSec: Math.ceil(
+              (opts.windowMs - (now - entry.firstSeen)) / 1000,
+            ),
+          };
+        }
+        return { limited: false };
+      },
+    ),
+  };
+});
+
 import { GET } from '../../../../app/api/players/search/route';
 import { NextRequest } from 'next/server';
 import axios from 'axios';

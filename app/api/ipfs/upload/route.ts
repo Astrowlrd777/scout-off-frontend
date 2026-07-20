@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import { sanitize } from '@/lib/sanitize';
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 
 /**
  * POST /api/ipfs/upload
  *
- * Rate limiting: max 10 uploads per IP per 60 seconds.
+ * Rate limiting: max 10 uploads per IP per 60 seconds, enforced via the
+ * shared lib/rateLimit.ts (Redis-backed in production, in-memory in dev —
+ * see that file for why a per-route in-memory Map isn't sufficient).
  * When exceeded, responds with 429 Too Many Requests and Retry-After header.
  *
  * Real client IP is extracted from the x-forwarded-for header.
@@ -92,51 +95,14 @@ function hasValidMagicBytes(header: Uint8Array): boolean {
   return false;
 }
 
-type RateEntry = { count: number; firstSeen: number };
-const ipRateMap = new Map<string, RateEntry>();
-
-function getClientIp(req: NextRequest): string {
-  const forwarded = req.headers.get('x-forwarded-for');
-  if (forwarded) return forwarded.split(',')[0].trim();
-  const realIp = req.headers.get('x-real-ip');
-  if (realIp) return realIp;
-  return 'unknown';
-}
-
-function checkRateLimit(ip: string): {
-  limited: boolean;
-  retryAfterSec?: number;
-} {
-  const now = Date.now();
-  const entry = ipRateMap.get(ip);
-  if (!entry) {
-    ipRateMap.set(ip, { count: 1, firstSeen: now });
-    return { limited: false };
-  }
-
-  if (now - entry.firstSeen > WINDOW_MS) {
-    ipRateMap.set(ip, { count: 1, firstSeen: now });
-    return { limited: false };
-  }
-
-  entry.count += 1;
-  ipRateMap.set(ip, entry);
-
-  if (entry.count > RATE_LIMIT) {
-    const retryAfterSec = Math.ceil(
-      (WINDOW_MS - (now - entry.firstSeen)) / 1000,
-    );
-    return { limited: true, retryAfterSec };
-  }
-
-  return { limited: false };
-}
-
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
 
   // Rate limiting check
-  const rl = checkRateLimit(ip);
+  const rl = await checkRateLimit(`ipfs-upload:${ip}`, {
+    limit: RATE_LIMIT,
+    windowMs: WINDOW_MS,
+  });
   if (rl.limited) {
     console.warn(`[IPFS rate limit] Too many uploads from IP: ${ip}`);
     const retryAfter = rl.retryAfterSec ?? 60;
