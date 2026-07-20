@@ -22,6 +22,14 @@ jest.mock('@/components/ContractPausedBanner', () => ({
   default: () => <div data-testid="contract-paused-banner" />,
 }));
 
+jest.mock('@/components/ConfigWarningBanner', () => ({
+  __esModule: true,
+  default: ({ warnings }: { warnings: unknown[] }) =>
+    warnings.length > 0 ? (
+      <div data-testid="config-warning-banner" />
+    ) : null,
+}));
+
 jest.mock('@/components/ui/Toast', () => ({
   __esModule: true,
   ToastProvider: ({ children }: { children: React.ReactNode }) => (
@@ -80,5 +88,46 @@ describe('RootLayout', () => {
   it('exposes SEO metadata for the app', () => {
     expect(metadata.title).toBe('ScoutOff — Decentralized Football Scouting');
     expect(metadata.openGraph?.url).toBe('https://scoutoff.app');
+  });
+
+  it('renders ConfigWarningBanner when config is invalid', async () => {
+    // Set NEXT_PUBLIC_CONTRACT_ID to empty to trigger the warning
+    const prev = process.env.NEXT_PUBLIC_CONTRACT_ID;
+    delete process.env.NEXT_PUBLIC_CONTRACT_ID;
+
+    try {
+      const element = await RootLayout({
+        children: <p>Content</p>,
+        params: { locale: 'en' },
+      });
+
+      render(<>{element}</>);
+
+      expect(
+        screen.getByTestId('config-warning-banner'),
+      ).toBeInTheDocument();
+    } finally {
+      process.env.NEXT_PUBLIC_CONTRACT_ID = prev;
+    }
+  });
+
+  it('hides ConfigWarningBanner when config is valid', async () => {
+    const prev = process.env.NEXT_PUBLIC_CONTRACT_ID;
+    process.env.NEXT_PUBLIC_CONTRACT_ID = 'CCTOLI...test123';
+
+    try {
+      const element = await RootLayout({
+        children: <p>Content</p>,
+        params: { locale: 'en' },
+      });
+
+      render(<>{element}</>);
+
+      expect(
+        screen.queryByTestId('config-warning-banner'),
+      ).not.toBeInTheDocument();
+    } finally {
+      process.env.NEXT_PUBLIC_CONTRACT_ID = prev;
+    }
   });
 });
