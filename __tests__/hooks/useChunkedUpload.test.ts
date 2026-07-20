@@ -24,8 +24,35 @@ describe('useChunkedUpload', () => {
     const { result } = renderHook(() => useChunkedUpload());
     expect(result.current.uploading).toBe(false);
     expect(result.current.progress).toBe(0);
+    expect(result.current.phase).toBe('uploading');
     expect(result.current.error).toBeNull();
     expect(result.current.canResume).toBe(false);
+  });
+
+  it('transitions to the processing phase once chunk upload finishes', async () => {
+    let resolveUpload!: (cid: string) => void;
+    mockUploadToIPFSChunked.mockImplementation(
+      (_file, options) =>
+        new Promise((resolve) => {
+          options.onPhaseChange('uploading');
+          options.onProgress(1);
+          options.onPhaseChange('processing');
+          resolveUpload = resolve;
+        }),
+    );
+
+    const { result } = renderHook(() => useChunkedUpload());
+
+    act(() => {
+      result.current.upload(makeFile());
+    });
+
+    await waitFor(() => expect(result.current.phase).toBe('processing'));
+    expect(result.current.progress).toBe(100);
+
+    await act(async () => {
+      resolveUpload('QmDone');
+    });
   });
 
   it('reports progress and resolves with the CID on success', async () => {

@@ -74,6 +74,13 @@ Browser                          Next.js app                      Pinata
   minute.
 - **The whole-file `/api/ipfs/upload` route is untouched** and still used
   for direct single-shot uploads; chunking is additive, not a replacement.
+- **Uploading vs. processing phases** (issue #688): `/complete`'s
+  concatenate-validate-pin step is a single request with no chunk-level
+  progress of its own, so surfacing it as "Uploading... 100%" would look
+  stuck. `uploadToIPFSChunked` reports an `onPhaseChange('processing')`
+  transition right before calling `/complete`; `useChunkedUpload` exposes it
+  as `phase`, and `VideoUpload` swaps the percentage label for an
+  indeterminate "Processing…" state so the two phases read distinctly.
 
 ## What this doesn't do
 
