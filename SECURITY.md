@@ -2,8 +2,7 @@
 
 ## Supported Versions
 
-Only the latest release of the `main` branch receives security updates.
-Older versions are not maintained and should not be used in production.
+We provide security updates for the following versions:
 
 | Version | Supported          |
 | ------- | ------------------ |
@@ -14,12 +13,12 @@ Older versions are not maintained and should not be used in production.
 
 ### In scope
 
-- This **frontend repository** (`scout-off/scout-off-frontend`) — including:
-  - Next.js application code (`app/`, `components/`, `hooks/`, `lib/`)
-  - API routes (`app/api/`)
-  - Server-side logic (IPFS upload proxy, SEP-10 authentication, referral handling)
-  - Build and CI/CD configuration
-  - Environment variable handling and configuration validation
+This **frontend repository** (`scout-off/scout-off-frontend`) — including:
+- Next.js application code (`app/`, `components/`, `hooks/`, `lib/`)
+- API routes (`app/api/`)
+- Server-side logic (IPFS upload proxy, SEP-10 authentication, referral handling)
+- Build and CI/CD configuration
+- Environment variable handling and configuration validation
 
 ### Out of scope
 
@@ -52,9 +51,9 @@ preferred as it provides structured fields and automatic tracking.
 
 ### What to expect
 
-| Event             | Estimated time |
-|-------------------|----------------|
-| Acknowledgment    | Within 48 hours |
+| Event             | Estimated time      |
+|-------------------|---------------------|
+| Acknowledgment    | Within 48 hours     |
 | Triage & analysis | Within 5 business days |
 | Fix deployed      | Dependent on severity (critical: < 48 hours, high: < 7 days, medium: < 30 days) |
 | Public disclosure | After fix is deployed, coordinated with reporter |
