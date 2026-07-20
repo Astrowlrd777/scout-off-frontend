@@ -9,6 +9,7 @@ import {
   TrendingUp,
   Radio,
 } from 'lucide-react';
+import RedirectReasonBanner from '@/components/ui/RedirectReasonBanner';
 
 // ── Feature card data ─────────────────────────────────────────────────────────
 const features = [
@@ -40,14 +41,21 @@ const features = [
 
 export default async function HomePage({
   params,
+  searchParams,
 }: {
   params: { locale: string };
+  searchParams?: { reason?: string | string[] };
 }) {
   const locale = params.locale;
   const t = await getTranslations({ locale, namespace: 'footer' });
 
   return (
     <div className="flex flex-col gap-24 pb-20">
+      {searchParams?.reason && (
+        <div className="px-4">
+          <RedirectReasonBanner reason={searchParams.reason} />
+        </div>
+      )}
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <section
         className="relative flex flex-col items-center text-center gap-8 py-24 px-4 overflow-hidden rounded-2xl"
