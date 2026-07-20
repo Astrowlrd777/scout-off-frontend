@@ -4,11 +4,42 @@ This guide walks you from a freshly cloned repository to a fully running local s
 
 ---
 
+## Docker Compose Quick Start (recommended for first-time contributors)
+
+The full manual setup below (Stellar CLI, a live testnet contract deploy, a real backend API, Pinata credentials) is the most accurate way to develop against real infrastructure, but it's a lot to provision just to make a small frontend change. `docker-compose.yml` brings up a complete local stack — the frontend, the indexer, and mocked local versions of the Soroban RPC and backend API — with a single command and **no external credentials**.
+
+```bash
+docker compose up --build
+```
+
+Then open **http://localhost:3000**.
+
+This starts four containers:
+
+| Service    | Port | What it is                                                                             |
+| ---------- | ---- | ---------------------------------------------------------------------------------------- |
+| `frontend` | 3000 | This Next.js app, built and served in production mode against the mocks below            |
+| `indexer`  | 3001 | `packages/indexer`'s HTTP server (`/health`, `/metrics`)                                   |
+| `mock-rpc` | 8000 | A local mock of the Soroban RPC endpoints `lib/stellar.ts`/`lib/contract.ts` call         |
+| `mock-api` | 4000 | A local mock of the backend REST API `lib/api.ts` calls (`NEXT_PUBLIC_API_URL`)           |
+
+**What works out of the box:** browsing player profiles and lists, milestone history, validator lists, contract health/paused banners, scout dashboards and profiles, and full write flows (register a player, approve a milestone, subscribe, pay-to-contact) — `mock-rpc` decodes the real transaction XDR your wallet builds and returns a canned-but-valid response, including simulate → sign (with Freighter, pointed at a custom network matching `mock-rpc`'s passphrase) → submit → confirm.
+
+**Known limitations of the mocks** (see `docker/mock-rpc/server.js` and `docker/mock-api/server.js` for exactly what's implemented):
+
+- `mock-rpc` doesn't execute real contract logic or persist ledger state across restarts — it returns fixed/generated data keyed off which contract method was called, not the actual on-chain rules (e.g. it won't really enforce "only the admin can withdraw fees").
+- `mock-api` responses are static fixtures; nothing you write through it is actually persisted.
+- This compose stack builds and serves the frontend with `next build && next start` (production mode), not `next dev` — there's no hot-reloading. If you're actively editing frontend code, run `docker compose up mock-rpc mock-api` for just the mocks, then `npm run dev` locally with `.env.local` pointed at `http://localhost:8000` / `http://localhost:4000`; that gives you the credential-free mocks with normal hot-reload.
+
+For anything that depends on real contract behavior or a real backend (integration testing before a release, verifying an actual Soroban migration), fall back to the manual setup below.
+
+---
+
 ## Prerequisites
 
 | Tool                         | Version / Requirement                                            | Check                            |
 | ---------------------------- | ---------------------------------------------------------------- | -------------------------------- |
-| **Node.js**                  | 20.x or later                                                    | `node --version`                 |
+| **Node.js**                  | 24.x (matches CI — use `nvm use` if you have nvm)                | `node --version`                 |
 | **npm**                      | 10.x or later (bundled with Node)                                | `npm --version`                  |
 | **Rust** (stable)            | 1.70+                                                            | `rustc --version`                |
 | **wasm32 target**            | `wasm32-unknown-unknown`                                         | `rustup target list --installed` |
@@ -58,6 +89,8 @@ projects/
 
 ```bash
 cd scout-off-frontend
+# If you use nvm, switch to the project's Node version first:
+nvm use
 npm install
 ```
 
@@ -167,11 +200,20 @@ Run validation again:
 node scripts/validate-env.js
 ```
 
-### 8. Start the backend API (if available)
+### 8. Start the backend API
 
-The frontend expects a backend API at `NEXT_PUBLIC_API_URL` (default `http://localhost:4000`). If the backend API repository is available, start it in a separate terminal. The frontend will function without it for read-only operations; write operations (player registration, milestone approval) require the API for off-chain data.
+The frontend expects a backend API at `NEXT_PUBLIC_API_URL` (default `http://localhost:4000`). This lives in `server/` in this same repo — see `server/README.md` for details. Start it in a separate terminal:
 
-If you don't have the backend, you can still browse the UI and interact with the contract directly via the Stellar SDK calls in the frontend hooks.
+```bash
+cd server
+npm install
+cp .env.example .env
+npm start              # or `npm run dev` for auto-restart on file changes
+```
+
+The frontend will function without it for read-only operations; write operations (player registration, milestone approval, referrals) require the API for off-chain data. Off-chain, non-blockchain state (referral codes today; chat history and player/scout comments next, per the architecture diagram above) lives here — `server/README.md` documents the pattern to follow when adding the next such feature.
+
+If you don't have the backend running, you can still browse the UI and interact with the contract directly via the Stellar SDK calls in the frontend hooks.
 
 ### 9. Start the frontend
 
@@ -324,27 +366,22 @@ Net effect: the "You were referred" banner on `/scout/subscribe` renders based p
 
 ---
 
-## Contract Version Compatibility
+## IPFS Media CDN Caching and Access Control
 
-`lib/contract.ts` assumes the deployed Soroban contract matches the function signatures and return shapes this file was written against. Since the contract can be upgraded or migrated independently of the frontend, a mismatch is checked for explicitly rather than left to fail deep inside a transaction build.
+Public player profiles (`app/[locale]/player/[id]`) previously rendered `<img>`/`<video>` sources built directly from `NEXT_PUBLIC_IPFS_GATEWAY` — e.g. `https://gateway.pinata.cloud/ipfs/<cid>`. That meant every viewer hit Pinata directly, the raw gateway URL was visible in page HTML for anyone to hotlink or bulk-scrape, and there was no caching layer this platform controlled.
 
-### How it works
+### How it works now
 
-- `EXPECTED_CONTRACT_VERSION` in `lib/contract.ts` is the ABI version this file's `build*`/`simulateTx` calls target.
-- `getContractVersion()` reads the deployed contract's self-reported version via a `get_contract_version` read-only call.
-- `checkContractCompatibility()` compares the two and returns one of three statuses, cached for 5 minutes:
-  - `'compatible'` — versions match, proceed normally.
-  - `'unknown'` — the contract doesn't expose a version query (e.g. an older deployment). Treated as "proceed with caution", not blocked, so this check never locks out a contract that predates it.
-  - `'incompatible'` — versions differ. A clear, actionable message is generated for display in the UI.
-- `assertContractCompatible()` throws `ContractIncompatibleError` (see `lib/errors.ts`) when the status is `'incompatible'`. It's called at the top of `buildTx`, so every write helper (`buildRegisterPlayer`, `buildApproveMilestone`, `buildPayToContact`, etc.) short-circuits before any RPC round-trip — a user never gets through uploading media or filling out a form only to fail at the signing step.
-- `hooks/useContractCompatibility.ts` + `components/ContractIncompatibleBanner.tsx` run the check on app load (mounted in `app/layout.tsx`) and show a blocking banner if incompatible, so the problem surfaces before a user starts a flow at all.
+- `lib/mediaUrl.ts` exports `getMediaProxyUrl(cid)`, a client-safe helper that returns `/api/media/<cid>` — a same-origin path — instead of the raw gateway URL. `PlayerCard` and `IPFSMediaGallery` use this instead of reading `NEXT_PUBLIC_IPFS_GATEWAY` directly.
+- `app/api/media/[cid]/route.ts` proxies the request server-side (trying `NEXT_PUBLIC_IPFS_GATEWAY` then the same fallback gateways as `lib/ipfs.ts`) and returns the media with `Cache-Control: public, max-age=31536000, immutable` (and the Vercel-specific `CDN-Cache-Control` header). Since IPFS CIDs are content-addressed, this is safe: the same CID always resolves to the same bytes.
+- **Cache invalidation**: an updated profile gets a *new* CID (see `buildUpdateProfile` in `lib/contract.ts`), which is a new proxy URL — there's nothing to invalidate for the old one, since it's still valid (and still immutable) content.
+- **Anti-hotlinking / anti-scraping**: the route rejects requests carrying an explicit cross-site `Referer` header (same-origin and "no Referer" requests are allowed, since a legitimate direct navigation or privacy-stripped Referer can't be distinguished from same-site). It also applies a best-effort per-IP rate limit (120 req/min) to blunt bulk scraping.
+- **Signed/expiring URLs**: `lib/mediaUrlSigning.ts` (server-only — never import from client code) exposes `signMediaUrl(cid, ttlSeconds)` / `verifyMediaUrlSignature(...)`, gated behind the `MEDIA_URL_SIGNING_SECRET` env var. When a request carries a valid `sig`/`exp` pair the route allows it regardless of Referer — useful for a future flow that needs a non-guessable, time-limited link (e.g. media unlocked via `pay_to_contact`). When the secret isn't set (the local/default case), the route falls back to referrer + rate-limit gating only, so this never blocks contributors who haven't configured it.
 
-### Updating this when the contract changes
+### What's intentionally out of scope here
 
-1. When a contract migration changes a method signature, argument order, or return shape that `lib/contract.ts` relies on, bump `EXPECTED_CONTRACT_VERSION` in the same PR that updates the corresponding `build*`/`simulateTx` calls.
-2. Coordinate with the contract side so `get_contract_version` returns the new number at (or before) the deployment that ships the breaking change — the frontend should never expect a version the contract hasn't shipped yet.
-3. Call `clearContractCompatibilityCache()` (exported from `lib/contract.ts`) after a manual redeploy in a long-running session (e.g. a debugging tool) to force an immediate re-check instead of waiting out the 5-minute cache.
-4. If the contract doesn't implement `get_contract_version` at all yet, confirm with the smart-contract side whether adding one is feasible — this frontend-side layer is only as useful as the on-chain query it checks against.
+- This is an origin-level (Next.js Route Handler) cache, not a managed CDN config. In production, put a real CDN (Vercel's Edge Network, or Cloudflare in front of the deployment) in front of this route so `Cache-Control`/`CDN-Cache-Control` actually get honored at the edge across regions/instances — the in-process rate limiter here is single-instance and should be replaced by the CDN's own rate limiting (or Upstash/Redis) before relying on it at scale.
+- **Bandwidth/cost measurement**: this repo has no production traffic to measure against yet. Once deployed, compare Pinata's bandwidth/request dashboard before and after this change goes live — a meaningful drop in Pinata-side requests for repeatedly-viewed CIDs is the signal this is working; if the CDN in front of `/api/media` isn't caching (e.g. `x-vercel-cache: MISS` on repeat requests), the edge config needs adjusting, not this route.
 
 ---
 
@@ -353,3 +390,5 @@ Net effect: the "You were referred" banner on `/scout/subscribe` renders based p
 - [README.md](README.md) — project overview, architecture, and smart contract API
 - [CONTRIBUTING.md](CONTRIBUTING.md) — contribution workflow and branch conventions
 - [DEPLOYMENT.md](DEPLOYMENT.md) — production deployment notes (Vercel, analytics)
+- [e2e/README.md](e2e/README.md) — Playwright E2E suite and wallet-mocking harness
+- [docs/fraud-detection.md](docs/fraud-detection.md) — referral/pay-to-contact abuse heuristics and admin flag review

@@ -2,7 +2,12 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import ReferralPanel from '@/components/scout/ReferralPanel';
-import { generateReferralCode, getReferralStats } from '@/lib/api';
+import { ToastProvider } from '@/components/ui/Toast';
+import {
+  generateReferralCode,
+  getReferralStats,
+  listReferralCodes,
+} from '@/lib/api';
 import type { ReferralCode, ReferralStats } from '@/types';
 
 expect.extend(toHaveNoViolations);
@@ -10,6 +15,16 @@ expect.extend(toHaveNoViolations);
 jest.mock('@/lib/api', () => ({
   generateReferralCode: jest.fn(),
   getReferralStats: jest.fn(),
+  listReferralCodes: jest.fn(),
+}));
+
+// ReferralPanel reads the connected wallet directly via useWallet(), which
+// needs a WalletProvider ancestor — mock it so the panel can generate/load
+// codes for a fixed scout wallet without rendering a real provider.
+jest.mock('@/hooks/useWallet', () => ({
+  useWallet: () => ({
+    publicKey: 'GABC1234567890ABCDE1234567890ABCDE1234567890ABCDE123456',
+  }),
 }));
 
 const mockGenerateReferralCode = generateReferralCode as jest.MockedFunction<
@@ -18,8 +33,19 @@ const mockGenerateReferralCode = generateReferralCode as jest.MockedFunction<
 const mockGetReferralStats = getReferralStats as jest.MockedFunction<
   typeof getReferralStats
 >;
+const mockListReferralCodes = listReferralCodes as jest.MockedFunction<
+  typeof listReferralCodes
+>;
 
 const STATS: ReferralStats = { totalCodes: 2, successfulReferrals: 1 };
+
+function renderReferralPanel() {
+  return render(
+    <ToastProvider>
+      <ReferralPanel />
+    </ToastProvider>,
+  );
+}
 
 function makeCode(code: string): ReferralCode {
   return {
@@ -35,11 +61,12 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockGetReferralStats.mockResolvedValue(STATS);
   mockGenerateReferralCode.mockResolvedValue(makeCode('ABC123'));
+  mockListReferralCodes.mockResolvedValue([]);
 });
 
 describe('ReferralPanel accessibility', () => {
   it('gives each per-row copy button a distinct, code-specific aria-label', async () => {
-    render(<ReferralPanel />);
+    renderReferralPanel();
 
     await screen.findByRole('button', { name: 'Generate Invite Link' });
 
@@ -79,7 +106,7 @@ describe('ReferralPanel accessibility', () => {
 
   it('has no axe violations once codes are present', async () => {
     mockGenerateReferralCode.mockResolvedValueOnce(makeCode('AXECODE'));
-    const { container } = render(<ReferralPanel />);
+    const { container } = renderReferralPanel();
 
     const generateButton = await screen.findByRole('button', {
       name: 'Generate Invite Link',

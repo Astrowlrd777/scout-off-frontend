@@ -4,9 +4,10 @@ import Navbar from '@/components/Navbar';
 import { ToastProvider } from '@/components/ui/Toast';
 import { WalletProvider } from '@/context/WalletContext';
 import ContractPausedBanner from '@/components/ContractPausedBanner';
-import ContractIncompatibleBanner from '@/components/ContractIncompatibleBanner';
+import ConfigWarningBanner from '@/components/ConfigWarningBanner';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
+import { validateConfig } from '@/lib/config';
 
 export const metadata: Metadata = {
   title: 'ScoutOff — Decentralized Football Scouting',
@@ -47,6 +48,12 @@ export default async function RootLayout({
   const locale = params?.locale ?? 'en';
   const messages = await getMessages();
 
+  // Runtime configuration check — fires on every request so a deployment
+  // with missing env vars (e.g. NEXT_PUBLIC_CONTRACT_ID not set in the
+  // hosting platform) surfaces a clear warning immediately instead of
+  // failing deep inside a Soroban RPC call.
+  const configWarnings = validateConfig();
+
   return (
     <html lang={locale}>
       <head>
@@ -77,6 +84,7 @@ export default async function RootLayout({
         <NextIntlClientProvider locale={locale} messages={messages}>
           <WalletProvider>
             <ToastProvider>
+              <ConfigWarningBanner warnings={configWarnings} />
               <Navbar />
               <ContractIncompatibleBanner />
               <ContractPausedBanner />
