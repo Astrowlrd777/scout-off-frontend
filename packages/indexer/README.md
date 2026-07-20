@@ -63,10 +63,6 @@ Key design decisions:
 ### Install
 
 ```bash
-# From the repo root
-npm install
-
-# Or from this package directory
 cd packages/indexer
 npm install
 ```
@@ -75,7 +71,7 @@ npm install
 
 ```bash
 cd packages/indexer
-npx tsc
+npm run build
 # Output written to dist/
 ```
 
@@ -83,17 +79,23 @@ npx tsc
 
 ```bash
 # Default port 3001
-node dist/server.js
+npm start
+# equivalent to: node dist/index.js
 
 # Override port
-PORT=9090 node dist/server.js
+PORT=9090 npm start
 ```
 
-### Development (watch mode)
+### Docker
 
 ```bash
-npx ts-node-dev src/server.ts
+docker build -t scoutoff-indexer packages/indexer
+docker run -p 3001:3001 scoutoff-indexer
 ```
+
+Or, as part of the full local stack (frontend + indexer + mocked RPC/API), see the "Docker Compose Quick Start" section in [DEVELOPMENT.md](../../DEVELOPMENT.md).
+
+> **Note:** `package.json`/`tsconfig.json` here are a minimal scaffold added to make this package buildable/containerizable (see [#675](https://github.com/scout-off/scout-off-frontend/issues/675)). A fuller npm-package setup (proper `exports`, publishing config, a watch-mode dev script) is tracked separately as a companion packaging issue.
 
 ---
 

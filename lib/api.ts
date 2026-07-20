@@ -1,8 +1,17 @@
 import axios from 'axios';
 import type { Player } from '@/types';
 
+// `API_URL_INTERNAL` (server-only, no NEXT_PUBLIC_ prefix) lets a Server
+// Component's SSR-time fetch reach the backend via a container-internal
+// hostname (e.g. Docker Compose's `http://mock-api:4000`) while the browser
+// bundle still uses the public `NEXT_PUBLIC_API_URL` — since it isn't
+// NEXT_PUBLIC_-prefixed, this only ever resolves server-side; the browser
+// bundle sees `undefined` here and falls through. See docker-compose.yml.
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000',
+  baseURL:
+    process.env.API_URL_INTERNAL ??
+    process.env.NEXT_PUBLIC_API_URL ??
+    'http://localhost:4000',
   headers: { 'Content-Type': 'application/json' },
 });
 
