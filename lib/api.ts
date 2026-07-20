@@ -200,4 +200,85 @@ export const fetchFraudFlags = async (): Promise<{
   return res.json();
 };
 
+// Academies (issue #663) — off-chain grouping of validator wallets under one
+// institutional identity. Admin-write endpoints go through the session-cookie-
+// gated Next.js proxy (app/api/admin/academies/**), matching the referrals
+// admin pattern above. The wallet-lookup read is public and unauthenticated,
+// hitting the backend directly (matching fetchValidatorMilestoneCount below).
+import type { Academy } from '@/types';
+
+async function parseErrorMessage(res: Response, fallback: string): Promise<string> {
+  try {
+    const body = await res.json();
+    return typeof body?.error === 'string' ? body.error : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+export const fetchAcademies = async (): Promise<Academy[]> => {
+  const res = await fetch('/api/admin/academies');
+  if (!res.ok) throw new Error(await parseErrorMessage(res, 'Failed to fetch academies'));
+  return res.json();
+};
+
+export const createAcademy = async (
+  name: string,
+  ownerWallet: string,
+): Promise<Academy> => {
+  const res = await fetch('/api/admin/academies', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, ownerWallet }),
+  });
+  if (!res.ok) throw new Error(await parseErrorMessage(res, 'Failed to create academy'));
+  return res.json();
+};
+
+export const addAcademyMember = async (
+  academyId: string,
+  wallet: string,
+): Promise<Academy> => {
+  const res = await fetch(
+    `/api/admin/academies/${encodeURIComponent(academyId)}/members`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wallet }),
+    },
+  );
+  if (!res.ok) throw new Error(await parseErrorMessage(res, 'Failed to add signer wallet'));
+  return res.json();
+};
+
+export const removeAcademyMember = async (
+  academyId: string,
+  wallet: string,
+): Promise<void> => {
+  const res = await fetch(
+    `/api/admin/academies/${encodeURIComponent(academyId)}/members/${encodeURIComponent(wallet)}`,
+    { method: 'DELETE' },
+  );
+  if (!res.ok) throw new Error(await parseErrorMessage(res, 'Failed to remove signer wallet'));
+};
+
+/**
+ * Looks up the academy a validator wallet is registered under, for
+ * milestone-attribution display. Returns `null` when the wallet isn't part
+ * of any academy or the lookup fails, so callers (e.g. ValidatorChip) can
+ * fall back to address-only display — this is enrichment, not a gate.
+ */
+export const fetchAcademyForWallet = async (
+  wallet: string,
+): Promise<Academy | null> => {
+  try {
+    const data = await api
+      .get(`/academies/wallet/${encodeURIComponent(wallet)}`)
+      .then((r) => r.data);
+    return data ?? null;
+  } catch {
+    return null;
+  }
+};
+
 export default api;

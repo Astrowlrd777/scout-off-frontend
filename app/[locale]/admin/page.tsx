@@ -9,6 +9,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import TransactionStatus from '@/components/ui/TransactionStatus';
 import AdminDashboardSkeleton from '@/components/admin/AdminDashboardSkeleton';
 import FraudFlagsPanel from '@/components/admin/FraudFlagsPanel';
+import AcademyManager from '@/components/admin/AcademyManager';
 import type { TxStatus } from '@/components/ui/TransactionStatus';
 import {
   getValidators,
@@ -420,6 +421,10 @@ function AdminDashboardContent() {
           </ul>
         )}
       </section>
+
+      {/* Academies (issue #663) — off-chain grouping of validator wallets
+          under one institutional identity. See docs/academy-validator-model.md */}
+      <AcademyManager />
 
       {/* Activity Feed */}
       <section className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
