@@ -270,6 +270,10 @@ sequenceDiagram
 - **Circuit breaker** allows admins to pause contract activity on incident.
 - **Server-side IPFS proxy** keeps Pinata keys off the client.
 
+### Vulnerability Disclosure
+
+ScoutOff follows responsible disclosure practices. If you discover a security vulnerability, please report it through our [Security Advisory](https://github.com/rahimatonize/scout-off-frontend/security/advisories/new) page or check our [security policy](SECURITY.md) and [security.txt](public/.well-known/security.txt) for more information.
+
 ## Getting started
 
 > For full local development with contracts and backend, see [DEVELOPMENT.md](DEVELOPMENT.md).
