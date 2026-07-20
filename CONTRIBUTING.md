@@ -11,7 +11,7 @@ The typical contribution workflow is:
 3. Make changes and run local validation.
 4. Open a pull request against `main`.
 
-> This repository includes a GitHub pull request template at `.github/PULL_REQUEST_TEMPLATE.md` and a PR process guide at `.github/PR_DOCUMENTATION.md` to help you provide the right details.
+> This repository includes GitHub issue templates at `.github/ISSUE_TEMPLATE/` (for bug reports and feature requests) and a pull request template at `.github/PULL_REQUEST_TEMPLATE.md`, plus a PR process guide at `.github/PR_DOCUMENTATION.md` to help you provide the right details.
 
 ## Local Development Setup
 
