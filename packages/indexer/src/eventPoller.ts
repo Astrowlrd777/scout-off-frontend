@@ -1,6 +1,7 @@
 import { SorobanRpc, Networks, xdr, scValToNative } from '@stellar/stellar-sdk';
 import { IndexerMetrics, type EventType } from './metrics/IndexerMetrics';
 import { updateLastLedger, updateNetworkLedger } from './ledgerTracker';
+import { EventStore } from './db/eventStore';
 
 /**
  * Polls Soroban RPC's getEvents for new ScoutOff contract events and feeds
@@ -12,7 +13,7 @@ import { updateLastLedger, updateNetworkLedger } from './ledgerTracker';
  *   NETWORK_PASSPHRASE, POLL_INTERVAL_MS, START_LEDGER (optional, defaulted)
  */
 
-const EVENT_TYPES: readonly EventType[] = [
+export const EVENT_TYPES: readonly EventType[] = [
   'player_registered',
   'milestone_approved',
   'milestone_revoked',
@@ -22,7 +23,7 @@ const EVENT_TYPES: readonly EventType[] = [
   'fees_withdrawn',
 ];
 
-function isEventType(name: unknown): name is EventType {
+export function isEventType(name: unknown): name is EventType {
   return (
     typeof name === 'string' && (EVENT_TYPES as readonly string[]).includes(name)
   );
@@ -146,6 +147,7 @@ export async function pollOnce(
   rpc: RpcClient,
   metrics: IndexerMetrics,
   cursorLedger: number,
+  store: EventStore,
 ): Promise<number> {
   const cycleStart = Date.now();
 
@@ -166,6 +168,7 @@ export async function pollOnce(
       const eventStart = Date.now();
       try {
         const decoded = decodeEvent(raw);
+        store.insertEvent(decoded);
         metrics.recordSuccess(
           decoded.type,
           Date.now() - eventStart,
@@ -212,13 +215,14 @@ export function startEventPolling(
   config: PollerConfig = loadConfigFromEnv(),
   rpc: RpcClient = createRpcClient(config),
   metrics: IndexerMetrics = IndexerMetrics.getInstance(),
+  store: EventStore = EventStore.getInstance(),
 ): EventPollerHandle {
   let cursor = config.startLedger;
   let stopped = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
 
   async function tick(): Promise<void> {
-    cursor = await pollOnce(config, rpc, metrics, cursor);
+    cursor = await pollOnce(config, rpc, metrics, cursor, store);
     if (!stopped) {
       timer = setTimeout(tick, config.pollIntervalMs);
     }
