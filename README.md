@@ -272,7 +272,7 @@ sequenceDiagram
 
 ### Vulnerability Disclosure
 
-ScoutOff follows responsible disclosure practices. If you discover a security vulnerability, please report it through our [Security Advisory](https://github.com/rahimatonize/scout-off-frontend/security/advisories/new) page or check our [security policy](SECURITY.md) and [security.txt](public/.well-known/security.txt) for more information.
+ScoutOff follows responsible disclosure practices. If you discover a security vulnerability, please report it through our [Security Advisory](https://github.com/scout-off/scout-off-frontend/security/advisories/new) page or check our [security policy](SECURITY.md) and [security.txt](public/.well-known/security.txt) for more information.
 
 ## Getting started
 

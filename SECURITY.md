@@ -1,124 +1,67 @@
 # Security Policy
 
-## Our Commitment
-
-ScoutOff is committed to ensuring the security of our platform and protecting the data of our players, scouts, validators, and administrators. We take security vulnerabilities seriously and appreciate the efforts of security researchers who help us maintain a safe platform.
+ScoutOff handles wallet authentication, signs and submits real-value transactions, and proxies file uploads server-side — making security a top priority.
 
 ## Supported Versions
 
-We provide security updates for the following versions:
+Only the **latest published release** of the frontend (this repository) receives security patches. Older versions should be upgraded promptly.
 
 | Version | Supported          |
-| ------- | ------------------ |
-| 0.1.x   | :white_check_mark: |
-
-## Reporting a Vulnerability
-
-**Please do not report security vulnerabilities through public GitHub issues.**
-
-Instead, please report security vulnerabilities through one of the following channels:
-
-### GitHub Security Advisory (Preferred)
-
-1. Go to [Security Advisories](https://github.com/rahimatonize/scout-off-frontend/security/advisories/new)
-2. Click "Report a vulnerability"
-3. Provide a detailed description of the vulnerability
-
-### What to Include
-
-When reporting a vulnerability, please include:
-
-- **Description**: A clear description of the vulnerability
-- **Impact**: The potential impact and severity of the issue
-- **Reproduction Steps**: Detailed steps to reproduce the vulnerability
-- **Affected Components**: Which parts of the system are affected (frontend, smart contracts, backend API, etc.)
-- **Suggested Fix**: If you have ideas on how to fix the issue (optional)
-- **Your Contact Information**: So we can follow up with you (optional)
-
-## Response Timeline
-
-- **Initial Response**: Within 48 hours of receiving your report
-- **Status Update**: We will provide regular updates on the status of your report
-- **Resolution**: We aim to resolve critical vulnerabilities within 7 days, and other vulnerabilities within 30 days
-
-## Disclosure Policy
-
-- We follow coordinated vulnerability disclosure
-- Please allow us reasonable time to investigate and remediate the issue before public disclosure
-- We will credit researchers who responsibly disclose vulnerabilities (unless you prefer to remain anonymous)
+|---------|--------------------|
+| latest  | ✅                |
+| < latest| ❌                |
 
 ## Scope
 
-### In Scope
+| Component                        | In scope | Notes                                           |
+|----------------------------------|----------|-------------------------------------------------|
+| This frontend repository         | ✅       | Next.js app, API routes, components, config     |
+| Smart-contract repository        | ❌       | Separate repo — report there directly           |
+| Third-party services (Pinata,    | ❌       | Report to the respective vendor                 |
+| Stellar RPC, Sentry, etc.)       |          |                                                 |
 
-The following are within the scope of our security program:
+If you are unsure whether a vulnerability is in scope, report it anyway. We prefer over-reporting to a missed disclosure.
 
-- **Frontend Application**: All code in this repository
-- **Smart Contracts**: Soroban contracts in the scout-off-contracts repository
-- **Backend API**: Server-side endpoints and authentication flows
-- **Wallet Integration**: SEP-10 authentication and transaction flows
-- **IPFS Integration**: Media upload and storage mechanisms
+## Reporting a Vulnerability
 
-### Security Concerns We Care About
+### Preferred channel: GitHub Private Vulnerability Reporting
 
-- Authentication and authorization bypasses
-- SQL injection or smart contract vulnerabilities
-- Cross-site scripting (XSS) or cross-site request forgery (CSRF)
-- Server-side request forgery (SSRF)
-- Wallet private key exposure or transaction manipulation
-- Unauthorized access to player, scout, or validator data
-- Payment flow vulnerabilities affecting XLM transactions
-- Denial of service vulnerabilities that could impact availability
-- Data leakage or privacy violations
+GitHub's built-in private vulnerability reporting is enabled for this repository:
 
-### Out of Scope
+➡ **https://github.com/scout-off/scout-off-frontend/security/advisories/new**
 
-- Issues in third-party dependencies (please report these to the respective maintainers)
-- Social engineering attacks
-- Denial of service attacks requiring excessive resources
-- Issues that require physical access to a user's device
-- Issues affecting outdated browsers or unsupported platforms
-- Rate limiting or anti-automation issues (unless they lead to data exposure)
+This creates a private advisory that is visible only to the repository maintainers and you. It allows for secure, tracked communication without exposing the issue publicly.
 
-## Security Best Practices
+### Alternative channel
 
-### For Users
+If you cannot use GitHub's private reporting for any reason, send an email to **security@scoutoff.app** with the following details:
 
-- **Never share your wallet private keys or seed phrases** with anyone
-- Use official wallet applications (Freighter, Albedo, LOBSTR)
-- Verify transaction details before signing
-- Keep your wallet software up to date
-- Be cautious of phishing attempts
+- **Subject**: `[ScoutOff Security] <brief description>`
+- **Description**: What the vulnerability is, where it occurs, and the potential impact
+- **Steps to reproduce**: Minimal proof-of-concept or steps to trigger the issue
+- **Environment**: Browser, OS, device details if applicable
+- **Attachments**: Screenshots, logs, or HAR files (avoid sharing private keys or session tokens)
 
-### For Developers
+### What to expect
 
-- Follow secure coding practices outlined in [CONTRIBUTING.md](CONTRIBUTING.md)
-- Never commit secrets, API keys, or private keys to the repository
-- Use environment variables for sensitive configuration
-- Run security linters and tests before submitting PRs
-- Keep dependencies up to date and monitor for vulnerabilities
+| Stage              | Expected time |
+|--------------------|---------------|
+| Acknowledgment     | Within **48 hours** of submission |
+| Triage & assessment| Within **5 business days** |
+| Fix & release      | Timelines vary by severity — critical issues are prioritised over general ones |
+| Public disclosure  | Coordinated with you after a fix is released |
 
-## Security Features
-
-ScoutOff implements several security measures:
-
-- **Validator Authorization**: Restricts milestone writes to approved validators
-- **Immutable Audit Trail**: All progress history and timestamps stored on-chain
-- **Strict Authorization Checks**: Every state-changing action is verified
-- **Safe Arithmetic**: Protects fee and subscription logic from overflow/underflow
-- **Anti-Spam Gating**: Subscriptions and pay-to-contact fees prevent abuse
-- **Circuit Breaker**: Admin can pause contract activity during incidents
-- **Server-Side IPFS Proxy**: Keeps Pinata keys secure and off the client
-- **SEP-10 Wallet Authentication**: Secure, challenge-based wallet login
-- **Content Security Policy (CSP)**: Protects against XSS attacks
-- **Input Sanitization**: All user inputs are sanitized using DOMPurify
+We will work with you to understand the impact, develop a fix, and coordinate a disclosure date. We ask that you do not disclose the vulnerability publicly until we have released a fix and given you the go-ahead.
 
 ## Hall of Fame
 
-We would like to thank the following security researchers for responsibly disclosing vulnerabilities:
+We maintain a private hall of fame for researchers who responsibly disclose valid security issues. If you would like public credit instead, we are happy to add your name to a publicly maintained list with your consent.
 
-*No reports yet - be the first!*
+## Security.txt
 
----
+This policy is also published in machine-readable format at `/.well-known/security.txt` (per [RFC 9116](https://www.rfc-editor.org/rfc/rfc9116)).
 
-Thank you for helping keep ScoutOff and our community safe!
+## Additional resources
+
+- [GitHub private vulnerability reporting docs](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities)
+- [OWASP Cheat Sheet: Vulnerability Disclosure](https://cheatsheetseries.owasp.org/cheatsheets/Vulnerability_Disclosure_Cheat_Sheet.html)
