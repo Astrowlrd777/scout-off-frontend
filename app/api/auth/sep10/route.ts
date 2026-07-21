@@ -1,21 +1,48 @@
 import { WebAuth, Networks, Keypair } from '@stellar/stellar-sdk';
 import { NextRequest, NextResponse } from 'next/server';
+import { createRequestLogger, withRequestId } from '@/lib/logger';
 
-function getAllowedOrigin(req: NextRequest): string | null {
-  const configured = process.env.NEXT_PUBLIC_BASE_URL;
-  if (configured) return configured;
+// Returns the set of origins this route will accept requests from. This is
+// derived ONLY from server-controlled configuration (env vars) — never from
+// the incoming request's own Host/X-Forwarded-Proto headers, which a caller
+// fully controls and could otherwise use to make `origin === allowed` a
+// self-referential, always-true check (see #659).
+function getAllowedOrigins(): string[] {
+  const allowList = process.env.SEP10_ALLOWED_ORIGINS;
+  const origins = new Set<string>();
 
-  const host = req.headers.get('host');
-  if (!host) return null;
-  const proto = req.headers.get('x-forwarded-proto') ?? 'http';
-  return `${proto}://${host}`;
+  if (allowList) {
+    for (const entry of allowList.split(',')) {
+      const trimmed = entry.trim();
+      if (trimmed) origins.add(trimmed);
+    }
+  }
+
+  // Honor NEXT_PUBLIC_BASE_URL as a convenience single-origin entry, kept
+  // for backward compatibility — folded into the allow-list rather than
+  // used as a separate fallback path.
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+  if (baseUrl) origins.add(baseUrl);
+
+  if (origins.size > 0) return [...origins];
+
+  // No allow-list configured. In production this must fail closed — do not
+  // derive an "allowed" origin from anything on the request itself.
+  if (process.env.NODE_ENV === 'production') return [];
+
+  // Local development convenience default, based on NEXT_PUBLIC_DOMAIN
+  // (see .env.example, defaults to `localhost:3000`) — never derived from
+  // the request.
+  const domain = process.env.NEXT_PUBLIC_DOMAIN || 'localhost:3000';
+  return [`http://${domain}`];
 }
 
 export async function POST(req: NextRequest) {
+  const log = createRequestLogger(req);
   const origin = req.headers.get('origin');
-  const allowed = getAllowedOrigin(req);
+  const allowedOrigins = getAllowedOrigins();
 
-  if (!origin || !allowed || origin !== allowed) {
+  if (!origin || allowedOrigins.length === 0 || !allowedOrigins.includes(origin)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -66,17 +93,23 @@ export async function POST(req: NextRequest) {
       sameSite: 'strict',
       path: '/',
     });
-    return response;
+    return withRequestId(response, log.requestId);
   } catch (error) {
-    console.error('SEP-10 Verification Error:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Verification failed' },
-      { status: 401 },
+    log.error('SEP-10 verification failed', {
+      reason: error instanceof Error ? error.message : String(error),
+    });
+    return withRequestId(
+      NextResponse.json(
+        { error: error instanceof Error ? error.message : 'Verification failed' },
+        { status: 401 },
+      ),
+      log.requestId,
     );
   }
 }
 
 export async function GET(req: NextRequest) {
+  const log = createRequestLogger(req);
   const account = req.nextUrl.searchParams.get('account');
   if (!account) {
     return NextResponse.json(
@@ -113,10 +146,15 @@ export async function GET(req: NextRequest) {
     );
     return NextResponse.json({ transaction: challengeXdr });
   } catch (error) {
-    console.error('SEP-10 Challenge Error:', error);
-    return NextResponse.json(
-      { error: 'Failed to generate challenge' },
-      { status: 500 },
+    log.error('SEP-10 challenge generation failed', {
+      reason: error instanceof Error ? error.message : String(error),
+    });
+    return withRequestId(
+      NextResponse.json(
+        { error: 'Failed to generate challenge' },
+        { status: 500 },
+      ),
+      log.requestId,
     );
   }
 }

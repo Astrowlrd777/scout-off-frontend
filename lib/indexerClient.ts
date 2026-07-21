@@ -44,12 +44,26 @@ export interface EventQueryParams {
   before?: number;
 }
 
+/** Generic event query against GET /events — same filter shape as the player/validator-scoped variants. */
+export const fetchEvents = (
+  params: EventQueryParams = {},
+): Promise<IndexedEventsPage> =>
+  indexerApi.get('/events', { params }).then((r) => r.data);
+
 export const fetchPlayerEvents = (
   playerId: string,
   params: EventQueryParams = {},
 ): Promise<IndexedEventsPage> =>
   indexerApi
     .get(`/players/${encodeURIComponent(playerId)}/events`, { params })
+    .then((r) => r.data);
+
+export const fetchValidatorEvents = (
+  validatorAddress: string,
+  params: EventQueryParams = {},
+): Promise<IndexedEventsPage> =>
+  indexerApi
+    .get(`/validators/${encodeURIComponent(validatorAddress)}/events`, { params })
     .then((r) => r.data);
 
 const MAX_PAGES = 10; // caps at 10 * 200 = 2000 events per player before giving up

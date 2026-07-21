@@ -8,7 +8,12 @@ const withPWA = require('next-pwa')({
   dest: 'public',
   disable: process.env.NODE_ENV === 'development',
   register: true,
-  skipWaiting: true,
+  // Keep `false`: an unconditional skipWaiting() activates every new build
+  // immediately, so the service worker never enters the "waiting" state the
+  // reload prompt (components/ServiceWorkerUpdateBanner.tsx) depends on to
+  // detect updates. With this off, workbox injects a SKIP_WAITING message
+  // listener instead, and the banner's "Reload" button triggers it.
+  skipWaiting: false,
   runtimeCaching: [
     // Network-first for API / RPC calls
     {

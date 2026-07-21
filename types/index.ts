@@ -199,3 +199,19 @@ export interface ContractCallResult<T = unknown> {
   data?: T;
   error?: string;
 }
+
+// ── Watchlist / Saved Search ────────────────────────────────────────────────
+export interface WatchlistEntry {
+  id: number;
+  scoutWallet: string;
+  playerId: string;
+  createdAt: number; // Unix ms
+}
+
+export interface SavedSearch {
+  id: number;
+  scoutWallet: string;
+  name: string;
+  filter: PlayerFilter;
+  createdAt: number; // Unix ms
+}

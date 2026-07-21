@@ -2,6 +2,9 @@
   "name": "scout-off-frontend",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -28,6 +31,7 @@
     "@sentry/nextjs": "^10.59.0",
     "@stellar/freighter-api": "2.0.0",
     "@stellar/stellar-sdk": "12.1.0",
+    "@upstash/redis": "^1.38.0",
     "@vercel/analytics": "^2.0.0",
     "axios": "1.7.2",
     "better-sqlite3": "^12.11.1",

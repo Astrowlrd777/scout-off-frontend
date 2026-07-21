@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import type { Metadata } from 'next';
 import { setRequestLocale } from 'next-intl/server';
 import { seoMetadata } from '@/lib/seo';
+import { locales } from '@/lib/locales';
 
 interface LocaleLayoutProps {
   children: ReactNode;
@@ -9,8 +10,6 @@ interface LocaleLayoutProps {
     locale: string;
   };
 }
-
-const locales = ['en', 'fr', 'sw'];
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));

@@ -1,6 +1,7 @@
 'use client';
 import { memo, useCallback, useEffect, useRef } from 'react';
 import useSWR from 'swr';
+import { Star } from 'lucide-react';
 import { getMilestoneHistory } from '@/lib/contract';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -24,7 +25,14 @@ const LEVEL_VARIANT: Record<
 
 const PREFETCH_DELAY_MS = 200;
 
-function PlayerCard({ player }: { player: Player }) {
+interface PlayerCardProps {
+  player: Player;
+  /** When provided (with onToggleWatchlist), renders a watchlist toggle star. */
+  isWatched?: boolean;
+  onToggleWatchlist?: () => void;
+}
+
+function PlayerCard({ player, isWatched, onToggleWatchlist }: PlayerCardProps) {
   const { id, vitals, progressLevel, ipfsHash } = player;
   const {
     data: milestones,
@@ -106,8 +114,27 @@ function PlayerCard({ player }: { player: Player }) {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onTouchStart={triggerPrefetch}
-      className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-4 hover:border-brand-green transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-green focus:ring-offset-2 focus:ring-offset-black"
+      className="relative bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-4 hover:border-brand-green transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-green focus:ring-offset-2 focus:ring-offset-black"
     >
+      {onToggleWatchlist && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleWatchlist();
+          }}
+          aria-pressed={!!isWatched}
+          aria-label={isWatched ? 'Remove from watchlist' : 'Add to watchlist'}
+          className="absolute top-3 right-3 inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition hover:text-yellow-400 focus:outline-none focus:ring-2 focus:ring-brand-green"
+        >
+          <Star
+            className={isWatched ? 'text-yellow-400' : ''}
+            fill={isWatched ? 'currentColor' : 'none'}
+            size={18}
+            aria-hidden="true"
+          />
+        </button>
+      )}
       {/* Avatar */}
       <div
         className="w-16 h-16 rounded-full bg-gray-700 overflow-hidden"
@@ -171,5 +198,7 @@ export default memo(
   PlayerCard,
   (prev, next) =>
     prev.player.id === next.player.id &&
-    prev.player.progressLevel === next.player.progressLevel,
+    prev.player.progressLevel === next.player.progressLevel &&
+    prev.isWatched === next.isWatched &&
+    prev.onToggleWatchlist === next.onToggleWatchlist,
 );
