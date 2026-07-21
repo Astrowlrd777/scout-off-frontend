@@ -173,6 +173,24 @@ export const listReferralCodes = (
     .then((r) => r.data);
 
 export const redeemReferralCode = (
+
+// ── Sponsorship waitlist ───────────────────────────────────────────────────
+//
+// Backed by the server/ Express API (SQLite), not the local filesystem
+// pattern used by the referral store.
+
+export type InterestType = 'fan' | 'investor' | 'sponsor';
+
+export const joinSponsorshipWaitlist = (
+  email: string,
+  interestType: InterestType = 'fan',
+  turnstileToken?: string,
+): Promise<{ message: string }> =>
+  api
+    .post('/sponsorship/waitlist', { email, interestType, turnstileToken })
+    .then((r) => r.data);
+
+export const redeemReferralCode = (
   code: string,
   usedBy: string,
 ): Promise<boolean> =>

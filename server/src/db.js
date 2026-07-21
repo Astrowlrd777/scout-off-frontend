@@ -48,6 +48,20 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_academy_members_academy_id
     ON academy_members (academy_id);
+
+  -- Sponsorship waitlist (issue #696): captures interest from fans, investors,
+  -- and potential sponsors before the fractionalized-sponsorship feature ships.
+  -- Not publicly readable — this table is only queried by internal admin tooling.
+  CREATE TABLE IF NOT EXISTS sponsorship_waitlist (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL UNIQUE,
+    interest_type TEXT NOT NULL DEFAULT 'fan',
+    created_at INTEGER NOT NULL,
+    ip_hash TEXT NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_sponsorship_waitlist_email
+    ON sponsorship_waitlist (email);
 `);
 
 module.exports = db;
