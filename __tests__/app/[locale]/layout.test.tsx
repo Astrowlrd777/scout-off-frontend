@@ -55,7 +55,7 @@ describe('LocaleLayout', () => {
   });
 
   describe('generateMetadata', () => {
-    it('returns canonical URL from x-pathname header', async () => {
+    it('returns canonical URL and hreflang alternates from x-pathname header', async () => {
       mockHeaders.set('x-pathname', '/en/scout/abc123');
 
       const metadata = await generateMetadata();
@@ -63,6 +63,12 @@ describe('LocaleLayout', () => {
       expect(metadata).toEqual({
         alternates: {
           canonical: 'https://scoutoff.app/en/scout/abc123',
+          languages: {
+            en: 'https://scoutoff.app/en/scout/abc123',
+            fr: 'https://scoutoff.app/fr/scout/abc123',
+            sw: 'https://scoutoff.app/sw/scout/abc123',
+            'x-default': 'https://scoutoff.app/en/scout/abc123',
+          },
         },
       });
     });
@@ -73,6 +79,12 @@ describe('LocaleLayout', () => {
       expect(metadata).toEqual({
         alternates: {
           canonical: 'https://scoutoff.app/',
+          languages: {
+            en: 'https://scoutoff.app/en/',
+            fr: 'https://scoutoff.app/fr/',
+            sw: 'https://scoutoff.app/sw/',
+            'x-default': 'https://scoutoff.app/en/',
+          },
         },
       });
     });
@@ -86,6 +98,12 @@ describe('LocaleLayout', () => {
       expect(metadata).toEqual({
         alternates: {
           canonical: 'https://example.com/fr/player/42',
+          languages: {
+            en: 'https://example.com/en/player/42',
+            fr: 'https://example.com/fr/player/42',
+            sw: 'https://example.com/sw/player/42',
+            'x-default': 'https://example.com/en/player/42',
+          },
         },
       });
     });
