@@ -152,6 +152,7 @@ describe('POST /api/ipfs/upload', () => {
 
   it('uploads a valid image to Pinata and returns the CID', async () => {
     mockedAxios.post.mockResolvedValue({ data: { IpfsHash: 'QmTestCid123' } });
+    mockedAxios.get.mockResolvedValue({ data: JPEG_HEADER.buffer });
 
     const file = makeFile(JPEG_HEADER, 'photo.jpg', 'image/jpeg');
     const form = new FormData();
@@ -192,6 +193,7 @@ describe('POST /api/ipfs/upload', () => {
 
   it('sanitizes text fields present alongside the file', async () => {
     mockedAxios.post.mockResolvedValue({ data: { IpfsHash: 'QmSanitized' } });
+    mockedAxios.get.mockResolvedValue({ data: JPEG_HEADER.buffer });
 
     const file = makeFile(JPEG_HEADER, 'photo.jpg', 'image/jpeg');
     const form = new FormData();
@@ -202,6 +204,43 @@ describe('POST /api/ipfs/upload', () => {
     const res = await POST(req);
 
     expect(res.status).toBe(200);
+  });
+
+  describe('post-upload integrity verification (issue #699)', () => {
+    it('returns 502 when the gateway serves content that does not match what was uploaded', async () => {
+      mockedAxios.post.mockResolvedValue({ data: { IpfsHash: 'QmMismatch' } });
+      // Gateway returns different bytes than what we uploaded.
+      mockedAxios.get.mockResolvedValue({
+        data: new Uint8Array([0, 1, 2, 3]).buffer,
+      });
+
+      const file = makeFile(JPEG_HEADER, 'photo.jpg', 'image/jpeg');
+      const form = new FormData();
+      form.append('file', file);
+      const req = makeRequest({ form, ip: 'ip-verify-mismatch' });
+
+      const res = await POST(req);
+
+      expect(res.status).toBe(502);
+      const body = await res.json();
+      expect(body.error).toMatch(/failed integrity verification/i);
+    });
+
+    it('returns 502 with a retryable error when the gateway cannot be reached for verification', async () => {
+      mockedAxios.post.mockResolvedValue({ data: { IpfsHash: 'QmGatewayDown' } });
+      mockedAxios.get.mockRejectedValue(new Error('gateway timeout'));
+
+      const file = makeFile(JPEG_HEADER, 'photo.jpg', 'image/jpeg');
+      const form = new FormData();
+      form.append('file', file);
+      const req = makeRequest({ form, ip: 'ip-verify-unreachable' });
+
+      const res = await POST(req);
+
+      expect(res.status).toBe(502);
+      const body = await res.json();
+      expect(body.error).toMatch(/could not verify the upload/i);
+    });
   });
 
   it('rate limits after exceeding 10 requests from the same IP within the window', async () => {

@@ -4,6 +4,10 @@ import { assembleFile, cleanupSession } from '@/lib/chunkedUploadStore';
 import { hasValidMagicBytes, bufToHex } from '@/lib/fileSignature';
 import { getClientIp, createRateLimiter } from '@/lib/uploadRateLimit';
 import { createRequestLogger } from '@/lib/logger';
+import {
+  verifyUploadedContent,
+  UploadVerificationError,
+} from '@/lib/uploadVerification';
 
 export const runtime = 'nodejs';
 
@@ -78,6 +82,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  let cid: string;
   try {
     const pinataForm = new FormData();
     // Uint8Array copy sidesteps a @types/node-vs-DOM-lib generic mismatch
@@ -95,9 +100,7 @@ export async function POST(req: NextRequest) {
         },
       },
     );
-
-    cleanupSession(sessionId);
-    return NextResponse.json({ cid: data.IpfsHash });
+    cid = data.IpfsHash;
   } catch (err) {
     // Deliberately don't clean up the session here: the assembled chunks are
     // still valid, so a client retrying /complete after a transient Pinata
@@ -108,4 +111,34 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json({ error: 'Failed to upload file to IPFS' }, { status: 502 });
   }
+
+  // Post-upload integrity verification (issue #699): re-fetch the CID from
+  // the gateway and confirm it matches the assembled bytes we just pinned,
+  // before telling the caller the upload succeeded. See
+  // lib/uploadVerification.ts for why this checks gateway-retrievable bytes
+  // rather than recomputing the CID itself.
+  try {
+    await verifyUploadedContent(cid, buffer);
+  } catch (err) {
+    // Same reasoning as a Pinata failure above: the assembled chunks are
+    // still valid (the content is unchanged), so preserve the session
+    // instead of forcing a full re-upload on retry.
+    log.error('Upload verification failed', {
+      ip,
+      cid,
+      reason: err instanceof Error ? err.message : String(err),
+    });
+    return NextResponse.json(
+      {
+        error:
+          err instanceof UploadVerificationError
+            ? err.message
+            : 'Upload verification failed. Please try again.',
+      },
+      { status: 502 },
+    );
+  }
+
+  cleanupSession(sessionId);
+  return NextResponse.json({ cid });
 }

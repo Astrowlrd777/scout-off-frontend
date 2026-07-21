@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import { sanitize } from '@/lib/sanitize';
 import { hasValidMagicBytes, bufToHex } from '@/lib/fileSignature';
-import { getClientIp, createRateLimiter } from '@/lib/uploadRateLimit';
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 import { createRequestLogger } from '@/lib/logger';
+import {
+  verifyUploadedContent,
+  UploadVerificationError,
+} from '@/lib/uploadVerification';
 
 /**
  * POST /api/ipfs/upload
@@ -14,12 +18,15 @@ import { createRequestLogger } from '@/lib/logger';
  * uploadToIPFSChunked) — this endpoint remains for small files / direct
  * single-shot callers.
  *
- * Rate limiting: max 10 uploads per IP per 60 seconds.
+ * Rate limiting: max 10 uploads per IP per 60 seconds, enforced via the
+ * shared lib/rateLimit.ts (Redis-backed in production, in-memory in dev —
+ * see that file for why a per-route in-memory Map isn't sufficient).
  * When exceeded, responds with 429 Too Many Requests and Retry-After header.
  *
  * Real client IP is extracted from the x-forwarded-for header.
  */
-const checkRateLimit = createRateLimiter(10, 60 * 1000);
+const RATE_LIMIT = 10;
+const WINDOW_MS = 60 * 1000;
 
 /** Maximum accepted file size: 100 MB */
 const MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024;
@@ -118,6 +125,7 @@ export async function POST(req: NextRequest) {
   }
 
   // ── 5. Forward to Pinata ────────────────────────────────────────────────────
+  let cid: string;
   try {
     const pinataForm = new FormData();
     pinataForm.append('file', file);
@@ -132,8 +140,7 @@ export async function POST(req: NextRequest) {
         },
       },
     );
-
-    return NextResponse.json({ cid: data.IpfsHash });
+    cid = data.IpfsHash;
   } catch (err) {
     log.error('Pinata upload failed', {
       ip,
@@ -144,4 +151,30 @@ export async function POST(req: NextRequest) {
       { status: 502 },
     );
   }
+
+  // ── 6. Post-upload integrity verification (issue #699) ─────────────────────
+  // Re-fetch the CID from the gateway and confirm it's byte-identical to what
+  // we just sent, before telling the caller the upload succeeded — see
+  // lib/uploadVerification.ts for why this checks gateway-retrievable bytes
+  // rather than recomputing the CID itself.
+  try {
+    await verifyUploadedContent(cid, Buffer.from(await file.arrayBuffer()));
+  } catch (err) {
+    log.error('Upload verification failed', {
+      ip,
+      cid,
+      reason: err instanceof Error ? err.message : String(err),
+    });
+    return NextResponse.json(
+      {
+        error:
+          err instanceof UploadVerificationError
+            ? err.message
+            : 'Upload verification failed. Please try again.',
+      },
+      { status: 502 },
+    );
+  }
+
+  return NextResponse.json({ cid });
 }
