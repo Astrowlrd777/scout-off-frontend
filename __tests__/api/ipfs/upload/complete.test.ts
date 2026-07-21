@@ -96,6 +96,7 @@ describe('POST /api/ipfs/upload/complete', () => {
   it('assembles the file and uploads it to Pinata, returning the CID', async () => {
     const sessionId = await seedSession(JPEG_HEADER, 'ip-success');
     mockedAxios.post.mockResolvedValueOnce({ data: { IpfsHash: 'QmChunkedCID' } });
+    mockedAxios.get.mockResolvedValueOnce({ data: JPEG_HEADER.buffer });
 
     const res = await POST(makeRequest({ sessionId }, 'ip-success'));
 
@@ -123,5 +124,35 @@ describe('POST /api/ipfs/upload/complete', () => {
 
     expect(res.status).toBe(502);
     expect(getSessionStatus(sessionId)).not.toBeNull();
+  });
+
+  describe('post-upload integrity verification (issue #699)', () => {
+    it('returns 502 and preserves the session when the gateway serves mismatched content', async () => {
+      const sessionId = await seedSession(JPEG_HEADER, 'ip-verify-mismatch');
+      mockedAxios.post.mockResolvedValueOnce({ data: { IpfsHash: 'QmMismatch' } });
+      mockedAxios.get.mockResolvedValueOnce({
+        data: new Uint8Array([9, 9, 9, 9]).buffer,
+      });
+
+      const res = await POST(makeRequest({ sessionId }, 'ip-verify-mismatch'));
+
+      expect(res.status).toBe(502);
+      const body = await res.json();
+      expect(body.error).toMatch(/failed integrity verification/i);
+      expect(getSessionStatus(sessionId)).not.toBeNull();
+    });
+
+    it('returns 502 with a retryable error when the gateway cannot be reached for verification', async () => {
+      const sessionId = await seedSession(JPEG_HEADER, 'ip-verify-unreachable');
+      mockedAxios.post.mockResolvedValueOnce({ data: { IpfsHash: 'QmGatewayDown' } });
+      mockedAxios.get.mockRejectedValueOnce(new Error('gateway timeout'));
+
+      const res = await POST(makeRequest({ sessionId }, 'ip-verify-unreachable'));
+
+      expect(res.status).toBe(502);
+      const body = await res.json();
+      expect(body.error).toMatch(/could not verify the upload/i);
+      expect(getSessionStatus(sessionId)).not.toBeNull();
+    });
   });
 });
