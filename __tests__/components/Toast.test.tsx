@@ -52,6 +52,25 @@ function ToastTestApp() {
   );
 }
 
+function UndoToastTestApp({ onUndo }: { onUndo: () => void }) {
+  const toast = useToast();
+
+  return (
+    <button
+      onClick={() =>
+        toast.show({
+          message: 'Removed from watchlist',
+          variant: 'info',
+          duration: 5000,
+          action: { label: 'Undo', onClick: onUndo },
+        })
+      }
+    >
+      Remove
+    </button>
+  );
+}
+
 describe('Toast notifications', () => {
   beforeEach(() => {
     jest.useFakeTimers();
@@ -213,5 +232,44 @@ describe('Toast notifications', () => {
       jest.advanceTimersByTime(1500); // t = 4000ms since Info shown
     });
     expect(screen.queryByText('Info message')).toBeNull();
+  });
+
+  it('renders an action button and invokes its onClick, dismissing the toast', () => {
+    const onUndo = jest.fn();
+    render(
+      <ToastProvider>
+        <UndoToastTestApp onUndo={onUndo} />
+      </ToastProvider>,
+    );
+
+    fireEvent.click(screen.getByText('Remove'));
+    expect(screen.getByText('Removed from watchlist')).toBeTruthy();
+
+    const undoButton = screen.getByRole('button', { name: 'Undo' });
+    fireEvent.click(undoButton);
+
+    expect(onUndo).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('Removed from watchlist')).toBeNull();
+  });
+
+  it('honors a custom duration instead of the 4s default', () => {
+    const onUndo = jest.fn();
+    render(
+      <ToastProvider>
+        <UndoToastTestApp onUndo={onUndo} />
+      </ToastProvider>,
+    );
+
+    fireEvent.click(screen.getByText('Remove'));
+
+    act(() => {
+      jest.advanceTimersByTime(4000);
+    });
+    expect(screen.getByText('Removed from watchlist')).toBeTruthy();
+
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+    expect(screen.queryByText('Removed from watchlist')).toBeNull();
   });
 });
