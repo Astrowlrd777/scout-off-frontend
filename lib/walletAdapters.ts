@@ -81,7 +81,7 @@ export const walletAdapters: Record<
           StrKey.encodeEd25519PublicKey(
             (await str.getPublicKey(STANDARD_LEDGER_PATH, false)).rawPublicKey,
           );
-        tx.addSignature(pk, signature);
+        tx.addSignature(pk, signature.toString('hex'));
         return tx.toXDR();
       } catch (err: unknown) {
         throw mapLedgerError(err, 'Failed to sign transaction with Ledger');

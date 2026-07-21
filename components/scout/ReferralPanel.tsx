@@ -25,7 +25,7 @@ function copyToClipboard(text: string) {
   }
 }
 
-export default function ReferralPanel() {
+export default function ReferralPanel({ scoutId }: { scoutId?: string } = {}) {
   const { publicKey } = useWallet();
   const { show } = useToast();
   const [codes, setCodes] = useState<ReferralCode[]>([]);
@@ -58,10 +58,10 @@ export default function ReferralPanel() {
   }, []);
 
   const loadStats = useCallback(async () => {
-    if (!publicKey) return;
+    if (!effectivePublicKey) return;
     setLoading(true);
     try {
-      const [s] = await Promise.all([getReferralStats(publicKey)]);
+      const [s] = await Promise.all([getReferralStats(effectivePublicKey)]);
       setStats(s);
     } catch {
       show({ message: 'Failed to load referral stats.', variant: 'error' });
@@ -71,17 +71,17 @@ export default function ReferralPanel() {
   }, [publicKey, show]);
 
   const loadCodes = useCallback(async () => {
-    if (!publicKey) return;
+    if (!effectivePublicKey) return;
     setCodesLoading(true);
     try {
-      const list = await listReferralCodes(publicKey);
+      const list = await listReferralCodes(effectivePublicKey);
       setCodes(list);
     } catch {
       // silently fail — the "generate" flow still works without history
     } finally {
       setCodesLoading(false);
     }
-  }, [publicKey]);
+  }, [effectivePublicKey]);
 
   useEffect(() => {
     loadStats();
@@ -206,7 +206,7 @@ export default function ReferralPanel() {
 
         <button
           onClick={handleExportCsv}
-          disabled={codesLoading || codes.length === 0 || !publicKey}
+          disabled={codesLoading || codes.length === 0 || !effectivePublicKey}
           className="self-start px-4 py-2 rounded-lg border border-gray-700 bg-gray-900 text-sm font-medium text-gray-200 transition hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Export as CSV
@@ -265,3 +265,5 @@ export default function ReferralPanel() {
     </div>
   );
 }
+
+export type { ReferralStats, ReferralCode };

@@ -42,7 +42,10 @@ async function verifyTurnstile(req, res, next) {
 
     return next();
   } catch (err) {
-    console.error('[turnstile] verification request failed', err);
+    const log = req.log;
+    const reason = err instanceof Error ? err.message : String(err);
+    if (log) log.error('Turnstile verification request failed', { reason });
+    else console.error('[turnstile] verification request failed', err);
     return res.status(502).json({
       error: 'Unable to verify bot-protection challenge. Please try again.',
     });

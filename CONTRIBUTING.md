@@ -11,7 +11,7 @@ The typical contribution workflow is:
 3. Make changes and run local validation.
 4. Open a pull request against `main`.
 
-> This repository includes a GitHub pull request template at `.github/PULL_REQUEST_TEMPLATE.md` and a PR process guide at `.github/PR_DOCUMENTATION.md` to help you provide the right details.
+> This repository includes GitHub issue templates at `.github/ISSUE_TEMPLATE/` (for bug reports and feature requests) and a pull request template at `.github/PULL_REQUEST_TEMPLATE.md`, plus a PR process guide at `.github/PR_DOCUMENTATION.md` to help you provide the right details.
 
 ## Local Development Setup
 
@@ -146,7 +146,8 @@ The repository exposes the following test-related commands:
 - `npm run test` — run Jest tests
 - `npm run test:watch` — run Jest tests in watch mode
 - `npm run test:coverage` — run Jest tests with coverage collection enabled
-- `npm run typecheck` — run the TypeScript compiler in `--noEmit` mode to check for type errors
+- `npm run typecheck` — run the TypeScript compiler in `--noEmit` mode to check for type errors (full repo, including tests)  
+- `npm run type-check` — same as above but excludes test and story files; runs as a standalone job in CI
 - `npm run format` — format files with Prettier
 - `npm run format:check` — check formatting with Prettier
 - `npm run prepare` — install Husky hooks

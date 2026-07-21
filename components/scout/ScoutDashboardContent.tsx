@@ -9,6 +9,8 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useOnboardingTour } from '@/hooks/useOnboardingTour';
+import { useWatchlist } from '@/hooks/useWatchlist';
+import { useSavedSearches } from '@/hooks/useSavedSearches';
 import { useToast } from '@/components/ui/Toast';
 import { getPlayer } from '@/lib/contract';
 import PlayerCard from '@/components/PlayerCard';
@@ -36,7 +38,7 @@ export default function ScoutDashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const tour = useOnboardingTour(SCOUT_TOUR_ID, scoutTourSteps, publicKey);
+  const tour = useOnboardingTour(SCOUT_TOUR_ID, scoutTourSteps, publicKey ?? undefined);
 
   const {
     players,
@@ -48,6 +50,8 @@ export default function ScoutDashboardContent() {
     refetch,
   } = useScout();
   const { subscription } = useSubscription();
+  const watchlist = useWatchlist(publicKey ?? null);
+  const savedSearches = useSavedSearches(publicKey ?? null);
   const { show: showToast } = useToast();
   const [now, setNow] = useState(() => Date.now());
 
@@ -164,6 +168,27 @@ export default function ScoutDashboardContent() {
     setResetKey((k) => k + 1);
   }, []);
 
+  const handleToggleWatchlist = useCallback(
+    (targetPlayer: Player) => {
+      const existing = watchlist.entries.find(
+        (e) => e.playerId === targetPlayer.id,
+      );
+      if (existing) {
+        watchlist.remove(existing);
+      } else {
+        watchlist.add(targetPlayer.id);
+      }
+    },
+    [watchlist],
+  );
+
+  const handleSaveSearch = useCallback(
+    (name: string, filter: PlayerFilter) => {
+      savedSearches.save(name, filter);
+    },
+    [savedSearches],
+  );
+
   if (!publicKey) return null;
   if (subscriptionLoading || !isProtected) return null;
 
@@ -244,6 +269,66 @@ export default function ScoutDashboardContent() {
 
       <ReferralPanel />
 
+      {watchlist.entries.length > 0 && (
+        <div className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-3">
+          <h2 className="text-sm font-medium text-gray-300">My Watchlist</h2>
+          <ul className="flex flex-col gap-2">
+            {watchlist.entries.map((entry) => (
+              <li
+                key={entry.id}
+                className="flex items-center justify-between gap-3 text-sm text-gray-200"
+              >
+                <Link
+                  href={`/player/${entry.playerId}`}
+                  className="text-brand-green hover:underline truncate"
+                >
+                  {entry.playerId}
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => watchlist.remove(entry)}
+                  className="px-3 py-1 rounded-lg border border-gray-700 text-xs text-gray-300 hover:border-red-500 hover:text-red-400 transition"
+                >
+                  Remove
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {savedSearches.searches.length > 0 && (
+        <div className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-3">
+          <h2 className="text-sm font-medium text-gray-300">Saved Searches</h2>
+          <ul className="flex flex-col gap-2">
+            {savedSearches.searches.map((s) => (
+              <li
+                key={s.id}
+                className="flex items-center justify-between gap-3 text-sm text-gray-200"
+              >
+                <span className="truncate">{s.name}</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => handleSearch(s.filter)}
+                    className="px-3 py-1 rounded-lg border border-brand-green text-xs text-brand-green hover:bg-brand-green hover:text-black transition"
+                  >
+                    Apply
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => savedSearches.remove(s)}
+                    className="px-3 py-1 rounded-lg border border-gray-700 text-xs text-gray-300 hover:border-red-500 hover:text-red-400 transition"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div
         className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-3"
         data-tour="search-section"
@@ -285,7 +370,11 @@ export default function ScoutDashboardContent() {
               searchResult !== 'invalid' &&
               searchResult !== 'not-found' && (
                 <div className="mt-2 max-w-sm">
-                  <PlayerCard player={searchResult} />
+                  <PlayerCard
+                    player={searchResult}
+                    isWatched={watchlist.isWatched(searchResult.id)}
+                    onToggleWatchlist={() => handleToggleWatchlist(searchResult)}
+                  />
                 </div>
               )}
           </div>
@@ -322,7 +411,11 @@ export default function ScoutDashboardContent() {
         className={`bg-brand-card border border-gray-800 rounded-xl p-5${nameQuery ? ' opacity-50 pointer-events-none' : ''}`}
         data-tour="filter-section"
       >
-        <PlayerFilterForm onSearch={handleSearch} resetKey={resetKey} />
+        <PlayerFilterForm
+          onSearch={handleSearch}
+          resetKey={resetKey}
+          onSaveSearch={handleSaveSearch}
+        />
       </div>
 
       {showSkeletons ? (
@@ -363,7 +456,12 @@ export default function ScoutDashboardContent() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {visiblePlayers.map((p) => (
-              <PlayerCard key={p.id} player={p} />
+              <PlayerCard
+                key={p.id}
+                player={p}
+                isWatched={watchlist.isWatched(p.id)}
+                onToggleWatchlist={() => handleToggleWatchlist(p)}
+              />
             ))}
           </div>
 

@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS events (
 );
 CREATE INDEX IF NOT EXISTS idx_events_player_ledger ON events(player_id, ledger DESC);
 CREATE INDEX IF NOT EXISTS idx_events_type_ledger ON events(event_type, ledger DESC);
+CREATE INDEX IF NOT EXISTS idx_events_validator ON events(validator, ledger DESC);
 CREATE INDEX IF NOT EXISTS idx_events_ledger ON events(ledger DESC);
 `;
 
@@ -60,6 +61,7 @@ export interface EventRecord {
 export interface QueryFilter {
   type?: EventType;
   playerId?: string;
+  validator?: string;
   /** Keyset cursor: only return events with ledger strictly less than this. */
   before?: number;
   /** Page size, capped at MAX_LIMIT. */
@@ -181,6 +183,10 @@ export class EventStore {
     if (filter.playerId) {
       clauses.push('player_id = @playerId');
       params.playerId = filter.playerId;
+    }
+    if (filter.validator) {
+      clauses.push('validator = @validator');
+      params.validator = filter.validator;
     }
     if (filter.before !== undefined) {
       clauses.push('ledger < @before');

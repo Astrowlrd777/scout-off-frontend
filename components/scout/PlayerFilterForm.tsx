@@ -36,12 +36,15 @@ export interface PlayerFilterFormProps {
   className?: string;
   /** Increment to imperatively reset all controls and retrigger the search with defaults. */
   resetKey?: number;
+  /** When provided, renders a "Save search" control that persists the current filter under a name. */
+  onSaveSearch?: (name: string, filter: PlayerFilter) => void;
 }
 
 export default function PlayerFilterForm({
   onSearch,
   className = '',
   resetKey = 0,
+  onSaveSearch,
 }: PlayerFilterFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -52,6 +55,9 @@ export default function PlayerFilterForm({
     position: searchParams.get('position') ?? DEFAULTS.position,
     level: Number(searchParams.get('level') ?? DEFAULTS.level) as ProgressLevel,
   }));
+
+  const [showSaveInput, setShowSaveInput] = useState(false);
+  const [saveSearchName, setSaveSearchName] = useState('');
 
   // Cancel pending debounce on unmount
   useEffect(() => {
@@ -97,6 +103,15 @@ export default function PlayerFilterForm({
     },
     [filter, updateURL, scheduleSearch],
   );
+
+  const handleSaveSearch = useCallback(() => {
+    if (!onSaveSearch) return;
+    const name = saveSearchName.trim();
+    if (!name) return;
+    onSaveSearch(name, toPlayerFilter(filter));
+    setSaveSearchName('');
+    setShowSaveInput(false);
+  }, [onSaveSearch, saveSearchName, filter]);
 
   const handleReset = useCallback(() => {
     if (debounceRef.current !== null) clearTimeout(debounceRef.current);
@@ -199,6 +214,61 @@ export default function PlayerFilterForm({
       >
         Reset Filters
       </button>
+
+      {/* Save search */}
+      {onSaveSearch &&
+        (showSaveInput ? (
+          <div className="flex items-end gap-2">
+            <div className="flex flex-col gap-1">
+              <label
+                htmlFor="save-search-name"
+                className="text-xs font-medium text-gray-400"
+              >
+                Search name
+              </label>
+              <input
+                id="save-search-name"
+                className="input w-40"
+                value={saveSearchName}
+                onChange={(e) => setSaveSearchName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSaveSearch();
+                  }
+                }}
+                placeholder="e.g. Lagos strikers"
+                autoFocus
+              />
+            </div>
+            <button
+              type="button"
+              onClick={handleSaveSearch}
+              disabled={!saveSearchName.trim()}
+              className="px-4 py-2 rounded-lg border border-brand-green text-sm text-brand-green disabled:opacity-40 hover:bg-brand-green hover:text-black transition"
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowSaveInput(false);
+                setSaveSearchName('');
+              }}
+              className="px-3 py-2 rounded-lg border border-gray-700 text-sm text-gray-300 hover:border-gray-500 transition"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowSaveInput(true)}
+            className="px-4 py-2 rounded-lg border border-gray-700 text-sm text-gray-300 hover:border-brand-green hover:text-white transition"
+          >
+            Save search
+          </button>
+        ))}
     </div>
   );
 }

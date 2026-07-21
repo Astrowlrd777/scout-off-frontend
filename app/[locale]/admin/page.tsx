@@ -9,6 +9,9 @@ import EmptyState from '@/components/ui/EmptyState';
 import TransactionStatus from '@/components/ui/TransactionStatus';
 import AdminDashboardSkeleton from '@/components/admin/AdminDashboardSkeleton';
 import FraudFlagsPanel from '@/components/admin/FraudFlagsPanel';
+import AcademyManager from '@/components/admin/AcademyManager';
+import AdminAuditLog from '@/components/admin/AdminAuditLog';
+import { recordAuditEntry } from '@/lib/adminAuditClient';
 import type { TxStatus } from '@/components/ui/TransactionStatus';
 import {
   getValidators,
@@ -169,7 +172,13 @@ function AdminDashboardContent() {
       let xdr: string;
       if (action === 'add') {
         xdr = await buildAddValidator(publicKey, validatorInput);
-        await signAndSubmit(xdr);
+        const txHash = await signAndSubmit(xdr);
+        recordAuditEntry({
+          actionType: 'validator_add',
+          target: validatorInput,
+          txHash,
+          status: 'submitted',
+        }).catch(() => {});
         setValidators((v) => [
           ...v,
           {
@@ -182,26 +191,49 @@ function AdminDashboardContent() {
         show({ message: 'Validator added.', variant: 'success' });
       } else if (action === 'remove') {
         xdr = await buildRemoveValidator(publicKey, removeTarget);
-        await signAndSubmit(xdr);
+        const txHash = await signAndSubmit(xdr);
+        recordAuditEntry({
+          actionType: 'validator_remove',
+          target: removeTarget,
+          txHash,
+          status: 'submitted',
+        }).catch(() => {});
         setValidators((v) => v.filter((val) => val.address !== removeTarget));
         setRemoveTarget('');
         show({ message: 'Validator removed.', variant: 'success' });
       } else if (action === 'withdraw') {
+        const amountStroops = fees ?? undefined;
         xdr = await buildWithdrawFees(publicKey);
         setWithdrawTxStatus('pending');
-        const result = await signAndSubmit(xdr);
-        setWithdrawTxHash((result as any)?.hash ?? null);
+        const txHash = await signAndSubmit(xdr);
+        recordAuditEntry({
+          actionType: 'fee_withdrawal',
+          amountStroops,
+          txHash,
+          status: 'submitted',
+        }).catch(() => {});
+        setWithdrawTxHash(txHash);
         setWithdrawTxStatus('success');
         const updatedFees = await getPlatformFees();
         setFees(updatedFees as number);
       } else if (action === 'pause') {
         xdr = await buildPauseContract(publicKey);
-        await signAndSubmit(xdr);
+        const txHash = await signAndSubmit(xdr);
+        recordAuditEntry({
+          actionType: 'pause',
+          txHash,
+          status: 'submitted',
+        }).catch(() => {});
         setPaused(true);
         show({ message: 'Contract paused.', variant: 'warning' });
       } else if (action === 'unpause') {
         xdr = await buildUnpauseContract(publicKey);
-        await signAndSubmit(xdr);
+        const txHash = await signAndSubmit(xdr);
+        recordAuditEntry({
+          actionType: 'unpause',
+          txHash,
+          status: 'submitted',
+        }).catch(() => {});
         setPaused(false);
         show({ message: 'Contract unpaused.', variant: 'success' });
       }
@@ -421,6 +453,10 @@ function AdminDashboardContent() {
         )}
       </section>
 
+      {/* Academies (issue #663) — off-chain grouping of validator wallets
+          under one institutional identity. See docs/academy-validator-model.md */}
+      <AcademyManager />
+
       {/* Activity Feed */}
       <section className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
         <h2 className="text-lg font-semibold text-white">Activity</h2>
@@ -548,6 +584,8 @@ function AdminDashboardContent() {
           </>
         )}
       </section>
+
+      <AdminAuditLog />
 
       <FraudFlagsPanel />
 

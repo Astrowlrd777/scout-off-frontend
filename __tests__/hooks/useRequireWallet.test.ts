@@ -23,9 +23,9 @@ describe('useRequireWallet', () => {
     mockWalletContext.isConnecting = false;
   });
 
-  it('redirects to home when unauthenticated and not connecting', () => {
+  it('redirects to home with a reason when unauthenticated and not connecting', () => {
     renderHook(() => useRequireWallet());
-    expect(mockReplace).toHaveBeenCalledWith('/');
+    expect(mockReplace).toHaveBeenCalledWith('/?reason=wallet-required');
   });
 
   it('does not redirect when authenticated', () => {
@@ -42,7 +42,7 @@ describe('useRequireWallet', () => {
 
   it('uses router.replace (not push) to prevent back-navigation', () => {
     renderHook(() => useRequireWallet());
-    expect(mockReplace).toHaveBeenCalledWith('/');
+    expect(mockReplace).toHaveBeenCalledWith('/?reason=wallet-required');
     expect(mockReplace).not.toHaveBeenCalledWith(
       expect.anything(),
       expect.anything(),

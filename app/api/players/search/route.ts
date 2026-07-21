@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
-import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
+import { createRequestLogger } from '@/lib/logger';
 
 /**
  * GET /api/players/search?name=...
@@ -29,6 +29,7 @@ const backend = axios.create({
 });
 
 export async function GET(req: NextRequest) {
+  const log = createRequestLogger(req);
   const ip = getClientIp(req);
 
   const rl = await checkRateLimit(`players-search:${ip}`, {
@@ -36,7 +37,7 @@ export async function GET(req: NextRequest) {
     windowMs: WINDOW_MS,
   });
   if (rl.limited) {
-    console.warn(`[player search rate limit] Too many searches from IP: ${ip}`);
+    log.warn('Rate limit exceeded', { ip });
     const retryAfter = rl.retryAfterSec ?? Math.ceil(WINDOW_MS / 1000);
     return NextResponse.json(
       { error: 'Too many search requests. Please slow down.' },
@@ -51,6 +52,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(res.data);
   } catch (e: any) {
     const status = e?.response?.status ?? 502;
+    log.error('Player search proxy failed', {
+      status,
+      reason: e instanceof Error ? e.message : String(e),
+    });
     return NextResponse.json({ error: 'Failed to search players' }, { status });
   }
 }

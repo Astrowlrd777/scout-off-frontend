@@ -49,18 +49,14 @@ const SCOUT_ID = 'scout-abc-123';
 
 function makeStats(overrides: Partial<ReferralStats> = {}): ReferralStats {
   return {
-    totalReferrals: 5,
-    activeReferrals: 3,
-    codes: [
-      { code: 'CODE-001', createdAt: 1_700_000_000, usageCount: 2 },
-      { code: 'CODE-002', createdAt: 1_700_001_000, usageCount: 0 },
-    ],
+    totalCodes: 5,
+    successfulReferrals: 3,
     ...overrides,
   };
 }
 
 function makeNewCode(code = 'CODE-NEW'): ReferralCode {
-  return { code, createdAt: Date.now() / 1000, usageCount: 0 };
+  return { code, scoutWallet: '', createdAt: Date.now() / 1000, usedBy: null, usedAt: null };
 }
 
 function makeToast() {

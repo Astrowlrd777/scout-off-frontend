@@ -5,6 +5,7 @@ import { ToastProvider } from '@/components/ui/Toast';
 import { WalletProvider } from '@/context/WalletContext';
 import ContractPausedBanner from '@/components/ContractPausedBanner';
 import ConfigWarningBanner from '@/components/ConfigWarningBanner';
+import ServiceWorkerUpdateBanner from '@/components/ServiceWorkerUpdateBanner';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import { validateConfig } from '@/lib/config';
@@ -85,6 +86,7 @@ export default async function RootLayout({
           <WalletProvider>
             <ToastProvider>
               <ConfigWarningBanner warnings={configWarnings} />
+              <ServiceWorkerUpdateBanner />
               <Navbar />
               <ContractIncompatibleBanner />
               <ContractPausedBanner />

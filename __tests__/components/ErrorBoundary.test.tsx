@@ -3,7 +3,7 @@ import ErrorBoundary from '@/components/ui/ErrorBoundary';
 
 const ERROR_MESSAGE = 'Test error';
 
-function ThrowingComponent() {
+function ThrowingComponent(): never {
   throw new Error(ERROR_MESSAGE);
 }
 
