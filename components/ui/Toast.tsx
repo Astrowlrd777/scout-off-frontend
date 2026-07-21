@@ -13,9 +13,18 @@ import {
 
 type ToastVariant = 'success' | 'error' | 'info' | 'warning';
 
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 export interface ToastOptions {
   message: string;
   variant: ToastVariant;
+  /** Overrides the default 4000ms auto-dismiss timeout. */
+  duration?: number;
+  /** Optional secondary action (e.g. "Undo") rendered alongside the dismiss button. */
+  action?: ToastAction;
 }
 
 interface ToastItem extends ToastOptions {
@@ -90,7 +99,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
       toastTimers.current[id] = window.setTimeout(() => {
         removeToast(id);
-      }, 4000);
+      }, toast.duration ?? 4000);
     },
     [removeToast],
   );
@@ -140,6 +149,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   <p className="font-semibold text-white">{meta.label}</p>
                   <p>{toast.message}</p>
                 </div>
+                {toast.action && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      toast.action?.onClick();
+                      removeToast(toast.id);
+                    }}
+                    className="ml-1 rounded-lg border border-gray-700 bg-gray-900 px-3 py-1.5 text-sm font-medium text-brand-green transition hover:bg-gray-800"
+                  >
+                    {toast.action.label}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => removeToast(toast.id)}
