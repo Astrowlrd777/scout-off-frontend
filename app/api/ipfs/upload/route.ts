@@ -32,7 +32,10 @@ export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
 
   // Rate limiting check
-  const rl = checkRateLimit(ip);
+  const rl = await checkRateLimit(`ipfs-upload:${ip}`, {
+    limit: RATE_LIMIT,
+    windowMs: WINDOW_MS,
+  });
   if (rl.limited) {
     log.warn('Rate limit exceeded', { ip });
     const retryAfter = rl.retryAfterSec ?? 60;
