@@ -1,14 +1,21 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { Analytics } from '@vercel/analytics/next';
 import Navbar from '@/components/Navbar';
 import { ToastProvider } from '@/components/ui/Toast';
 import { WalletProvider } from '@/context/WalletContext';
+import ContractIncompatibleBanner from '@/components/ContractIncompatibleBanner';
 import ContractPausedBanner from '@/components/ContractPausedBanner';
 import ConfigWarningBanner from '@/components/ConfigWarningBanner';
 import ServiceWorkerUpdateBanner from '@/components/ServiceWorkerUpdateBanner';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import { validateConfig } from '@/lib/config';
+
+// Analytics and Web Vitals reporting are disabled in tests to avoid
+// polluting real analytics data and to keep jsdom-based test runs from
+// touching PerformanceObserver APIs it doesn't fully implement.
+const isTestEnv = process.env.NODE_ENV === 'test';
 
 export const metadata: Metadata = {
   title: 'ScoutOff — Decentralized Football Scouting',
@@ -96,6 +103,12 @@ export default async function RootLayout({
             </ToastProvider>
           </WalletProvider>
         </NextIntlClientProvider>
+        {!isTestEnv && (
+          <>
+            <Analytics />
+            <WebVitalsReporter />
+          </>
+        )}
       </body>
     </html>
   );
