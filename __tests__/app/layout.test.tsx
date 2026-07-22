@@ -40,6 +40,11 @@ jest.mock('@/components/WebVitalsReporter', () => ({
   default: () => <div data-testid="web-vitals-reporter" />,
 }));
 
+jest.mock('@/components/ServiceWorkerUpdateBanner', () => ({
+  __esModule: true,
+  default: () => <div data-testid="service-worker-update-banner" />,
+}));
+
 // @vercel/analytics/next ships an ESM-only build under the "browser" export
 // condition, which jest-environment-jsdom resolves by default — Jest can't
 // transform it, so it's mocked out like the other leaf components above.
@@ -61,6 +66,19 @@ jest.mock('@/context/WalletContext', () => ({
   ),
 }));
 
+// ── next/headers mock (used by getLocale() in the root layout) ────────────────
+
+let mockPathname = '';
+
+jest.mock('next/headers', () => ({
+  headers: jest.fn().mockImplementation(async () => ({
+    get: (key: string) => {
+      if (key === 'x-pathname') return mockPathname || null;
+      return null;
+    },
+  })),
+}));
+
 describe('RootLayout', () => {
   // Rendering a top-level <html>/<body> tree via RTL's render() (which mounts
   // into a <div>) triggers a benign DOM-nesting warning from React; silence it.
@@ -68,6 +86,7 @@ describe('RootLayout', () => {
 
   beforeEach(() => {
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockPathname = '';
   });
 
   afterEach(() => {
@@ -75,9 +94,11 @@ describe('RootLayout', () => {
   });
 
   it('renders providers, navbar, banner, and children inside main content', async () => {
+    mockPathname = '/en/';
+
     const element = await RootLayout({
       children: <p>Page content</p>,
-      params: { locale: 'fr' },
+      params: { locale: 'en' },
     });
 
     render(<>{element}</>);
@@ -94,8 +115,52 @@ describe('RootLayout', () => {
     );
   });
 
-  it('defaults the locale to "en" when no locale param is provided', async () => {
-    const element = await RootLayout({ children: <p>No locale</p> });
+  it('sets html lang to "fr" when x-pathname has /fr/ prefix', async () => {
+    mockPathname = '/fr/scout';
+
+    const element = await RootLayout({
+      children: <p>Bonjour</p>,
+      params: { locale: 'fr' },
+    });
+
+    const { container } = render(<>{element}</>);
+
+    expect(container.querySelector('html')).toHaveAttribute('lang', 'fr');
+  });
+
+  it('sets html lang to "sw" when x-pathname has /sw/ prefix', async () => {
+    mockPathname = '/sw/player/abc';
+
+    const element = await RootLayout({
+      children: <p>Habari</p>,
+      params: { locale: 'sw' },
+    });
+
+    const { container } = render(<>{element}</>);
+
+    expect(container.querySelector('html')).toHaveAttribute('lang', 'sw');
+  });
+
+  it('falls back to "en" when x-pathname header is absent', async () => {
+    mockPathname = '';
+
+    const element = await RootLayout({
+      children: <p>Fallback</p>,
+      params: { locale: 'en' },
+    });
+
+    const { container } = render(<>{element}</>);
+
+    expect(container.querySelector('html')).toHaveAttribute('lang', 'en');
+  });
+
+  it('falls back to "en" for unrecognized locale prefix', async () => {
+    mockPathname = '/xx/player';
+
+    const element = await RootLayout({
+      children: <p>Unknown locale</p>,
+      params: { locale: 'xx' },
+    });
 
     const { container } = render(<>{element}</>);
 
@@ -108,7 +173,7 @@ describe('RootLayout', () => {
   });
 
   it('renders ConfigWarningBanner when config is invalid', async () => {
-    // Set NEXT_PUBLIC_CONTRACT_ID to empty to trigger the warning
+    mockPathname = '/en/';
     const prev = process.env.NEXT_PUBLIC_CONTRACT_ID;
     delete process.env.NEXT_PUBLIC_CONTRACT_ID;
 
@@ -129,6 +194,7 @@ describe('RootLayout', () => {
   });
 
   it('hides ConfigWarningBanner when config is valid', async () => {
+    mockPathname = '/en/';
     const prev = process.env.NEXT_PUBLIC_CONTRACT_ID;
     process.env.NEXT_PUBLIC_CONTRACT_ID = 'CCTOLI...test123';
 
@@ -149,6 +215,8 @@ describe('RootLayout', () => {
   });
 
   it('does not render Analytics or WebVitalsReporter in the test environment', async () => {
+    mockPathname = '/en/';
+
     const element = await RootLayout({
       children: <p>Content</p>,
       params: { locale: 'en' },
@@ -165,6 +233,7 @@ describe('RootLayout', () => {
   });
 
   it('renders Analytics and WebVitalsReporter outside the test environment', async () => {
+    mockPathname = '/en/';
     const prevNodeEnv = process.env.NODE_ENV;
     // @ts-expect-error NODE_ENV is typed readonly; reassigning to simulate a
     // production build is the standard way to exercise this branch.
