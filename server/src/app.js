@@ -4,6 +4,7 @@ const requestLogger = require('./middleware/requestLogger');
 const { createRequestLogger } = require('./logger');
 const referralsRouter = require('./routes/referrals');
 const academiesRouter = require('./routes/academies');
+const sponsorshipRouter = require('./routes/sponsorship');
 
 function createApp() {
   const app = express();
@@ -26,6 +27,7 @@ function createApp() {
   // dedicated service module + a router mounted here.
   app.use('/referrals', referralsRouter);
   app.use('/academies', academiesRouter);
+  app.use('/sponsorship', sponsorshipRouter);
 
   app.use((req, res) => {
     res.status(404).json({ error: 'Not found' });
