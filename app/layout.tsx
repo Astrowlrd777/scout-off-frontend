@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { headers } from 'next/headers';
 import './globals.css';
 import { Analytics } from '@vercel/analytics/next';
 import Navbar from '@/components/Navbar';
@@ -8,9 +9,11 @@ import ContractIncompatibleBanner from '@/components/ContractIncompatibleBanner'
 import ContractPausedBanner from '@/components/ContractPausedBanner';
 import ConfigWarningBanner from '@/components/ConfigWarningBanner';
 import ServiceWorkerUpdateBanner from '@/components/ServiceWorkerUpdateBanner';
+import WebVitalsReporter from '@/components/WebVitalsReporter';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import { validateConfig } from '@/lib/config';
+import { locales, defaultLocale } from '@/lib/locales';
 
 // Analytics and Web Vitals reporting are disabled in tests to avoid
 // polluting real analytics data and to keep jsdom-based test runs from
@@ -46,14 +49,33 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * Reads the active locale from the request.
+ *
+ * Root layouts in Next.js App Router cannot access `params.locale` from the
+ * nested `[locale]` segment. Instead, we read the `x-pathname` header set by
+ * the middleware and extract the locale from the path prefix (e.g.
+ * `/en/player` → `en`). Falls back to `defaultLocale` when the header is
+ * absent.
+ */
+async function getLocale(): Promise<string> {
+  const headersList = await headers();
+  const pathname = headersList.get('x-pathname') || '';
+  // Extract locale from the first path segment (e.g. "/en/player" → "en")
+  const match = pathname.match(/^\/([a-z]{2})(?:\/|$)/);
+  if (match && locales.includes(match[1])) {
+    return match[1];
+  }
+  return defaultLocale;
+}
+
 export default async function RootLayout({
   children,
-  params,
 }: {
   children: React.ReactNode;
   params?: { locale?: string };
 }) {
-  const locale = params?.locale ?? 'en';
+  const locale = await getLocale();
   const messages = await getMessages();
 
   // Runtime configuration check — fires on every request so a deployment
