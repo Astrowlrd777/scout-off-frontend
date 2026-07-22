@@ -202,6 +202,14 @@ Do not use `--no-verify` for PRs targeting `main`.
 - [ ] Documentation updated where necessary
 - [ ] Code follows project conventions and formatting
 
+### Code review assignment
+
+This repository uses a [CODEOWNERS](.github/CODEOWNERS) file to automatically request
+reviews from the appropriate maintainers when a PR touches specific directories.
+For example, changes to `app/api/auth/`, `lib/contract.ts`, or `packages/indexer/`
+will automatically request a review from the relevant team. No manual reviewer
+assignment is needed — GitHub applies CODEOWNERS rules on PR creation.
+
 ## Security Guidelines
 
 - Never commit secrets, private keys, API tokens, or credentials.
