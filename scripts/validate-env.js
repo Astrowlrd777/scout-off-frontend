@@ -58,11 +58,14 @@ console.log(`✓ All ${used.size} env vars declared in .env.example`);
 // In CI (NODE_ENV === 'test' from Jest, or any non-production environment)
 // this is fine — the test/admin-skip paths skip the admin gate. Only warn
 // (don't fail) when NODE_ENV is unset so local dev still passes.
-if (process.env.NODE_ENV === 'production' && !process.env.NEXT_PUBLIC_ADMIN_ADDRESS) {
+if (
+  process.env.NODE_ENV === 'production' &&
+  !process.env.NEXT_PUBLIC_ADMIN_ADDRESS
+) {
   console.error(
     '\n⚠ NEXT_PUBLIC_ADMIN_ADDRESS is unset in a production env. ' +
       'Any connected wallet will be treated as admin. Set it in your hosting ' +
-      "platform before deploying.\n",
+      'platform before deploying.\n',
   );
   // Don't process.exit — this is a deploy-time misconfig, not an env-shape
   // mismatch; ops should see this with their full env also printed so they

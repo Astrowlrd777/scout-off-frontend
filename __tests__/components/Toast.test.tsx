@@ -114,8 +114,9 @@ describe('Toast notifications', () => {
 
     const successMessage = screen.getByText('Success message');
     expect(successMessage).toBeTruthy();
-    const toast = queryAllToasts()
-      .find((node) => node.textContent?.includes('Success message'));
+    const toast = queryAllToasts().find((node) =>
+      node.textContent?.includes('Success message'),
+    );
     expect(toast).toBeDefined();
     expect(toast?.className).toContain('border-brand-green');
     expect(toast?.textContent).toContain('✓');

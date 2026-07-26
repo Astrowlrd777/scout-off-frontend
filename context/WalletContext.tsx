@@ -47,9 +47,8 @@ export async function isWalletInstalled(
 ): Promise<boolean> {
   if (provider === 'ledger') {
     try {
-      const { default: TransportWebHID } = await import(
-        '@ledgerhq/hw-transport-webhid'
-      );
+      const { default: TransportWebHID } =
+        await import('@ledgerhq/hw-transport-webhid');
       return TransportWebHID.isSupported();
     } catch {
       return false;
@@ -156,7 +155,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     try {
       const account = await rpc.getAccount(address);
       const native = (
-        (account as any).balances as Array<{ asset_type: string; balance: string }>
+        (account as any).balances as Array<{
+          asset_type: string;
+          balance: string;
+        }>
       ).find((b) => b.asset_type === 'native');
       setXlmBalance(native ? native.balance : '0.0000000');
     } catch (err: unknown) {

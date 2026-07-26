@@ -182,7 +182,5 @@ function mapLedgerError(err: unknown, fallbackMessage: string): Error {
       );
     }
   }
-  return err instanceof Error
-    ? err
-    : new Error(fallbackMessage);
+  return err instanceof Error ? err : new Error(fallbackMessage);
 }

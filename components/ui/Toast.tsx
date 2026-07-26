@@ -170,9 +170,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               <div
                 key={toast.id}
                 role="status"
-                aria-live={
-                  toast.variant === 'error' ? 'assertive' : 'polite'
-                }
+                aria-live={toast.variant === 'error' ? 'assertive' : 'polite'}
                 aria-atomic="true"
                 aria-label={`${meta.label} notification: ${toast.message}`}
                 className={`pointer-events-auto flex items-start gap-3 rounded-xl border border-gray-800 border-l-4 bg-brand-card p-4 shadow-2xl ${meta.border}`}

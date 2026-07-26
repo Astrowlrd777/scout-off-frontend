@@ -16,12 +16,12 @@ Then open **http://localhost:3000**.
 
 This starts four containers:
 
-| Service    | Port | What it is                                                                             |
-| ---------- | ---- | ---------------------------------------------------------------------------------------- |
-| `frontend` | 3000 | This Next.js app, built and served in production mode against the mocks below            |
-| `indexer`  | 3001 | `packages/indexer`'s HTTP server (`/health`, `/metrics`)                                   |
-| `mock-rpc` | 8000 | A local mock of the Soroban RPC endpoints `lib/stellar.ts`/`lib/contract.ts` call         |
-| `mock-api` | 4000 | A local mock of the backend REST API `lib/api.ts` calls (`NEXT_PUBLIC_API_URL`)           |
+| Service    | Port | What it is                                                                        |
+| ---------- | ---- | --------------------------------------------------------------------------------- |
+| `frontend` | 3000 | This Next.js app, built and served in production mode against the mocks below     |
+| `indexer`  | 3001 | `packages/indexer`'s HTTP server (`/health`, `/metrics`)                          |
+| `mock-rpc` | 8000 | A local mock of the Soroban RPC endpoints `lib/stellar.ts`/`lib/contract.ts` call |
+| `mock-api` | 4000 | A local mock of the backend REST API `lib/api.ts` calls (`NEXT_PUBLIC_API_URL`)   |
 
 **What works out of the box:** browsing player profiles and lists, milestone history, validator lists, contract health/paused banners, scout dashboards and profiles, and full write flows (register a player, approve a milestone, subscribe, pay-to-contact) — `mock-rpc` decodes the real transaction XDR your wallet builds and returns a canned-but-valid response, including simulate → sign (with Freighter, pointed at a custom network matching `mock-rpc`'s passphrase) → submit → confirm.
 
@@ -376,7 +376,7 @@ Public player profiles (`app/[locale]/player/[id]`) previously rendered `<img>`/
 
 - `lib/mediaUrl.ts` exports `getMediaProxyUrl(cid)`, a client-safe helper that returns `/api/media/<cid>` — a same-origin path — instead of the raw gateway URL. `PlayerCard` and `IPFSMediaGallery` use this instead of reading `NEXT_PUBLIC_IPFS_GATEWAY` directly.
 - `app/api/media/[cid]/route.ts` proxies the request server-side (trying `NEXT_PUBLIC_IPFS_GATEWAY` then the same fallback gateways as `lib/ipfs.ts`) and returns the media with `Cache-Control: public, max-age=31536000, immutable` (and the Vercel-specific `CDN-Cache-Control` header). Since IPFS CIDs are content-addressed, this is safe: the same CID always resolves to the same bytes.
-- **Cache invalidation**: an updated profile gets a *new* CID (see `buildUpdateProfile` in `lib/contract.ts`), which is a new proxy URL — there's nothing to invalidate for the old one, since it's still valid (and still immutable) content.
+- **Cache invalidation**: an updated profile gets a _new_ CID (see `buildUpdateProfile` in `lib/contract.ts`), which is a new proxy URL — there's nothing to invalidate for the old one, since it's still valid (and still immutable) content.
 - **Anti-hotlinking / anti-scraping**: the route rejects requests carrying an explicit cross-site `Referer` header (same-origin and "no Referer" requests are allowed, since a legitimate direct navigation or privacy-stripped Referer can't be distinguished from same-site). It also applies a best-effort per-IP rate limit (120 req/min) to blunt bulk scraping.
 - **Signed/expiring URLs**: `lib/mediaUrlSigning.ts` (server-only — never import from client code) exposes `signMediaUrl(cid, ttlSeconds)` / `verifyMediaUrlSignature(...)`, gated behind the `MEDIA_URL_SIGNING_SECRET` env var. When a request carries a valid `sig`/`exp` pair the route allows it regardless of Referer — useful for a future flow that needs a non-guessable, time-limited link (e.g. media unlocked via `pay_to_contact`). When the secret isn't set (the local/default case), the route falls back to referrer + rate-limit gating only, so this never blocks contributors who haven't configured it.
 
@@ -391,13 +391,13 @@ Public player profiles (`app/[locale]/player/[id]`) previously rendered `<img>`/
 
 `packages/indexer/` runs an HTTP server alongside the event poller. Two endpoints are exposed on the port configured by `PORT` (default `3001`):
 
-| Endpoint    | Format      | Purpose                                                                                                                                                              |
-| ----------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/health`   | JSON        | Liveness probe. Returns `{ status, lastLedger, uptime }`. `status` flips to `"degraded"` when the poller hasn't seen a fresh ledger entry in 60s.                       |
-| `/metrics`  | Prometheus  | Pull-format counter/gauge metrics: `indexer_events_total{type=...}`, `indexer_processed_total`, `indexer_errors_total`, `indexer_error_rate_percent`, `indexer_latency_avg_ms`, `indexer_latency_p95_ms`, `indexer_ledger_lag`, `indexer_healthy`. |
-| `/events`   | JSON        | Query contract events. Supports `?type=...&limit=...&before=...`.                                                                                                    |
-| `/players/:id/events` | JSON | Same shape, scoped to a single player.                                                                                                                                  |
-| `/validators/:address/events` | JSON | Same shape, scoped to a single validator (filter by `validator` field on the event).                                                                                            |
+| Endpoint                      | Format     | Purpose                                                                                                                                                                                                                                            |
+| ----------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/health`                     | JSON       | Liveness probe. Returns `{ status, lastLedger, uptime }`. `status` flips to `"degraded"` when the poller hasn't seen a fresh ledger entry in 60s.                                                                                                  |
+| `/metrics`                    | Prometheus | Pull-format counter/gauge metrics: `indexer_events_total{type=...}`, `indexer_processed_total`, `indexer_errors_total`, `indexer_error_rate_percent`, `indexer_latency_avg_ms`, `indexer_latency_p95_ms`, `indexer_ledger_lag`, `indexer_healthy`. |
+| `/events`                     | JSON       | Query contract events. Supports `?type=...&limit=...&before=...`.                                                                                                                                                                                  |
+| `/players/:id/events`         | JSON       | Same shape, scoped to a single player.                                                                                                                                                                                                             |
+| `/validators/:address/events` | JSON       | Same shape, scoped to a single validator (filter by `validator` field on the event).                                                                                                                                                               |
 
 ### Quick verification
 
