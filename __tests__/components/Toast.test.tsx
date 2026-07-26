@@ -81,6 +81,16 @@ describe('Toast notifications', () => {
     jest.useRealTimers();
   });
 
+  /**
+   * Per Issue #28, error toasts use `role="alert"` and non-errors use
+   * `role="status"`. The helper covers both so existing assertions keep
+   * working without each test having to branch on the variant.
+   */
+  const queryAllToasts = () => [
+    ...screen.queryAllByRole('alert'),
+    ...screen.queryAllByRole('status'),
+  ];
+
   it('renders a toast when show is called', () => {
     render(
       <ToastProvider>
@@ -88,7 +98,9 @@ describe('Toast notifications', () => {
       </ToastProvider>,
     );
 
-    expect(screen.getByRole('alert').textContent).toContain('Initial toast');
+    const toasts = queryAllToasts();
+    expect(toasts.length).toBeGreaterThan(0);
+    expect(toasts[0].textContent).toContain('Initial toast');
   });
 
   it('renders variant-specific icon and border for success', () => {
@@ -102,8 +114,7 @@ describe('Toast notifications', () => {
 
     const successMessage = screen.getByText('Success message');
     expect(successMessage).toBeTruthy();
-    const toast = screen
-      .getAllByRole('alert')
+    const toast = queryAllToasts()
       .find((node) => node.textContent?.includes('Success message'));
     expect(toast).toBeDefined();
     expect(toast?.className).toContain('border-brand-green');
@@ -153,9 +164,9 @@ describe('Toast notifications', () => {
     fireEvent.click(screen.getByText(/show info/i));
     fireEvent.click(screen.getByText(/show warning/i));
 
-    const toastMessages = screen
-      .queryAllByRole('alert')
-      .map((element) => element.textContent ?? '');
+    const toastMessages = queryAllToasts().map(
+      (element) => element.textContent ?? '',
+    );
 
     expect(toastMessages).toHaveLength(3);
     expect(toastMessages.some((text) => text.includes('Initial toast'))).toBe(
@@ -200,15 +211,15 @@ describe('Toast notifications', () => {
 
     // All three toasts are visible simultaneously as distinct, stacked nodes
     // rather than overlapping/replacing one another.
-    const alerts = screen.getAllByRole('alert');
-    expect(alerts).toHaveLength(3);
+    const toasts = queryAllToasts();
+    expect(toasts).toHaveLength(3);
 
-    const stack = alerts[0].parentElement;
+    const stack = toasts[0].parentElement;
     expect(stack).not.toBeNull();
     expect(stack?.className).toMatch(/flex-col/);
     expect(stack?.className).toMatch(/gap-3/);
-    alerts.forEach((alert) => {
-      expect(alert.parentElement).toBe(stack);
+    toasts.forEach((toast) => {
+      expect(toast.parentElement).toBe(stack);
     });
 
     // Success (shown first) dismisses on its own timer without shifting

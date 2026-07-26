@@ -173,6 +173,13 @@ export const listReferralCodes = (
     .then((r) => r.data);
 
 export const redeemReferralCode = (
+  code: string,
+  usedBy: string,
+): Promise<boolean> =>
+  api
+    .post('/referrals/redeem', { code, usedBy })
+    .then(() => true)
+    .catch(() => false);
 
 // ── Sponsorship waitlist ───────────────────────────────────────────────────
 //
@@ -189,15 +196,6 @@ export const joinSponsorshipWaitlist = (
   api
     .post('/sponsorship/waitlist', { email, interestType, turnstileToken })
     .then((r) => r.data);
-
-export const redeemReferralCode = (
-  code: string,
-  usedBy: string,
-): Promise<boolean> =>
-  api
-    .post('/referrals/redeem', { code, usedBy })
-    .then(() => true)
-    .catch(() => false);
 
 export const fetchAllReferralCodes = (): Promise<ReferralCode[]> =>
   api.get('/referrals/all').then((r) => r.data);

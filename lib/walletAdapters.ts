@@ -30,12 +30,43 @@ export const walletAdapters: Record<
       return freighterSign(xdr, { networkPassphrase });
     },
   },
+  // Albedo is web-based — there's no extension to inject `window.albedo`,
+  // it always pops up to https://albedo.link/. The adapter is dynamically
+  // imported on first use so SSR / Node test processes never touch the
+  // `window`-coupled SDK at module-load time.
   albedo: {
     async getPublicKey() {
-      throw new Error('Albedo adapter not configured');
+      try {
+        const { default: albedo } = await import('@albedo-link/intent');
+        // Albedo SDK requires `publicKey(params)` per @albedo-link/intent@0.13
+        // types; passing an empty options object selects the default signer.
+        const result = await albedo.publicKey({});
+        if (!result?.pubkey) {
+          throw new Error(
+            'Albedo did not return a public key. Please try again.',
+          );
+        }
+        return result.pubkey;
+      } catch (err) {
+        throw mapAlbedoError(err, 'Failed to get public key from Albedo');
+      }
     },
-    async signTransaction(_xdr, _networkPassphrase) {
-      throw new Error('Albedo adapter not configured');
+    async signTransaction(xdr, networkPassphrase) {
+      try {
+        const { default: albedo } = await import('@albedo-link/intent');
+        // Albedo's `tx({ network })` accepts the network passphrase string;
+        // pass it through verbatim and let Albedo handle unrecognized values.
+        const result = await albedo.tx({ xdr, network: networkPassphrase });
+        const signed = result?.signed_envelope_xdr;
+        if (!signed) {
+          throw new Error(
+            'Albedo did not return a signed envelope. Please try again.',
+          );
+        }
+        return signed;
+      } catch (err) {
+        throw mapAlbedoError(err, 'Failed to sign transaction with Albedo');
+      }
     },
   },
   lobstr: {
@@ -91,6 +122,23 @@ export const walletAdapters: Record<
     },
   },
 };
+
+function mapAlbedoError(err: unknown, fallbackMessage: string): Error {
+  if (err instanceof Error) {
+    const msg = err.message.toLowerCase();
+    if (msg.includes('user declined') || msg.includes('rejected')) {
+      return new Error(
+        'Albedo signing was cancelled. Please try again to continue.',
+      );
+    }
+    if (msg.includes('popup') || msg.includes('blocked')) {
+      return new Error(
+        'Albedo popup was blocked by your browser. Please allow popups for this site and try again.',
+      );
+    }
+  }
+  return err instanceof Error ? err : new Error(fallbackMessage);
+}
 
 function mapLedgerError(err: unknown, fallbackMessage: string): Error {
   if (err instanceof Error) {
