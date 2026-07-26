@@ -59,14 +59,28 @@ export const archivePlayerProfile = (playerId: string): Promise<Player> =>
 export const unarchivePlayerProfile = (playerId: string): Promise<Player> =>
   api.post(`/players/${playerId}/unarchive`).then((r) => r.data);
 
-export const linkBackupWallet = (playerId: string, backupWallet: string, signature: string): Promise<Player> =>
-  api.post(`/players/${playerId}/backup-wallet/link`, { backupWallet, signature }).then((r) => r.data);
+export const linkBackupWallet = (
+  playerId: string,
+  backupWallet: string,
+  signature: string,
+): Promise<Player> =>
+  api
+    .post(`/players/${playerId}/backup-wallet/link`, {
+      backupWallet,
+      signature,
+    })
+    .then((r) => r.data);
 
 export const removeBackupWallet = (playerId: string): Promise<Player> =>
   api.post(`/players/${playerId}/backup-wallet/remove`).then((r) => r.data);
 
-export const claimAccountWithBackupWallet = (primaryWallet: string, backupWallet: string): Promise<{ playerId: string; wallet: string }> =>
-  api.post('/players/recovery/claim', { primaryWallet, backupWallet }).then((r) => r.data);
+export const claimAccountWithBackupWallet = (
+  primaryWallet: string,
+  backupWallet: string,
+): Promise<{ playerId: string; wallet: string }> =>
+  api
+    .post('/players/recovery/claim', { primaryWallet, backupWallet })
+    .then((r) => r.data);
 
 // Scouts
 export const fetchScoutProfile = (scoutId: string) =>
@@ -158,9 +172,7 @@ export const generateReferralCode = (
     .post('/referrals/generate', { scoutWallet, turnstileToken })
     .then((r) => r.data);
 
-export const getReferralStats = (
-  scoutWallet: string,
-): Promise<ReferralStats> =>
+export const getReferralStats = (scoutWallet: string): Promise<ReferralStats> =>
   api
     .get(`/referrals/count/${encodeURIComponent(scoutWallet)}`)
     .then((r) => r.data);
@@ -171,13 +183,6 @@ export const listReferralCodes = (
   api
     .get(`/referrals/scout/${encodeURIComponent(scoutWallet)}`)
     .then((r) => r.data);
-
-export const redeemReferralCode = (
-
-// ── Sponsorship waitlist ───────────────────────────────────────────────────
-//
-// Backed by the server/ Express API (SQLite), not the local filesystem
-// pattern used by the referral store.
 
 export type InterestType = 'fan' | 'investor' | 'sponsor';
 
@@ -225,7 +230,10 @@ export const fetchFraudFlags = async (): Promise<{
 // hitting the backend directly (matching fetchValidatorMilestoneCount below).
 import type { Academy } from '@/types';
 
-async function parseErrorMessage(res: Response, fallback: string): Promise<string> {
+async function parseErrorMessage(
+  res: Response,
+  fallback: string,
+): Promise<string> {
   try {
     const body = await res.json();
     return typeof body?.error === 'string' ? body.error : fallback;
@@ -236,7 +244,8 @@ async function parseErrorMessage(res: Response, fallback: string): Promise<strin
 
 export const fetchAcademies = async (): Promise<Academy[]> => {
   const res = await fetch('/api/admin/academies');
-  if (!res.ok) throw new Error(await parseErrorMessage(res, 'Failed to fetch academies'));
+  if (!res.ok)
+    throw new Error(await parseErrorMessage(res, 'Failed to fetch academies'));
   return res.json();
 };
 
@@ -249,7 +258,8 @@ export const createAcademy = async (
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, ownerWallet }),
   });
-  if (!res.ok) throw new Error(await parseErrorMessage(res, 'Failed to create academy'));
+  if (!res.ok)
+    throw new Error(await parseErrorMessage(res, 'Failed to create academy'));
   return res.json();
 };
 
@@ -265,7 +275,10 @@ export const addAcademyMember = async (
       body: JSON.stringify({ wallet }),
     },
   );
-  if (!res.ok) throw new Error(await parseErrorMessage(res, 'Failed to add signer wallet'));
+  if (!res.ok)
+    throw new Error(
+      await parseErrorMessage(res, 'Failed to add signer wallet'),
+    );
   return res.json();
 };
 
@@ -277,7 +290,10 @@ export const removeAcademyMember = async (
     `/api/admin/academies/${encodeURIComponent(academyId)}/members/${encodeURIComponent(wallet)}`,
     { method: 'DELETE' },
   );
-  if (!res.ok) throw new Error(await parseErrorMessage(res, 'Failed to remove signer wallet'));
+  if (!res.ok)
+    throw new Error(
+      await parseErrorMessage(res, 'Failed to remove signer wallet'),
+    );
 };
 
 /**
