@@ -116,7 +116,7 @@ export default function ReferralPanel({ scoutId }: { scoutId?: string } = {}) {
       setTurnstileToken(null);
       setTurnstileKey((k) => k + 1);
     }
-  }, [publicKey, loadStats, show]);
+  }, [publicKey, loadStats, show, turnstileToken]);
 
   const handleShowMore = useCallback(() => {
     setVisibleCount((count) => count + PAGE_SIZE);

@@ -207,7 +207,7 @@ export default function BackupWalletModal({
             </div>
 
             <p className="text-sm text-gray-300">
-              Enter a secondary wallet address to use as a recovery method. You'll need to sign a
+              Enter a secondary wallet address to use as a recovery method. You&apos;ll need to sign a
               confirmation with your primary wallet.
             </p>
 
@@ -267,7 +267,7 @@ export default function BackupWalletModal({
             </div>
 
             <p className="text-sm text-gray-400">
-              Click "Link & Sign" to confirm with your primary wallet. This proves you own both
+              Click &quot;Link &amp; Sign&quot; to confirm with your primary wallet. This proves you own both
               addresses.
             </p>
 
@@ -310,7 +310,7 @@ export default function BackupWalletModal({
             </div>
 
             <p className="text-sm text-gray-300">
-              Removing your backup wallet means you won't be able to use it to recover your account
+              Removing your backup wallet means you won&apos;t be able to use it to recover your account
               if you lose access to your primary wallet.
             </p>
 
@@ -341,7 +341,7 @@ export default function BackupWalletModal({
             </div>
 
             <p className="text-sm text-red-200">
-              Are you sure? This action cannot be undone. You'll have no backup recovery method.
+              Are you sure? This action cannot be undone. You&apos;ll have no backup recovery method.
             </p>
 
             <div className="flex gap-3 pt-2">
