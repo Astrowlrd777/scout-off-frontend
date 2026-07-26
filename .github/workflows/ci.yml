@@ -83,13 +83,24 @@ jobs:
           "
       - name: Guard against committed .data/ artifacts
         run: |
-          tracked=$(git ls-files -- '.data/' '.data/**')
+          # .gitignore was historically `.data/` (with a leading dot) — the
+          # typo has been fixed to `/data/` (lib/referralStore.ts writes
+          # to a root-anchored `data/`). Guard against any tracked files
+          # under either path so we catch drift in either direction.
+          tracked=$(git ls-files -- '.data/**' 'data/**')
           if [ -n "$tracked" ]; then
-            echo "Tracked files found under .data/ (should be gitignored, dev-only referral store artifacts):"
+            echo "Tracked files found under runtime data dirs (dev-only referral store artifacts, should be gitignored):"
             echo "$tracked"
             exit 1
           fi
-          echo "No tracked files under .data/."
+          echo "No tracked files under .data/ or data/."
+
+      # Contract guard for `docs/pr-bodies/`. Pinned in CI so adding a body
+      # file with the wrong shape fails loudly on PR. The contract is
+      # documented in `docs/pr-bodies/README.md` and reproduced in the
+      # snippet at the end of `.github/PULL_REQUEST_TEMPLATE.md`.
+      - name: Validate docs/pr-bodies/ body-file contract
+        run: node scripts/validate-pr-bodies.js
 
   coverage:
     runs-on: ubuntu-latest
