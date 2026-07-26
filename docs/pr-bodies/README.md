@@ -13,6 +13,8 @@ arguments when opening cross-fork PRs against `scout-off/scout-off-frontend`'s
 | [`chore-lint-followups.md`](./chore-lint-followups.md)                     | `chore/lint-followups`           | chore(lint): fix 8 unescaped-entities + 1 exhaustive-deps blocking the build CI job      |
 | [`feat-scout-subscription-guard.md`](./feat-scout-subscription-guard.md)   | `feat/scout-subscription-guard`  | feat(scout): add subscription guard to dashboard (ISSUES.md Issue #7)                    |
 | [`test-error-boundary-production.md`](./test-error-boundary-production.md) | `test/error-boundary-production` | test(error-boundary): lock in production-mode error detail suppression (Issue #23 AC #3) |
+| [`test-fix-lib-api-parser.md`](./test-fix-lib-api-parser.md)               | `test/fix-lib-api-parser`        | fix(test): remove orphan redeemReferralCode declaration in lib/api.ts (TS1005)           |
+| [`test-jest-provider-helper.md`](./test-jest-provider-helper.md)           | `test/jest-provider-helper`      | test(infra): add setup-providers.tsx helper for app-level renders                        |
 
 ## How to use
 
@@ -54,13 +56,14 @@ gh pr create \
 
 ## Related
 
-Two additional branches were added to the bulk-deploy stack after these four were drafted and were not yet backfilled into this directory:
+All six branches stacked for the bulk-deploy pass are now backfilled into this
+directory. If a future bulk-deploy stack grows past the existing six entries,
+follow the same authoring pattern (branch + title HTML comments at the top of
+each body file, summary → diff → validation → out-of-scope sections) and
+extend the Files table above.
 
-- `test/jest-provider-helper` (commit `81f1639`) — `__tests__/setup-providers.tsx` helper for app-level renders. PR body shipped via chat scrollback.
-- `test/fix-lib-api-parser` (commit `d4949f3`) — removes orphan `redeemReferralCode` declaration in `lib/api.ts` (TS1005 fix). PR body shipped via chat scrollback.
-- `feat/scout-subscription-guard` (commit `d8b0169`) — ISSUES.md Issue #7. PR body shipped via chat scrollback above.
-
-To recover any of these bodies, run:
+To recover a body for a branch that exists elsewhere in the repo but wasn't
+checked in here, run:
 
 ```bash
 # If the body was committed to docs/pr-bodies/<branch>.md on that branch:
@@ -70,6 +73,6 @@ git show <sha>:docs/pr-bodies/<branch>.md 2>/dev/null
 git log <sha> --format=%B -1 | sed -n '/^## Summary/,/^---$/p'
 ```
 
-Or ask the author to backfill in a follow-up commit.
-
-A one-line cross-link from `CONTRIBUTING.md` to this directory is also recommended so contributors landing on `main` discover it (currently the docs are only discoverable via branch diff at the time `gh pr create` is being run).
+A cross-link from `CONTRIBUTING.md` to this directory has been added under
+"Additional Notes" so contributors landing on `main` discover the directory
+when onboarding, not only when opening a PR.
