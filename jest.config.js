@@ -18,6 +18,14 @@ const customJestConfig = {
     '<rootDir>/node_modules/',
     '<rootDir>/e2e/',
     '<rootDir>/server/',
+    // setup-providers.tsx is a shared render helper, not a test file.
+    // Without this pattern, jest's default testMatch would treat it as a
+    // test suite with zero tests and emit a "your test suite must contain
+    // at least one test" warning, breaking `npx jest --ci`.
+    // Matches __tests__/setup-providers.tsx and any future non-test
+    // helpers in the same dir (e.g. setup-providers-helpers.tsx).
+    // Update this regex if you add another non-test helper at __tests__/.
+    '<rootDir>/__tests__/setup-providers[^/]*\\.tsx',
   ],
   // Issue #108: enforce minimum coverage thresholds
   coverageThreshold: {
