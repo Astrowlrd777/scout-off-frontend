@@ -6,6 +6,40 @@ on:
   pull_request:
     branches: [main]
 
+# Placeholder envs for `npm run build` (only `npm run build` actually reads
+# these — the rest of the steps in every job are happy to ignore them).
+# Hoisted to workflow-level so the two build steps in `lint` + `build` jobs
+# don't drift; see Issue #16.
+env:
+  NEXT_PUBLIC_CONTRACT_ID: ci-placeholder
+  NEXT_PUBLIC_SOROBAN_RPC: https://soroban-testnet.stellar.org
+  NEXT_PUBLIC_HORIZON_URL: https://horizon-testnet.stellar.org
+  NEXT_PUBLIC_IPFS_GATEWAY: https://gateway.pinata.cloud/ipfs
+  NEXT_PUBLIC_API_URL: http://localhost:4000
+  NEXT_PUBLIC_APP_URL: https://scoutoff.app
+  NEXT_PUBLIC_STATUS_PAGE_URL: ''
+  NEXT_PUBLIC_ADMIN_ADDRESS: ''
+  PINATA_API_KEY: ci-placeholder
+  PINATA_SECRET: ci-placeholder
+  PLATFORM_CONTACT_FEE_XLM: '1'
+  UPSTASH_REDIS_REST_URL: ''
+  UPSTASH_REDIS_REST_TOKEN: ''
+  MEDIA_URL_SIGNING_SECRET: ''
+  API_URL_INTERNAL: ''
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY: ''
+  NEXT_PUBLIC_INDEXER_API_URL: http://localhost:3001
+  STELLAR_SECRET_KEY: ''
+  NEXT_PUBLIC_DOMAIN: localhost:3000
+  NEXT_PUBLIC_SENTRY_DSN: ''
+  SENTRY_ORG: ''
+  SENTRY_PROJECT: ''
+  SENTRY_AUTH_TOKEN: ''
+  SENTRY_RELEASE: ''
+  SEP10_SERVER_KEY: ''
+  SEP10_HOME_DOMAIN: ''
+  SEP10_ALLOWED_ORIGINS: ''
+  NEXT_PUBLIC_BASE_URL: ''
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -22,6 +56,18 @@ jobs:
       - run: npm run type-check
       - run: npm run test
       - run: node scripts/validate-env.js
+      # Issue #16: A broken Next.js build can be merged without CI catching it.
+      # The .next build cache is keyed on package-lock + this step so subsequent
+      # runs reuse it. Build-only env vars are inherited from the workflow-level
+      # `env:` block (see top of file), so this step doesn't need its own.
+      - run: npm run build
+      # Restore the .next cache to the post-test step (no-op for this job, but
+      # documents intent for the dedicated build job below).
+      - uses: actions/cache@v4
+        with:
+          path: .next
+          key: ${{ runner.os }}-next-build-${{ hashFiles('package-lock.json') }}
+          restore-keys: ${{ runner.os }}-next-build-
       - name: Verify PWA icons exist
         run: |
           node -e "
@@ -69,7 +115,7 @@ jobs:
         with:
           files: ./coverage/lcov.info
           flags: frontend
-          fail_ci_if_error: false   # don't fail the build if Codecov is unreachable
+          fail_ci_if_error: false # don't fail the build if Codecov is unreachable
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
@@ -113,6 +159,31 @@ jobs:
 
       - name: Test indexer
         run: npm test --workspace=packages/indexer
+
+  build:
+    # Standalone build job — separated from the `lint` job so its
+    # Next.js build cache can be reused and build failures don't block
+    # lint signals. Issue #16.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm install
+
+      - uses: actions/cache@v4
+        with:
+          path: .next
+          key: ${{ runner.os }}-next-build-${{ hashFiles('package-lock.json') }}
+          restore-keys: ${{ runner.os }}-next-build-
+
+      # Build-only env vars are inherited from the workflow-level `env:`
+      # block (see top of file) — no step-level env needed here either.
+      - run: npm run build
 
   build-storybook:
     runs-on: ubuntu-latest
