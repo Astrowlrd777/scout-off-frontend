@@ -84,6 +84,16 @@ Examples:
 - Ensure content reflects current behavior.
 - Use `docs/` branch prefix when appropriate.
 
+### Bulk-deploy PRs (using `docs/pr-bodies/`)
+
+For multi-PR stacks authored from a fork against `scout-off/scout-off-frontend:main`, store each PR's body in [`docs/pr-bodies/<branch-with-dashes>.md`](docs/pr-bodies/README.md) _before_ opening the PR. The CI `lint` job (`.github/workflows/ci.yml`) runs a contract check that every body file in `docs/pr-bodies/`:
+
+- has both `<!-- Branch: <name> -->` and `<!-- Title: <commit-subject> -->` HTML comment headers at the top
+- contains a `## Summary` section and a `## Validation` table
+- derives a branch from its filename (`<name-with-dashes>.md` → `<category>/<rest>`) and verifies that branch exists locally
+
+The PR title should match the `<!-- Title: ... -->` value verbatim — no quotes, no backticks, no other markup. `gh pr create --body-file <file>.md` is the recommended open command; an extractor using POSIX `sed` is shown in `docs/pr-bodies/README.md`.
+
 ## Guide updates
 
 Update this document whenever the PR workflow changes or new validation steps are introduced.

@@ -47,13 +47,21 @@ export async function isWalletInstalled(
 ): Promise<boolean> {
   if (provider === 'ledger') {
     try {
-      const { default: TransportWebHID } = await import(
-        '@ledgerhq/hw-transport-webhid'
-      );
+      const { default: TransportWebHID } =
+        await import('@ledgerhq/hw-transport-webhid');
       return TransportWebHID.isSupported();
     } catch {
       return false;
     }
+  }
+  if (provider === 'albedo') {
+    // Albedo is a web-based wallet (https://albedo.link) — it always works
+    // as long as popups are allowed. Probing `getPublicKey()` here would
+    // trigger an unexpected Albedo popup on page load, so we just claim
+    // it's installed. Per-wallet popup-block / user-cancel errors are
+    // surfaced as friendly toasts in lib/walletAdapters.ts's
+    // `mapAlbedoError` on the actual connect attempt.
+    return true;
   }
   try {
     await walletAdapters[provider].getPublicKey();
@@ -147,7 +155,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     try {
       const account = await rpc.getAccount(address);
       const native = (
-        (account as any).balances as Array<{ asset_type: string; balance: string }>
+        (account as any).balances as Array<{
+          asset_type: string;
+          balance: string;
+        }>
       ).find((b) => b.asset_type === 'native');
       setXlmBalance(native ? native.balance : '0.0000000');
     } catch (err: unknown) {
@@ -164,25 +175,66 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     if (publicKey) await loadBalance(publicKey);
   }, [publicKey, loadBalance]);
 
-  // Restore session from localStorage on mount
+  // Restore session from localStorage on mount.
+  //
+  // Per Issue #13: if the stored session is unusable (provider API throws,
+  // wallet extension has been uninstalled, etc.) we don't leave the app in
+  // an unauthenticated state with no explanation — we:
+  //   1. Probe the provider by attempting to read the public key.
+  //   2. If the probe throws (extension uninstalled, network reset, etc.)
+  //      clear the stale localStorage entry and dispatch a CustomEvent
+  //      that the ToastProvider listens for, so a reconnect-needed toast
+  //      surfaces without coupling WalletContext to a Toast hook (which
+  //      would require a circular layout dependency).
+  //   3. Always flip `isRestoringSession` to false in `finally`, so
+  //      callers like useRequireWallet are unblocked even when restore
+  //      fails.
   useEffect(() => {
     async function restoreSession() {
+      let session: StoredSession | null = null;
       try {
-        const session = getStoredSession();
-        if (session) {
-          const { publicKey: pk, provider } = session;
-          setPublicKey(pk);
-          setIsAuthenticated(true);
-          setWalletProvider(provider);
+        session = getStoredSession();
+        if (!session) return;
+        const { publicKey: pk, provider } = session;
+
+        // Re-probe the provider to confirm the session is still valid (e.g.
+        // the extension wasn't uninstalled). Skip the probe for web-based
+        // wallets — Albedo is opened via popup and probing `getPublicKey()`
+        // here would trigger an unexpected confirmation popup on every page
+        // load, contradicting the very reason `isWalletInstalled` claims
+        // it's installed without probing. Albedo failures surface on the
+        // next actual connect attempt instead.
+        if (provider !== 'albedo') {
+          await walletAdapters[provider].getPublicKey();
+        }
+
+        setPublicKey(pk);
+        setIsAuthenticated(true);
+        setWalletProvider(provider);
+        try {
           await loadBalance(pk);
+        } catch {
+          // Balance load failure is non-fatal — session itself is valid.
         }
       } catch {
-        // Silently fail session restore
+        if (!session) return;
+        removeStoredSession();
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('scoutoff:session-expired', {
+              detail: {
+                message:
+                  'Your session expired. Please reconnect your wallet to continue.',
+              },
+            }),
+          );
+        }
       } finally {
         setIsRestoringSession(false);
       }
     }
     restoreSession();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadBalance]);
 
   const openWalletModal = useCallback(() => setShowWalletModal(true), []);
