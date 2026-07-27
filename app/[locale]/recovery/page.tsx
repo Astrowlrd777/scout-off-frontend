@@ -110,7 +110,7 @@ export default function AccountRecoveryPage() {
                   <span className="flex-shrink-0 w-6 h-6 rounded-full bg-brand-green text-black flex items-center justify-center text-xs font-semibold">
                     1
                   </span>
-                  <span>Enter your primary wallet address that you've lost access to</span>
+                  <span>Enter your primary wallet address that you&apos;ve lost access to</span>
                 </li>
                 <li className="flex gap-3">
                   <span className="flex-shrink-0 w-6 h-6 rounded-full bg-brand-green text-black flex items-center justify-center text-xs font-semibold">
@@ -273,9 +273,9 @@ export default function AccountRecoveryPage() {
                 <span className="font-semibold">Troubleshooting:</span>
               </p>
               <ul className="list-disc list-inside space-y-1">
-                <li>Verify you're using the correct primary wallet address</li>
-                <li>Confirm you've previously linked this backup wallet</li>
-                <li>Make sure you're connected with the backup wallet</li>
+                <li>Verify you&apos;re using the correct primary wallet address</li>
+                <li>Confirm you&apos;ve previously linked this backup wallet</li>
+                <li>Make sure you&apos;re connected with the backup wallet</li>
               </ul>
             </div>
 
