@@ -9,7 +9,7 @@ public/build
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
-.husky
+.husky/_
 /.git
 .vscode
 public/sw.js

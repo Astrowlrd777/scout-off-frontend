@@ -172,16 +172,22 @@ cd ../scout-off-contracts && cargo test
 
 Run smart contract tests when your frontend changes depend on on-chain contract behavior, contract IDs, or Soroban interaction logic.
 
-## Husky Pre-Commit Hooks
+## Husky Hooks
 
-This project uses Husky to run checks before each commit. The repository has a pre-commit hook at `.husky/pre-commit` that executes `npx --no-install lint-staged`.
+This project uses Husky to run checks before each commit and push.
+
+### Pre-commit hook
+
+The pre-commit hook at `.husky/pre-commit` executes `npx --no-install lint-staged`.
 
 `lint-staged` runs:
 
 - `eslint --fix` on staged `.js`, `.jsx`, `.ts`, and `.tsx` files
 - `prettier --write` on staged `.json`, `.css`, `.md`, and `.mdx` files
 
-These hooks help keep commits clean and consistent.
+### Pre-push hook
+
+The pre-push hook at `.husky/pre-push` runs the full test suite via `npm test`. This ensures that no branch is pushed with broken tests.
 
 ### Bypassing hooks
 
@@ -189,6 +195,7 @@ Only bypass hooks in an emergency:
 
 ```bash
 git commit --no-verify
+git push --no-verify
 ```
 
 Do not use `--no-verify` for PRs targeting `main`.
