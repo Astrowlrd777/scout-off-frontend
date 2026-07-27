@@ -16,12 +16,12 @@ Then open **http://localhost:3000**.
 
 This starts four containers:
 
-| Service    | Port | What it is                                                                             |
-| ---------- | ---- | ---------------------------------------------------------------------------------------- |
-| `frontend` | 3000 | This Next.js app, built and served in production mode against the mocks below            |
-| `indexer`  | 3001 | `packages/indexer`'s HTTP server (`/health`, `/metrics`)                                   |
-| `mock-rpc` | 8000 | A local mock of the Soroban RPC endpoints `lib/stellar.ts`/`lib/contract.ts` call         |
-| `mock-api` | 4000 | A local mock of the backend REST API `lib/api.ts` calls (`NEXT_PUBLIC_API_URL`)           |
+| Service    | Port | What it is                                                                        |
+| ---------- | ---- | --------------------------------------------------------------------------------- |
+| `frontend` | 3000 | This Next.js app, built and served in production mode against the mocks below     |
+| `indexer`  | 3001 | `packages/indexer`'s HTTP server (`/health`, `/metrics`)                          |
+| `mock-rpc` | 8000 | A local mock of the Soroban RPC endpoints `lib/stellar.ts`/`lib/contract.ts` call |
+| `mock-api` | 4000 | A local mock of the backend REST API `lib/api.ts` calls (`NEXT_PUBLIC_API_URL`)   |
 
 **What works out of the box:** browsing player profiles and lists, milestone history, validator lists, contract health/paused banners, scout dashboards and profiles, and full write flows (register a player, approve a milestone, subscribe, pay-to-contact) — `mock-rpc` decodes the real transaction XDR your wallet builds and returns a canned-but-valid response, including simulate → sign (with Freighter, pointed at a custom network matching `mock-rpc`'s passphrase) → submit → confirm.
 
@@ -236,11 +236,15 @@ Open **http://localhost:3000** in your browser.
 
 ---
 
-## Common First-Run Errors
+## Common Errors
+
+A reference for the errors new contributors hit most often — the
+pages in this section also map to the ISSUES.md backlog. Run `npm test`,
+`npm run lint`, and `npm run type-check` after any of the resolutions
+below; the broader regression tests are the cheapest way to confirm
+nothing else broke while fixing the local symptom.
 
 ### Error 1: Missing environment variable (`validate-env` failure)
-
-**Symptom:** Running `node scripts/validate-env.js` outputs:
 
 ```
 Missing from .env.example: SOME_VAR_NAME
@@ -299,6 +303,105 @@ npm run dev
 ```
 
 ---
+
+### Error 4: Husky pre-commit hook fails (`lint-staged` cannot parse a file)
+
+**Symptom:** Running `git commit` prints something like:
+
+```
+husky > pre-commit (node v24.x.x)
+npx: prettier: not found
+× prettier --check failed:
+[ERROR] Could not find parser for ".gitignore"
+[ERROR] Could not find parser for "public/sw.js.map"
+```
+
+**Root cause:** `lint-staged` globs `*.{ts,tsx,js,mjs,json,md,...}` and
+passes every staged file to `prettier --check`. Files Prettier doesn't
+have a parser for (e.g. `.gitignore`, `.env`, sourcemaps, generated
+`public/sw*.js`) need to be excluded via `.prettierignore` or they'd
+break every commit even when nothing is wrong with the code.
+
+**Solution:**
+
+1. Open `.prettierignore` and confirm these entries are present:
+
+   ```
+   .gitignore
+   .env
+   .env.local
+   .env.*.local
+   public/sw.js
+   public/sw.js.map
+   public/workbox-*.js
+   public/workbox-*.js.map
+   ```
+
+2. If a new generated file shows up that Prettier can't parse, append
+   it to `.prettierignore` rather than disabling the lint-staged step.
+
+3. For `.env`-shaped secrets specifically, never check `.env.local` —
+   it's already in `.gitignore`. Only `.env.example` (the committed
+   template) should pass through Prettier.
+
+### Error 5: Service worker cache returned a stale page after a hot fix
+
+**Symptom:** A critical fix was merged and deployed, but the browser
+still shows the old, broken UI after a normal refresh. The network
+panel shows `ServiceWorker` (not `Memory cache`) as the initiator for
+`/_next/static/chunks/*` requests.
+
+**Root cause:** Next.js's `next-pwa` plugin keeps serving the
+previous build from the service worker's `precache` until the user
+explicitly accepts the new version. This is by design — silent
+`skipWaiting()` would interrupt in-flight requests on every deploy.
+
+**Solution:**
+
+1. The `ServiceWorkerUpdateBanner` component surfaces a polite prompt
+   once `window.workbox`'s `waiting` event fires. Reload via that
+   banner's button, **not** a regular refresh.
+2. If the banner doesn't appear (e.g. you're on a tab that's been
+   idle across the deploy), do a one-time workaround:
+   DevTools → Application → Service Workers → **Unregister**, then
+   hard-reload (`Ctrl+Shift+R` or `Cmd+Shift+R`).
+3. For local development you can opt out of the service worker
+   entirely by editing `next.config.js`'s `pwa` block — comment out
+   or disable the plugin, restart `npm run dev`, and the public
+   bundle will be served from the regular Next.js dev cache. Don't
+   ship that config change: it's local-only.
+
+### Error 6: `validate-pr-bodies` CI step fails on a docs-only PR
+
+**Symptom:** The `lint` job fails on a docs-only PR with output like:
+
+```
+Validate docs/pr-bodies/ body-file contract
+All 0 body file(s) in docs/pr-bodies/ pass the contract.
+... but a required header / section is missing, e.g.:
+docs/pr-bodies/fix-foo.md: missing <!-- Title: ... -->
+```
+
+**Root cause:** Every PR that touches `docs/pr-bodies/*.md` must keep the
+file headers (`<!-- Branch: ... -->` + `<!-- Title: ... -->`) and the
+required `## Summary` / `## Validation` sections intact — the CI guard
+(`scripts/validate-pr-bodies.js`, run from the `lint` job in
+`.github/workflows/ci.yml`) verifies this on every PR.
+
+**Solution:**
+
+1. Re-add the missing header / section. The template lives in
+   `.github/PULL_REQUEST_TEMPLATE.md` under "PR Body Source" and is
+   enforced by `scripts/validate-pr-bodies.js`.
+2. Run the script locally before pushing:
+   ```
+   node scripts/validate-pr-bodies.js
+   ```
+   Exit code 0 means green; non-zero lists the offending files.
+3. If you intentionally need a body file that breaks the convention
+   (extremely rare — only for archival of a closed PR), call that out
+   in the PR description and bypass via `[skip-docs-validation]` in
+   the PR title so the maintainer can drop the guard once.
 
 ## Verification Checklist
 
@@ -376,7 +479,7 @@ Public player profiles (`app/[locale]/player/[id]`) previously rendered `<img>`/
 
 - `lib/mediaUrl.ts` exports `getMediaProxyUrl(cid)`, a client-safe helper that returns `/api/media/<cid>` — a same-origin path — instead of the raw gateway URL. `PlayerCard` and `IPFSMediaGallery` use this instead of reading `NEXT_PUBLIC_IPFS_GATEWAY` directly.
 - `app/api/media/[cid]/route.ts` proxies the request server-side (trying `NEXT_PUBLIC_IPFS_GATEWAY` then the same fallback gateways as `lib/ipfs.ts`) and returns the media with `Cache-Control: public, max-age=31536000, immutable` (and the Vercel-specific `CDN-Cache-Control` header). Since IPFS CIDs are content-addressed, this is safe: the same CID always resolves to the same bytes.
-- **Cache invalidation**: an updated profile gets a *new* CID (see `buildUpdateProfile` in `lib/contract.ts`), which is a new proxy URL — there's nothing to invalidate for the old one, since it's still valid (and still immutable) content.
+- **Cache invalidation**: an updated profile gets a _new_ CID (see `buildUpdateProfile` in `lib/contract.ts`), which is a new proxy URL — there's nothing to invalidate for the old one, since it's still valid (and still immutable) content.
 - **Anti-hotlinking / anti-scraping**: the route rejects requests carrying an explicit cross-site `Referer` header (same-origin and "no Referer" requests are allowed, since a legitimate direct navigation or privacy-stripped Referer can't be distinguished from same-site). It also applies a best-effort per-IP rate limit (120 req/min) to blunt bulk scraping.
 - **Signed/expiring URLs**: `lib/mediaUrlSigning.ts` (server-only — never import from client code) exposes `signMediaUrl(cid, ttlSeconds)` / `verifyMediaUrlSignature(...)`, gated behind the `MEDIA_URL_SIGNING_SECRET` env var. When a request carries a valid `sig`/`exp` pair the route allows it regardless of Referer — useful for a future flow that needs a non-guessable, time-limited link (e.g. media unlocked via `pay_to_contact`). When the secret isn't set (the local/default case), the route falls back to referrer + rate-limit gating only, so this never blocks contributors who haven't configured it.
 
@@ -386,6 +489,35 @@ Public player profiles (`app/[locale]/player/[id]`) previously rendered `<img>`/
 - **Bandwidth/cost measurement**: this repo has no production traffic to measure against yet. Once deployed, compare Pinata's bandwidth/request dashboard before and after this change goes live — a meaningful drop in Pinata-side requests for repeatedly-viewed CIDs is the signal this is working; if the CDN in front of `/api/media` isn't caching (e.g. `x-vercel-cache: MISS` on repeat requests), the edge config needs adjusting, not this route.
 
 ---
+
+## Indexer HTTP API (Issue #29)
+
+`packages/indexer/` runs an HTTP server alongside the event poller. Two endpoints are exposed on the port configured by `PORT` (default `3001`):
+
+| Endpoint                      | Format     | Purpose                                                                                                                                                                                                                                            |
+| ----------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/health`                     | JSON       | Liveness probe. Returns `{ status, lastLedger, uptime }`. `status` flips to `"degraded"` when the poller hasn't seen a fresh ledger entry in 60s.                                                                                                  |
+| `/metrics`                    | Prometheus | Pull-format counter/gauge metrics: `indexer_events_total{type=...}`, `indexer_processed_total`, `indexer_errors_total`, `indexer_error_rate_percent`, `indexer_latency_avg_ms`, `indexer_latency_p95_ms`, `indexer_ledger_lag`, `indexer_healthy`. |
+| `/events`                     | JSON       | Query contract events. Supports `?type=...&limit=...&before=...`.                                                                                                                                                                                  |
+| `/players/:id/events`         | JSON       | Same shape, scoped to a single player.                                                                                                                                                                                                             |
+| `/validators/:address/events` | JSON       | Same shape, scoped to a single validator (filter by `validator` field on the event).                                                                                                                                                               |
+
+### Quick verification
+
+```bash
+# Start the indexer (from repo root, against your testnet deploy):
+npm run start --workspace=packages/indexer
+
+# In another terminal, hit the endpoints:
+curl -s http://localhost:3001/health | jq
+curl -s http://localhost:3001/metrics | head -40
+```
+
+### Wiring into a metrics dashboard
+
+- **Prometheus:** add `packages/indexer` to your Prometheus scrape config with `scrape_interval: 15s` and a target of `http://<indexer-host>:3001/metrics`. The metric names are stable and the `indexer_healthy` gauge is the canonical "is the indexer alive in production" signal.
+- **Grafana:** the labels (`type=...`) on `indexer_events_total` let you chart per-event-type throughput directly. The `indexer_ledger_lag` gauge is the one to alert on — a sustained lag above ~50 means the indexer can't keep up with ledger close times.
+- **Uptime monitors:** point them at `/health`. Anything non-200 OR `status: "degraded"` should page.
 
 ## Related Documentation
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import { createRequestLogger } from '@/lib/logger';
+import { getClientIp, checkRateLimit } from '@/lib/rateLimit';
 
 /**
  * GET /api/players/search?name=...

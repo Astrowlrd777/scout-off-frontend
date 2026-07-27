@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AFRICAN_REGIONS_GROUPED } from '@/lib/regions';
 import { FOOTBALL_POSITIONS } from '@/lib/positions';
+import Select from '@/components/ui/Select';
 import type { PlayerFilter, ProgressLevel } from '@/types';
 
 const DEBOUNCE_MS = 300;
@@ -135,76 +136,55 @@ export default function PlayerFilterForm({
       className={`flex flex-wrap gap-4 items-end ${className}`}
     >
       {/* Region */}
-      <div className="flex flex-col gap-1">
-        <label
-          htmlFor="filter-region"
-          className="text-xs font-medium text-gray-400"
-        >
-          Region
-        </label>
-        <select
-          id="filter-region"
-          className="input w-44"
-          value={filter.region}
-          onChange={(e) => handleChange('region', e.target.value)}
-        >
-          <option value="">All regions</option>
-          {Object.entries(AFRICAN_REGIONS_GROUPED).map(([group, regions]) => (
-            <optgroup key={group} label={group}>
-              {regions.map(({ label, value }) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
-      </div>
+      <Select
+        id="filter-region"
+        label="Region"
+        className="w-44"
+        value={filter.region}
+        onChange={(e) => handleChange('region', e.target.value)}
+      >
+        <option value="">All regions</option>
+        {Object.entries(AFRICAN_REGIONS_GROUPED).map(([group, regions]) => (
+          <optgroup key={group} label={group}>
+            {regions.map(({ label, value }) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </optgroup>
+        ))}
+      </Select>
 
       {/* Position */}
-      <div className="flex flex-col gap-1">
-        <label
-          htmlFor="filter-position"
-          className="text-xs font-medium text-gray-400"
-        >
-          Position
-        </label>
-        <select
-          id="filter-position"
-          className="input w-40"
-          value={filter.position}
-          onChange={(e) => handleChange('position', e.target.value)}
-        >
-          <option value="">Any position</option>
-          {FOOTBALL_POSITIONS.map(({ label, value }) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </div>
+      <Select
+        id="filter-position"
+        label="Position"
+        className="w-40"
+        value={filter.position}
+        onChange={(e) => handleChange('position', e.target.value)}
+      >
+        <option value="">Any position</option>
+        {FOOTBALL_POSITIONS.map(({ label, value }) => (
+          <option key={value} value={value}>
+            {label}
+          </option>
+        ))}
+      </Select>
 
       {/* Min Level */}
-      <div className="flex flex-col gap-1">
-        <label
-          htmlFor="filter-level"
-          className="text-xs font-medium text-gray-400"
-        >
-          Min Level
-        </label>
-        <select
-          id="filter-level"
-          className="input w-36"
-          value={filter.level}
-          onChange={(e) => handleChange('level', e.target.value)}
-        >
-          {LEVEL_OPTIONS.map(({ label, value }) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </div>
+      <Select
+        id="filter-level"
+        label="Min Level"
+        className="w-36"
+        value={String(filter.level)}
+        onChange={(e) => handleChange('level', e.target.value)}
+      >
+        {LEVEL_OPTIONS.map(({ label, value }) => (
+          <option key={value} value={value}>
+            {label}
+          </option>
+        ))}
+      </Select>
 
       {/* Reset */}
       <button

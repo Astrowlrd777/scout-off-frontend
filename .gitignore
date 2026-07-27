@@ -1,9 +1,25 @@
+node_modules
+.next/
+.vercel
+out
+dist
+build
+coverage
+public/build
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+.husky
+/.git
+.vscode
+public/sw.js
+public/workbox-*.js
+# next-pwa regenerates sourcemaps adjacent to workbox output on local builds
+public/sw.js.map
+public/workbox-*.js.map
+
 .env.local
 .env*.local
-.next/
-node_modules/
-out/
-dist/
 *.tsbuildinfo
 # Jest coverage output (issue #108)
 coverage/
@@ -21,7 +37,7 @@ storybook-static/
 pr-*.md
 
 # Local referral-store data (lib/referralStore.ts writes here in dev)
-.data/
+/data/
 
 # Local indexer SQLite event store (packages/indexer/src/db/eventStore.ts writes here in dev)
 packages/indexer/data/

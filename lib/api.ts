@@ -184,6 +184,20 @@ export const listReferralCodes = (
     .get(`/referrals/scout/${encodeURIComponent(scoutWallet)}`)
     .then((r) => r.data);
 
+export const redeemReferralCode = (
+  code: string,
+  usedBy: string,
+): Promise<boolean> =>
+  api
+    .post('/referrals/redeem', { code, usedBy })
+    .then(() => true)
+    .catch(() => false);
+
+// ── Sponsorship waitlist ───────────────────────────────────────────────────
+//
+// Backed by the server/ Express API (SQLite), not the local filesystem
+// pattern used by the referral store.
+
 export type InterestType = 'fan' | 'investor' | 'sponsor';
 
 export const joinSponsorshipWaitlist = (
@@ -194,15 +208,6 @@ export const joinSponsorshipWaitlist = (
   api
     .post('/sponsorship/waitlist', { email, interestType, turnstileToken })
     .then((r) => r.data);
-
-export const redeemReferralCode = (
-  code: string,
-  usedBy: string,
-): Promise<boolean> =>
-  api
-    .post('/referrals/redeem', { code, usedBy })
-    .then(() => true)
-    .catch(() => false);
 
 export const fetchAllReferralCodes = (): Promise<ReferralCode[]> =>
   api.get('/referrals/all').then((r) => r.data);
