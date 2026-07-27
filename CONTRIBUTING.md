@@ -233,6 +233,7 @@ Do not use `--no-verify` for PRs targeting `main`.
 
 - [ ] Tests pass locally
 - [ ] Environment validation passes (`node scripts/validate-env.js`)
+- [ ] Lighthouse CI passes (performance ≥ 80)
 - [ ] No secrets or credentials committed
 - [ ] New features include tests where applicable
 - [ ] Documentation updated where necessary
@@ -257,6 +258,7 @@ assignment is needed — GitHub applies CODEOWNERS rules on PR creation.
 
 - The frontend repository is configured for GitHub Actions in `.github/workflows/ci.yml`.
 - `npm run lint`, `npm run test`, and `node scripts/validate-env.js` are all part of the CI validation path.
+- Lighthouse CI runs on every PR as a `lighthouse` job — reports are uploaded as build artifacts.
 - If Husky hooks are not active after cloning, run `npm run prepare`.
 - For offline PR-body drafts used when opening cross-fork PRs against `scout-off/scout-off-frontend:main`, see [docs/pr-bodies/](docs/pr-bodies/) — each file matches a branch in the bulk-deploy stack and is passed to `gh pr create --body-file`.
 
