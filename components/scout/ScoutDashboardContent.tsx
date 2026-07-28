@@ -74,6 +74,8 @@ export default function ScoutDashboardContent() {
   const loadingEverStarted = useRef(false);
   const [searchHasCompleted, setSearchHasCompleted] = useState(false);
   const [resetKey, setResetKey] = useState(0);
+  const [renamingId, setRenamingId] = useState<number | null>(null);
+  const [renameValue, setRenameValue] = useState('');
 
   const [walletQuery, setWalletQuery] = useState('');
   const [searchResult, setSearchResult] = useState<
@@ -306,23 +308,80 @@ export default function ScoutDashboardContent() {
                 key={s.id}
                 className="flex items-center justify-between gap-3 text-sm text-gray-200"
               >
-                <span className="truncate">{s.name}</span>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => handleSearch(s.filter)}
-                    className="px-3 py-1 rounded-lg border border-brand-green text-xs text-brand-green hover:bg-brand-green hover:text-black transition"
-                  >
-                    Apply
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => savedSearches.remove(s)}
-                    className="px-3 py-1 rounded-lg border border-gray-700 text-xs text-gray-300 hover:border-red-500 hover:text-red-400 transition"
-                  >
-                    Remove
-                  </button>
-                </div>
+                {renamingId === s.id ? (
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <input
+                      className="input flex-1 min-w-0"
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const trimmed = renameValue.trim();
+                          if (trimmed) {
+                            savedSearches.rename(s.id, trimmed);
+                          }
+                          setRenamingId(null);
+                        }
+                        if (e.key === 'Escape') {
+                          setRenamingId(null);
+                        }
+                      }}
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const trimmed = renameValue.trim();
+                        if (trimmed) {
+                          savedSearches.rename(s.id, trimmed);
+                        }
+                        setRenamingId(null);
+                      }}
+                      disabled={!renameValue.trim()}
+                      className="px-3 py-1 rounded-lg border border-brand-green text-xs text-brand-green disabled:opacity-40 hover:bg-brand-green hover:text-black transition"
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRenamingId(null)}
+                      className="px-3 py-1 rounded-lg border border-gray-700 text-xs text-gray-300 hover:border-gray-500 transition"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <span className="truncate">{s.name}</span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleSearch(s.filter)}
+                        className="px-3 py-1 rounded-lg border border-brand-green text-xs text-brand-green hover:bg-brand-green hover:text-black transition"
+                      >
+                        Apply
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRenameValue(s.name);
+                          setRenamingId(s.id);
+                        }}
+                        className="px-3 py-1 rounded-lg border border-gray-700 text-xs text-gray-300 hover:border-yellow-500 hover:text-yellow-400 transition"
+                      >
+                        Rename
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => savedSearches.remove(s)}
+                        className="px-3 py-1 rounded-lg border border-gray-700 text-xs text-gray-300 hover:border-red-500 hover:text-red-400 transition"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </>
+                )}
               </li>
             ))}
           </ul>
