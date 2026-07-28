@@ -1,6 +1,7 @@
 'use client';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import Link from 'next/link';
+
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useRequireWallet } from '@/hooks/useRequireWallet';
 import { useRequireSubscription } from '@/hooks/useRequireSubscription';
@@ -76,6 +77,8 @@ export default function ScoutDashboardContent() {
   const [resetKey, setResetKey] = useState(0);
   const [renamingId, setRenamingId] = useState<number | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const [compareIds, setCompareIds] = useState<string[]>([]);
+  const showCompareBar = compareIds.length >= 2;
 
   const [walletQuery, setWalletQuery] = useState('');
   const [searchResult, setSearchResult] = useState<
@@ -164,6 +167,26 @@ export default function ScoutDashboardContent() {
     },
     [search],
   );
+
+  const toggleCompare = useCallback(
+    (playerId: string) => {
+      setCompareIds((prev) => {
+        if (prev.includes(playerId)) {
+          return prev.filter((id) => id !== playerId);
+        }
+        if (prev.length >= 4) {
+          showToast({ message: 'Maximum 4 players for comparison', variant: 'info' });
+          return prev;
+        }
+        return [...prev, playerId];
+      });
+    },
+    [showToast],
+  );
+
+  const handleClearCompare = useCallback(() => {
+    setCompareIds([]);
+  }, []);
 
   const handleClearFilters = useCallback(() => {
     setNameQuery('');
@@ -433,6 +456,8 @@ export default function ScoutDashboardContent() {
                     player={searchResult}
                     isWatched={watchlist.isWatched(searchResult.id)}
                     onToggleWatchlist={() => handleToggleWatchlist(searchResult)}
+                    isCompareSelected={compareIds.includes(searchResult.id)}
+                    onToggleCompare={() => toggleCompare(searchResult.id)}
                   />
                 </div>
               )}
@@ -477,6 +502,29 @@ export default function ScoutDashboardContent() {
         />
       </div>
 
+      {showCompareBar && (
+        <div className="flex items-center justify-between bg-brand-card border border-brand-green rounded-xl px-5 py-3">
+          <span className="text-sm text-gray-200">
+            {compareIds.length} player{compareIds.length !== 1 ? 's' : ''} selected for comparison
+          </span>
+          <div className="flex items-center gap-3">
+            <Link
+              href={`/scout/compare?ids=${compareIds.join(',')}`}
+              className="px-4 py-1.5 rounded-lg border border-brand-green text-sm text-brand-green hover:bg-brand-green hover:text-black transition"
+            >
+              Compare
+            </Link>
+            <button
+              type="button"
+              onClick={handleClearCompare}
+              className="px-4 py-1.5 rounded-lg border border-gray-700 text-sm text-gray-300 hover:border-red-500 hover:text-red-400 transition"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
+
       {showSkeletons ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {Array.from({ length: PAGE_SIZE }).map((_, i) => (
@@ -520,6 +568,8 @@ export default function ScoutDashboardContent() {
                 player={p}
                 isWatched={watchlist.isWatched(p.id)}
                 onToggleWatchlist={() => handleToggleWatchlist(p)}
+                isCompareSelected={compareIds.includes(p.id)}
+                onToggleCompare={() => toggleCompare(p.id)}
               />
             ))}
           </div>
