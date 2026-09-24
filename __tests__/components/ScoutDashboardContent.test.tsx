@@ -95,6 +95,18 @@ jest.mock('next/navigation', () => ({
   useSearchParams: () => ({ get: () => null, toString: () => '' }),
 }));
 
+jest.mock('next-intl', () => ({
+  useTranslations: () => (key: string) => {
+    const translations: Record<string, (params?: { count?: number }) => string> = {
+      'scout_dashboard.no_players': () => 'No players found',
+      'scout_dashboard.players_found': ({ count }: { count: number }) =>
+        `${count} ${count === 1 ? 'player' : 'players'} found`,
+    };
+    const t = translations[key];
+    return t ? t : (key: string) => key;
+  },
+}));
+
 jest.mock('@/components/PlayerCard', () => ({
   __esModule: true,
   default: ({
@@ -875,6 +887,146 @@ describe('ScoutDashboardContent — name search debouncing', () => {
     });
 
     expect(mockSearchByName).toHaveBeenCalledWith('');
+  });
+});
+
+// ── Screen reader announcements (issue #553, #554) ─────────────────────────────
+
+describe('ScoutDashboardContent — screen reader announcements', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    setupScout();
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.runOnlyPendingTimers();
+    jest.useRealTimers();
+  });
+
+  it('renders a visually hidden status region for announcements', () => {
+    render(<ScoutDashboardContent />);
+    const statusRegion = screen.getByRole('status');
+    expect(statusRegion).toBeInTheDocument();
+    expect(statusRegion).toHaveAttribute('aria-live', 'polite');
+    expect(statusRegion).toHaveClass('sr-only');
+  });
+
+  it('search input has aria-controls pointing to the status region', () => {
+    render(<ScoutDashboardContent />);
+    const input = screen.getByLabelText(/search by player name/i);
+    expect(input).toHaveAttribute('aria-controls', 'search-results');
+  });
+
+  it('search input has aria-expanded set correctly based on query state', () => {
+    render(<ScoutDashboardContent />);
+    const input = screen.getByLabelText(/search by player name/i);
+    // Initially empty, so aria-expanded should be false
+    expect(input).toHaveAttribute('aria-expanded', 'false');
+
+    fireEvent.change(input, { target: { value: 'Amara' } });
+    // After typing but before debounce settles, aria-expanded should be true
+    expect(input).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('announces "No players found" after search completes with zero results', () => {
+    const { rerender } = render(<ScoutDashboardContent />);
+    const input = screen.getByLabelText(/search by player name/i);
+    const statusRegion = screen.getByRole('status');
+
+    fireEvent.change(input, { target: { value: 'Amara' } });
+    act(() => {
+      jest.advanceTimersByTime(350);
+    });
+
+    // Simulate search completing with no results
+    act(() => {
+      mockUseScout.mockReturnValue({
+        ...EMPTY_SCOUT,
+        loading: false,
+        players: [],
+      });
+      rerender(<ScoutDashboardContent />);
+    });
+
+    expect(statusRegion).toHaveTextContent('No players found');
+  });
+
+  it('announces result count after search completes with results', () => {
+    const { rerender } = render(<ScoutDashboardContent />);
+    const input = screen.getByLabelText(/search by player name/i);
+    const statusRegion = screen.getByRole('status');
+
+    fireEvent.change(input, { target: { value: 'Amara' } });
+    act(() => {
+      jest.advanceTimersByTime(350);
+    });
+
+    // Simulate search completing with 3 results
+    act(() => {
+      mockUseScout.mockReturnValue({
+        ...EMPTY_SCOUT,
+        loading: false,
+        players: [makePlayer('p1'), makePlayer('p2'), makePlayer('p3')],
+      });
+      rerender(<ScoutDashboardContent />);
+    });
+
+    expect(statusRegion).toHaveTextContent('3 players found');
+  });
+
+  it('uses singular form when exactly one result is returned', () => {
+    const { rerender } = render(<ScoutDashboardContent />);
+    const input = screen.getByLabelText(/search by player name/i);
+    const statusRegion = screen.getByRole('status');
+
+    fireEvent.change(input, { target: { value: 'Amara' } });
+    act(() => {
+      jest.advanceTimersByTime(350);
+    });
+
+    // Simulate search completing with 1 result
+    act(() => {
+      mockUseScout.mockReturnValue({
+        ...EMPTY_SCOUT,
+        loading: false,
+        players: [makePlayer('p1')],
+      });
+      rerender(<ScoutDashboardContent />);
+    });
+
+    expect(statusRegion).toHaveTextContent('1 player found');
+  });
+
+  it('clears announcement when query is cleared', () => {
+    const { rerender } = render(<ScoutDashboardContent />);
+    const input = screen.getByLabelText(/search by player name/i);
+    const statusRegion = screen.getByRole('status');
+
+    fireEvent.change(input, { target: { value: 'Amara' } });
+    act(() => {
+      jest.advanceTimersByTime(350);
+    });
+
+    // Simulate search completing with results
+    act(() => {
+      mockUseScout.mockReturnValue({
+        ...EMPTY_SCOUT,
+        loading: false,
+        players: [makePlayer('p1')],
+      });
+      rerender(<ScoutDashboardContent />);
+    });
+
+    expect(statusRegion).toHaveTextContent('1 player found');
+
+    // Clear the query
+    fireEvent.change(input, { target: { value: '' } });
+    act(() => {
+      jest.advanceTimersByTime(350);
+    });
+
+    expect(statusRegion).toHaveTextContent('');
   });
 });
 

@@ -46,7 +46,8 @@
     "milestones": "Milestones",
     "search_player": "Search player by wallet address",
     "player_not_found": "Player not found",
-    "no_players": "No players found"
+    "no_players": "No players found",
+    "players_found": "{count, plural, one {# player found} other {# players found}}"
   },
   "player_profile": {
     "back_to_scout_dashboard": "← Back to Scout Dashboard"

@@ -63,7 +63,8 @@
     "milestones": "Jalons",
     "search_player": "Rechercher un joueur par adresse de portefeuille",
     "player_not_found": "Joueur non trouvé",
-    "no_players": "Aucun joueur trouvé"
+    "no_players": "Aucun joueur trouvé",
+    "players_found": "{count, plural, one {# joueur trouvé} other {# joueurs trouvés}}"
   },
   "player_profile": {
     "back_to_scout_dashboard": "← Retour au tableau de bord des scouts"
