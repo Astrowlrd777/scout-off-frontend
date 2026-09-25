@@ -14,6 +14,12 @@ import { walletAdapters } from '@/lib/walletAdapters';
 import type { WalletProvider as WalletProviderAlias } from '@/lib/walletAdapters';
 import { purgeAllContactDetails } from '@/lib/contactDetailsCache';
 import { getServerSession, refreshSession } from '@/lib/sessionClient';
+import {
+  WALLET_SESSION_KEY,
+  REMEMBERED_ADDRESSES_KEY,
+  SESSION_EXPIRY_KEY,
+  SESSION_INVALIDATED_KEY,
+} from '@/lib/storageKeys';
 
 // @stellar/stellar-sdk and lib/stellar.ts (which also pulls it in) are
 // dynamically imported inside the functions below that actually need them
@@ -90,17 +96,9 @@ export async function isWalletInstalled(
   }
 }
 
-// ── localStorage keys ─────────────────────────────────────────────────────────
-
-const WALLET_SESSION_KEY = 'wallet_session';
-const REMEMBERED_ADDRESSES_KEY = 'scoutoff:remembered_addresses';
-const SESSION_EXPIRY_KEY = 'scoutoff:session_expiry';
-
-// ── Cross-tab session invalidation key ────────────────────────────────────────
-// Writing a timestamp to this key and then removing it fires the browser's
-// `storage` event in other same-origin tabs, which we listen for below.
-// Using a dedicated key keeps this signal isolated from app data.
-const SESSION_INVALIDATED_KEY = 'scoutoff:session-invalidated';
+// Storage keys (incl. the cross-tab session-invalidation signal key, whose
+// set-then-remove fires `storage` events in other tabs) live in
+// lib/storageKeys.ts.
 
 // ── Periodic session reconciliation cadence ───────────────────────────────────
 // GET /api/auth/session is rate-limited to 30 requests per IP per 10 seconds

@@ -1,6 +1,7 @@
 import type { Meta, StoryObj, Decorator, StoryFn } from '@storybook/react';
 import { useEffect } from 'react';
 import XlmFiatDisplay from './XlmFiatDisplay';
+import { CURRENCY_PREFERENCE_KEY } from '@/lib/storageKeys';
 
 // ── Storybook hook-seeding helpers ────────────────────────────────────────────
 //
@@ -23,7 +24,7 @@ import XlmFiatDisplay from './XlmFiatDisplay';
 // (rate=null), which keeps the hook in its initial loading: true, rate: null
 // state — identical to how it behaves before the first CoinGecko response.
 
-const STORAGE_KEY = 'scoutoff_currency_preference';
+const STORAGE_KEY = CURRENCY_PREFERENCE_KEY;
 
 // ── Decorator factory ─────────────────────────────────────────────────────────
 
