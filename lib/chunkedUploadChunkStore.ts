@@ -17,6 +17,13 @@
  * .env.example. On a truly stateless/ephemeral-disk serverless deployment
  * with no shared volume, this same limitation would resurface one layer
  * down; that's an explicit, documented tradeoff, not a silent gap.
+ *
+ * Issue #1294: every write is still bounded per (sessionId, chunkIndex) by
+ * the PRIMARY KEY upsert, but callers must enforce per-chunk and total size
+ * limits *before* calling writeChunk (see lib/chunkedUploadStore.ts) —
+ * this store itself stays a dumb byte bucket plus size-introspection
+ * helpers (getChunkSize/totalBytes) so limit checks stay consistent across
+ * instances sharing this SQLite file.
  */
 import type Database from 'better-sqlite3';
 import { openSqliteDb } from './sqliteDb';
@@ -81,6 +88,26 @@ export class ChunkedUploadChunkStore {
         data: new Uint8Array(data),
         created_at: Date.now(),
       });
+  }
+
+  /** Stored byte size for one chunk, or null when absent. */
+  getChunkSize(sessionId: string, chunkIndex: number): number | null {
+    const row = this.db
+      .prepare(
+        `SELECT length(data) AS size FROM chunked_upload_chunks WHERE session_id = ? AND chunk_index = ?`,
+      )
+      .get(sessionId, chunkIndex) as { size: number } | undefined;
+    return row ? Number(row.size) : null;
+  }
+
+  /** Sum of stored chunk bytes for a session (0 when none). */
+  totalBytes(sessionId: string): number {
+    const row = this.db
+      .prepare(
+        `SELECT COALESCE(SUM(length(data)), 0) AS total FROM chunked_upload_chunks WHERE session_id = ?`,
+      )
+      .get(sessionId) as { total: number };
+    return Number(row.total) || 0;
   }
 
   /** Which chunk indices this store currently holds for a session. */
