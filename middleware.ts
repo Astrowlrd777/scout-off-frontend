@@ -1,10 +1,15 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { locales, defaultLocale } from '@/lib/locales';
+import {
+  locales,
+  defaultLocale,
+  LOCALE_COOKIE,
+  LOCALE_COOKIE_MAX_AGE,
+} from '@/lib/locales';
 import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 
 function getLocale(request: NextRequest): string {
-  const cookieLocale = request.cookies.get('NEXT_LOCALE')?.value;
+  const cookieLocale = request.cookies.get(LOCALE_COOKIE)?.value;
   if (cookieLocale && locales.includes(cookieLocale)) {
     return cookieLocale;
   }
@@ -70,7 +75,11 @@ export async function middleware(request: NextRequest) {
     new URL(`/${locale}${pathname}`, request.url),
   );
 
-  response.cookies.set('NEXT_LOCALE', locale);
+  response.cookies.set(LOCALE_COOKIE, locale, {
+    path: '/',
+    maxAge: LOCALE_COOKIE_MAX_AGE,
+    sameSite: 'lax',
+  });
   return response;
 }
 

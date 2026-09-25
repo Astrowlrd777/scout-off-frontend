@@ -261,40 +261,71 @@ async function handleApprovalCountsQuery(
   }
 }
 
+/** Decodes a percent-encoded path segment, returning null if it is malformed. */
+function safeDecode(s: string): string | null {
+  try {
+    return decodeURIComponent(s);
+  } catch (err) {
+    if (err instanceof URIError) return null;
+    throw err;
+  }
+}
+
+function handleUnexpectedError(res: http.ServerResponse, err: unknown): void {
+  console.error('Unhandled indexer request error:', err);
+  if (!res.headersSent) {
+    sendJson(res, 500, { error: 'internal server error' });
+  } else {
+    res.end();
+  }
+}
+
+function route(req: http.IncomingMessage, res: http.ServerResponse): void {
+  const url = new URL(req.url ?? '/', 'http://localhost');
+
+  if (req.method === 'GET' && url.pathname === '/health') {
+    return handleHealth(res);
+  }
+  if (req.method === 'GET' && url.pathname === '/metrics') {
+    return handleMetrics(res);
+  }
+  if (req.method === 'GET' && url.pathname === '/events') {
+    return handleEventsQuery(url, res);
+  }
+  if (req.method === 'POST' && url.pathname === '/validators/approval-counts') {
+    handleApprovalCountsQuery(req, res).catch((err) =>
+      handleUnexpectedError(res, err),
+    );
+    return;
+  }
+  const playerMatch = url.pathname.match(PLAYER_EVENTS_PATH);
+  if (req.method === 'GET' && playerMatch) {
+    const playerId = safeDecode(playerMatch[1]);
+    if (playerId === null) {
+      return sendJson(res, 400, { error: 'invalid path encoding' });
+    }
+    return handleEventsQuery(url, res, playerId);
+  }
+  const validatorMatch = url.pathname.match(VALIDATOR_EVENTS_PATH);
+  if (req.method === 'GET' && validatorMatch) {
+    const validatorId = safeDecode(validatorMatch[1]);
+    if (validatorId === null) {
+      return sendJson(res, 400, { error: 'invalid path encoding' });
+    }
+    return handleValidatorEventsQuery(url, res, validatorId);
+  }
+
+  res.writeHead(404);
+  res.end('Not Found');
+}
+
 export const server = http.createServer(
   (req: http.IncomingMessage, res: http.ServerResponse) => {
-    const url = new URL(req.url ?? '/', 'http://localhost');
-
-    if (req.method === 'GET' && url.pathname === '/health') {
-      return handleHealth(res);
+    try {
+      route(req, res);
+    } catch (err) {
+      handleUnexpectedError(res, err);
     }
-    if (req.method === 'GET' && url.pathname === '/metrics') {
-      return handleMetrics(res);
-    }
-    if (req.method === 'GET' && url.pathname === '/events') {
-      return handleEventsQuery(url, res);
-    }
-    if (
-      req.method === 'POST' &&
-      url.pathname === '/validators/approval-counts'
-    ) {
-      return handleApprovalCountsQuery(req, res);
-    }
-    const playerMatch = url.pathname.match(PLAYER_EVENTS_PATH);
-    if (req.method === 'GET' && playerMatch) {
-      return handleEventsQuery(url, res, decodeURIComponent(playerMatch[1]));
-    }
-    const validatorMatch = url.pathname.match(VALIDATOR_EVENTS_PATH);
-    if (req.method === 'GET' && validatorMatch) {
-      return handleValidatorEventsQuery(
-        url,
-        res,
-        decodeURIComponent(validatorMatch[1]),
-      );
-    }
-
-    res.writeHead(404);
-    res.end('Not Found');
   },
 );
 

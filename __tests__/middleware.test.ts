@@ -1,3 +1,4 @@
+/** @jest-environment node */
 /**
  * Unit tests for middleware.ts locale routing
  *
@@ -10,7 +11,19 @@
  * Issue #530
  */
 
-import { locales, defaultLocale } from '@/lib/locales';
+import { NextRequest } from 'next/server';
+import {
+  locales,
+  defaultLocale,
+  LOCALE_COOKIE,
+  LOCALE_COOKIE_MAX_AGE,
+} from '@/lib/locales';
+import { middleware } from '@/middleware';
+
+jest.mock('@/lib/rateLimit', () => ({
+  checkRateLimit: jest.fn(),
+  getClientIp: jest.fn(),
+}));
 
 describe('middleware.ts locale configuration', () => {
   describe('locale configuration', () => {
@@ -83,5 +96,19 @@ describe('middleware.ts locale configuration', () => {
         expect(locale).toMatch(/^[a-z]{2}$/);
       });
     });
+  });
+});
+
+describe('middleware.ts locale cookie (issue #1367)', () => {
+  it('sets the locale cookie with path, one-year max-age and sameSite=lax', async () => {
+    const response = await middleware(
+      new NextRequest('http://localhost/players'),
+    );
+    const setCookie = response.headers.get('set-cookie') ?? '';
+
+    expect(setCookie).toContain(`${LOCALE_COOKIE}=${defaultLocale}`);
+    expect(setCookie).toMatch(/Path=\//i);
+    expect(setCookie).toContain(`Max-Age=${LOCALE_COOKIE_MAX_AGE}`);
+    expect(setCookie).toMatch(/SameSite=lax/i);
   });
 });

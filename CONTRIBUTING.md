@@ -13,6 +13,10 @@ The typical contribution workflow is:
 
 > This repository includes GitHub issue templates at `.github/ISSUE_TEMPLATE/` (for bug reports and feature requests) and a pull request template at `.github/PULL_REQUEST_TEMPLATE.md`, plus a PR process guide at `.github/PR_DOCUMENTATION.md` to help you provide the right details.
 
+## Finding Something to Work On
+
+All work is tracked in [GitHub Issues](https://github.com/scout-off/scout-off-frontend/issues). Filter by the `easy`, `medium`, `hard`, or `good first issue` labels to find a task that fits. The old `ISSUES.md` list is archived at [`docs/archive/ISSUES-2026.md`](docs/archive/ISSUES-2026.md) for historical reference only.
+
 ## Local Development Setup
 
 > For a complete end-to-end guide covering contracts, backend, and wallet setup, see [DEVELOPMENT.md](DEVELOPMENT.md).
