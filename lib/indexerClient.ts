@@ -7,8 +7,23 @@ import type { Milestone } from '@/types';
  * without hitting Horizon/Soroban RPC on every page load (see
  * packages/indexer/README.md, "Querying Indexed Data").
  */
+/**
+ * In the browser, requests go through the same-origin proxy at
+ * /api/indexer (app/api/indexer/[...path]/route.ts) — the indexer sends no
+ * CORS headers and should stay off the public internet. On the server they
+ * go straight to INDEXER_API_URL_INTERNAL.
+ */
+function indexerBaseUrl(): string {
+  if (typeof window !== 'undefined') return '/api/indexer';
+  return (
+    process.env.INDEXER_API_URL_INTERNAL ??
+    process.env.NEXT_PUBLIC_INDEXER_API_URL ??
+    'http://localhost:3001'
+  );
+}
+
 const indexerApi = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_INDEXER_API_URL ?? 'http://localhost:3001',
+  baseURL: indexerBaseUrl(),
   headers: { 'Content-Type': 'application/json' },
   timeout: 5000,
 });

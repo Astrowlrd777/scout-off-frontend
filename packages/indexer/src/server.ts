@@ -1,7 +1,12 @@
 import * as http from 'http';
 import { IndexerMetrics } from './metrics/IndexerMetrics';
 import { getLastLedgerInfo, getLedgerLag } from './ledgerTracker';
-import { startEventPolling, isEventType } from './eventPoller';
+import {
+  startEventPolling,
+  isEventType,
+  getLastPollError,
+  type EventPollerHandle,
+} from './eventPoller';
 import {
   EventStore,
   type QueryFilter,
@@ -13,18 +18,84 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3001;
 
 const startTime = Date.now();
 
+/** How long a fresh indexer may report `starting` before it's `unhealthy`. */
+const STARTUP_GRACE_MS = 120_000;
+/** A last successful poll older than this marks the indexer `degraded`. */
+const STALE_AFTER_MS = 60_000;
+const MAX_LEDGER_LAG = process.env.HEALTH_MAX_LEDGER_LAG
+  ? parseInt(process.env.HEALTH_MAX_LEDGER_LAG, 10)
+  : 100;
+const SHUTDOWN_TIMEOUT_MS = 10_000;
+
+export type HealthStatus = 'starting' | 'ok' | 'degraded' | 'unhealthy';
+
+export interface HealthInput {
+  now: number;
+  startedAt: number;
+  lastIngestedAt: number; // 0 = never
+  pollerRunning: boolean;
+  pollerHealthy: boolean; // false after repeated consecutive RPC failures
+  ledgerLag: number;
+}
+
+/**
+ * Health state machine (issue #1334): starting → ok → degraded → unhealthy.
+ * `unhealthy` means the poller isn't running, keeps failing, or hasn't
+ * ingested anything by the end of the startup grace period.
+ */
+export function computeHealthStatus(input: HealthInput): HealthStatus {
+  if (!input.pollerRunning || !input.pollerHealthy) return 'unhealthy';
+  if (input.lastIngestedAt === 0) {
+    return input.now - input.startedAt < STARTUP_GRACE_MS
+      ? 'starting'
+      : 'unhealthy';
+  }
+  if (
+    input.now - input.lastIngestedAt > STALE_AFTER_MS ||
+    input.ledgerLag > MAX_LEDGER_LAG
+  ) {
+    return 'degraded';
+  }
+  return 'ok';
+}
+
+let poller: EventPollerHandle | null = null;
+let pollerStartError: string | null = null;
+
+/** Records the running poller (or why it failed to start) for /health. */
+export function setPollerState(
+  handle: EventPollerHandle | null,
+  startError: string | null = null,
+): void {
+  poller = handle;
+  pollerStartError = startError;
+}
+
+function isPollerRunning(): boolean {
+  return poller?.isRunning() ?? false;
+}
+
 function handleHealth(res: http.ServerResponse): void {
   const { lastLedger, timestamp } = getLastLedgerInfo();
   const now = Date.now();
-  const stale = timestamp > 0 && now - timestamp > 60_000;
-  const uptimeSec = Math.floor((now - startTime) / 1000);
-  const body = JSON.stringify({
-    status: stale ? 'degraded' : 'ok',
-    lastLedger,
-    uptime: uptimeSec,
+  const pollerRunning = isPollerRunning();
+  const ledgerLag = getLedgerLag();
+  const status = computeHealthStatus({
+    now,
+    startedAt: startTime,
+    lastIngestedAt: timestamp,
+    pollerRunning,
+    pollerHealthy: IndexerMetrics.getInstance().snapshot().isHealthy,
+    ledgerLag,
   });
-  res.writeHead(200, { 'Content-Type': 'application/json' });
-  res.end(body);
+  sendJson(res, status === 'unhealthy' ? 503 : 200, {
+    status,
+    lastLedger,
+    ledgerLag,
+    pollerRunning,
+    lastError: pollerStartError ?? getLastPollError(),
+    uptime: Math.floor((now - startTime) / 1000),
+  });
 }
 
 function handleMetrics(res: http.ServerResponse): void {
@@ -58,6 +129,9 @@ function handleMetrics(res: http.ServerResponse): void {
     '# HELP indexer_healthy 1 if indexer is healthy, 0 otherwise',
     '# TYPE indexer_healthy gauge',
     `indexer_healthy ${snap.isHealthy ? 1 : 0}`,
+    '# HELP indexer_poller_running 1 if the event poller is running, 0 otherwise',
+    '# TYPE indexer_poller_running gauge',
+    `indexer_poller_running ${isPollerRunning() ? 1 : 0}`,
   ];
 
   res.writeHead(200, {
@@ -298,6 +372,25 @@ export const server = http.createServer(
   },
 );
 
+/**
+ * Graceful shutdown (issue #1333): stop accepting connections, let the
+ * in-flight poll batch finish (bounded by SHUTDOWN_TIMEOUT_MS), then flush
+ * and close the event store.
+ */
+export async function shutdown(signal: string): Promise<void> {
+  console.log(`Indexer shutting down (${signal})`);
+  server.close();
+  if (poller) {
+    await Promise.race([
+      poller.stop(),
+      new Promise<void>((resolve) =>
+        setTimeout(resolve, SHUTDOWN_TIMEOUT_MS).unref(),
+      ),
+    ]);
+  }
+  EventStore.getInstance().close();
+}
+
 export function startServer(): void {
   server.listen(PORT, () => {
     console.log(`Indexer server listening on port ${PORT}`);
@@ -307,8 +400,20 @@ export function startServer(): void {
   // deploy-time misconfiguration, not a reason to bring the whole process
   // (and /health, which is useful for diagnosing exactly this) down.
   try {
-    startEventPolling();
+    setPollerState(startEventPolling());
   } catch (err) {
     console.error('Failed to start event poller:', err);
+    setPollerState(
+      null,
+      err instanceof Error ? err.message : 'Failed to start event poller',
+    );
   }
+
+  const onSignal = (signal: NodeJS.Signals) => {
+    shutdown(signal)
+      .catch((err) => console.error('Error during shutdown:', err))
+      .finally(() => process.exit(0));
+  };
+  process.once('SIGTERM', onSignal);
+  process.once('SIGINT', onSignal);
 }

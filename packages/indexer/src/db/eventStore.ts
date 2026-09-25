@@ -413,7 +413,22 @@ export class EventStore {
     return counts;
   }
 
+  /** Runs `fn` inside a single SQLite transaction (rolled back if it throws). */
+  transaction<T>(fn: () => T): T {
+    return this.db.transaction(fn)();
+  }
+
+  /**
+   * Flushes the WAL into the main DB file and closes the connection — the
+   * last step of the indexer's graceful shutdown (issue #1333).
+   */
   close(): void {
-    this.db.close();
+    if (!this.db.open) return;
+    try {
+      this.db.pragma('wal_checkpoint(TRUNCATE)');
+    } finally {
+      this.db.close();
+    }
+    if (EventStore._instance === this) EventStore._instance = null;
   }
 }

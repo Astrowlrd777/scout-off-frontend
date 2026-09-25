@@ -12,7 +12,24 @@ import { EventStore } from '../db/eventStore';
 import type { DecodedEvent } from '../eventPoller';
 
 // Import server after mocking so it uses our module state
-import { server } from '../server';
+import {
+  server,
+  computeHealthStatus,
+  setPollerState,
+  shutdown,
+  type HealthInput,
+} from '../server';
+import type { EventPollerHandle } from '../eventPoller';
+
+function fakePoller(running = true): EventPollerHandle {
+  let isRunning = running;
+  return {
+    stop: jest.fn(async () => {
+      isRunning = false;
+    }),
+    isRunning: () => isRunning,
+  };
+}
 
 // Distinct default eventId per call (see eventStore.test.ts for why) so
 // unrelated tests inserting several events don't collide on the unique
@@ -56,6 +73,7 @@ beforeAll((done) => {
 });
 
 afterAll((done) => {
+  setPollerState(null);
   server.close(done);
 });
 
@@ -64,6 +82,7 @@ beforeEach(() => {
   resetLedgerState();
   EventStore.resetInstance();
   EventStore.getInstance(':memory:');
+  setPollerState(fakePoller());
 });
 
 afterEach(() => {
@@ -81,20 +100,105 @@ describe('GET /health', () => {
     expect(contentType).toContain('application/json');
   });
 
-  test('returns status ok and uptime when ledger is fresh', async () => {
+  test('returns status ok with lag info when ledger is fresh', async () => {
+    updateNetworkLedger(105);
     updateLastLedger(100);
-    const { body } = await request('/health');
+    const { status, body } = await request('/health');
     const json = JSON.parse(body);
+    expect(status).toBe(200);
     expect(json.status).toBe('ok');
     expect(json.lastLedger).toBe(100);
+    expect(json.ledgerLag).toBe(5);
+    expect(json.pollerRunning).toBe(true);
+    expect(json.lastError).toBeNull();
     expect(typeof json.uptime).toBe('number');
   });
 
-  test('returns status ok when ledger has never been set (timestamp=0)', async () => {
-    // timestamp stays 0 — not stale, just unknown
-    const { body } = await request('/health');
+  test('returns starting (200) before the first ingestion', async () => {
+    const { status, body } = await request('/health');
+    expect(status).toBe(200);
+    expect(JSON.parse(body).status).toBe('starting');
+  });
+
+  test('returns 503 unhealthy with the start error when the poller failed to start', async () => {
+    setPollerState(null, 'SOROBAN_RPC_URL is required');
+    const { status, body } = await request('/health');
     const json = JSON.parse(body);
-    expect(json.status).toBe('ok');
+    expect(status).toBe(503);
+    expect(json.status).toBe('unhealthy');
+    expect(json.pollerRunning).toBe(false);
+    expect(json.lastError).toBe('SOROBAN_RPC_URL is required');
+  });
+});
+
+describe('computeHealthStatus', () => {
+  const base: HealthInput = {
+    now: 1_000_000,
+    startedAt: 1_000_000 - 1_000,
+    lastIngestedAt: 1_000_000 - 1_000,
+    pollerRunning: true,
+    pollerHealthy: true,
+    ledgerLag: 0,
+  };
+
+  test('ok when fresh and caught up', () => {
+    expect(computeHealthStatus(base)).toBe('ok');
+  });
+
+  test('starting within the grace period with no ingestion', () => {
+    expect(computeHealthStatus({ ...base, lastIngestedAt: 0 })).toBe(
+      'starting',
+    );
+  });
+
+  test('unhealthy after the grace period with no ingestion (e.g. bad RPC URL)', () => {
+    expect(
+      computeHealthStatus({
+        ...base,
+        lastIngestedAt: 0,
+        startedAt: base.now - 121_000,
+      }),
+    ).toBe('unhealthy');
+  });
+
+  test('degraded when the last poll is over 60 s old', () => {
+    expect(
+      computeHealthStatus({ ...base, lastIngestedAt: base.now - 61_000 }),
+    ).toBe('degraded');
+  });
+
+  test('degraded when ledger lag exceeds the threshold', () => {
+    expect(computeHealthStatus({ ...base, ledgerLag: 101 })).toBe('degraded');
+  });
+
+  test('unhealthy when the poller is not running', () => {
+    expect(computeHealthStatus({ ...base, pollerRunning: false })).toBe(
+      'unhealthy',
+    );
+  });
+
+  test('unhealthy after repeated RPC failures', () => {
+    expect(computeHealthStatus({ ...base, pollerHealthy: false })).toBe(
+      'unhealthy',
+    );
+  });
+});
+
+describe('shutdown', () => {
+  test('stops the poller and closes the event store', async () => {
+    const handle = fakePoller();
+    setPollerState(handle);
+    const closeSpy = jest.spyOn(EventStore.getInstance(), 'close');
+    const serverClose = jest
+      .spyOn(server, 'close')
+      .mockImplementation(() => server);
+
+    await shutdown('SIGTERM');
+
+    expect(serverClose).toHaveBeenCalled();
+    expect(handle.stop).toHaveBeenCalled();
+    expect(closeSpy).toHaveBeenCalled();
+    serverClose.mockRestore();
   });
 });
 

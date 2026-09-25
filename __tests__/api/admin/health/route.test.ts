@@ -53,6 +53,29 @@ describe('GET /api/admin/health', () => {
     expect(body.backend.status).toBe('degraded');
   });
 
+  it('reports unhealthy (not unreachable) for a 503 with status: unhealthy', async () => {
+    global.fetch = jest
+      .fn()
+      .mockResolvedValue(
+        jsonResponse(503, { status: 'unhealthy', pollerRunning: false }),
+      );
+
+    const res = await GET();
+    const body = await res.json();
+    expect(body.indexer.status).toBe('unhealthy');
+    expect(body.indexer.detail.pollerRunning).toBe(false);
+  });
+
+  it('passes through the starting state', async () => {
+    global.fetch = jest
+      .fn()
+      .mockResolvedValue(jsonResponse(200, { status: 'starting' }));
+
+    const res = await GET();
+    const body = await res.json();
+    expect(body.indexer.status).toBe('starting');
+  });
+
   it('reports unreachable with the HTTP status when a subsystem responds non-ok', async () => {
     global.fetch = jest.fn().mockResolvedValue(jsonResponse(503, {}));
 
