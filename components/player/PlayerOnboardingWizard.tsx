@@ -162,6 +162,7 @@ export default function PlayerOnboardingWizard({
   const { player, loading: playerLoading } = usePlayer(publicKey);
   const isPaused = useIsPaused();
   const tErrors = useTranslations('contractErrors');
+  const tContractStatus = useTranslations('contract_status');
 
   // Background sync for the final submit step (issue #1181): if signing
   // succeeds but broadcasting the transaction fails for a network reason,
@@ -885,8 +886,8 @@ export default function PlayerOnboardingWizard({
               type="button"
               onClick={handleSubmit}
               isLoading={isLoading}
-              disabled={isLoading || isPaused}
-              title={isPaused ? 'Contract is currently paused' : undefined}
+              disabled={isLoading}
+              disabledReason={isPaused ? tContractStatus('paused_hint') : undefined}
               className="flex-1"
             >
               {isLoading ? 'Registering...' : 'Register as Player'}

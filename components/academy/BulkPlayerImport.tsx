@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState, useCallback, ChangeEvent, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { useWallet } from '@/hooks/useWallet';
 import useIsPaused from '@/hooks/useIsPaused';
 import { buildRegisterPlayer } from '@/lib/contract';
@@ -135,6 +136,7 @@ function StatusBadge({
 export default function BulkPlayerImport() {
   const { publicKey, signAndSubmit } = useWallet();
   const isPaused = useIsPaused();
+  const tContractStatus = useTranslations('contract_status');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [phase, setPhase] = useState<Phase>('upload');
@@ -637,16 +639,9 @@ export default function BulkPlayerImport() {
                   disabled={
                     phase === 'submitting' ||
                     validRows.length === 0 ||
-                    isPaused ||
                     !publicKey
                   }
-                  title={
-                    isPaused
-                      ? 'Contract is currently paused'
-                      : !publicKey
-                        ? 'Connect a wallet to import players'
-                        : undefined
-                  }
+                  disabledReason={isPaused ? tContractStatus('paused_hint') : undefined}
                 >
                   {phase === 'submitting'
                     ? isPausedBatch

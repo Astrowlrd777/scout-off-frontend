@@ -185,6 +185,9 @@
     "contract_error": "TODO: Machine-translated - Wito wa kontrata umeshindwa",
     "wallet_error": "TODO: Machine-translated - Operesheni ya pochi imeshindwa"
   },
+  "contract_status": {
+    "paused_hint": "Haipatikani kwa muda — jukwaa limepumzishwa kwa matengenezo"
+  },
   "actions": {
     "refresh": "Refresh",
     "export": "TODO: Machine-translated - Hamisha nje",

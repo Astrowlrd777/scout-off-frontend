@@ -110,6 +110,9 @@
     "contract_error": "Contract call failed",
     "wallet_error": "Wallet operation failed"
   },
+  "contract_status": {
+    "paused_hint": "Temporarily unavailable — the platform is paused for maintenance"
+  },
   "actions": {
     "refresh": "Refresh",
     "export": "Export",

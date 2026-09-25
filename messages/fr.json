@@ -127,6 +127,9 @@
     "contract_error": "L'appel du contrat a échoué",
     "wallet_error": "L'opération du portefeuille a échoué"
   },
+  "contract_status": {
+    "paused_hint": "Indisponible temporairement — la plateforme est en pause pour maintenance"
+  },
   "actions": {
     "refresh": "Actualiser",
     "export": "Exporter",
