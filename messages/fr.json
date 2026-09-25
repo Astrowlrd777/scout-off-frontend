@@ -130,6 +130,9 @@
   "contract_status": {
     "paused_hint": "Indisponible temporairement — la plateforme est en pause pour maintenance"
   },
+  "dispute_modal": {
+    "character_count": "{count} sur {max} caractères"
+  },
   "actions": {
     "refresh": "Actualiser",
     "export": "Exporter",
