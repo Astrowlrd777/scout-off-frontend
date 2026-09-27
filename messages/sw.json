@@ -121,7 +121,8 @@
     "milestones": "Miikukuu",
     "search_player": "TODO: Machine-translated - Tafuta mchezaji kwa anwani ya pochi",
     "player_not_found": "TODO: Machine-translated - Mchezaji hajafikiwa",
-    "no_players": "TODO: Machine-translated - Hakuna wachezaji waliopatikana"
+    "no_players": "TODO: Machine-translated - Hakuna wachezaji waliopatikana",
+    "players_found": "{count, plural, one {mchezaji # amepatikana} other {wachezaji # wamepatikana}}"
   },
   "player_profile": {
     "back_to_scout_dashboard": "← Rudi kwenye Dashibodi ya Scout"
@@ -183,6 +184,9 @@
     "network_error": "TODO: Machine-translated - Kosa la Mtandao",
     "contract_error": "TODO: Machine-translated - Wito wa kontrata umeshindwa",
     "wallet_error": "TODO: Machine-translated - Operesheni ya pochi imeshindwa"
+  },
+  "contract_status": {
+    "paused_hint": "Haipatikani kwa muda — jukwaa limepumzishwa kwa matengenezo"
   },
   "actions": {
     "refresh": "Refresh",

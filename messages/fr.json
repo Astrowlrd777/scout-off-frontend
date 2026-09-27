@@ -63,7 +63,8 @@
     "milestones": "Jalons",
     "search_player": "Rechercher un joueur par adresse de portefeuille",
     "player_not_found": "Joueur non trouvé",
-    "no_players": "Aucun joueur trouvé"
+    "no_players": "Aucun joueur trouvé",
+    "players_found": "{count, plural, one {# joueur trouvé} other {# joueurs trouvés}}"
   },
   "player_profile": {
     "back_to_scout_dashboard": "← Retour au tableau de bord des scouts"
@@ -125,6 +126,9 @@
     "network_error": "Erreur réseau",
     "contract_error": "L'appel du contrat a échoué",
     "wallet_error": "L'opération du portefeuille a échoué"
+  },
+  "contract_status": {
+    "paused_hint": "Indisponible temporairement — la plateforme est en pause pour maintenance"
   },
   "actions": {
     "refresh": "Actualiser",

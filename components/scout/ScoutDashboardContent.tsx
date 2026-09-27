@@ -3,6 +3,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useRequireWallet } from '@/hooks/useRequireWallet';
 import { useRequireSubscription } from '@/hooks/useRequireSubscription';
 import { useScout } from '@/hooks/useScout';
@@ -70,6 +71,7 @@ export default function ScoutDashboardContent() {
     useRequireSubscription();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const t = useTranslations('scout_dashboard');
 
   const tour = useOnboardingTour(
     SCOUT_TOUR_ID,
@@ -93,6 +95,7 @@ export default function ScoutDashboardContent() {
   const { show: showToast } = useToast();
   const [now, setNow] = useState(() => Date.now());
   const [remainingSec, setRemainingSec] = useState<number | null>(null);
+  const [searchAnnouncement, setSearchAnnouncement] = useState<string>('');
 
   useEffect(() => {
     if (!isRateLimited) {
@@ -267,6 +270,21 @@ export default function ScoutDashboardContent() {
       searchByName('');
     }
   }, [debouncedName, searchByName]);
+
+  // Announce search results after debounce and fetch resolves
+  useEffect(() => {
+    if (!searchHasCompleted || nameQuery === '') {
+      setSearchAnnouncement('');
+      return;
+    }
+
+    if (players.length === 0) {
+      setSearchAnnouncement(t('no_players'));
+    } else {
+      // Use ICU plural for proper localization
+      setSearchAnnouncement(t('players_found', { count: players.length }));
+    }
+  }, [searchHasCompleted, players.length, nameQuery, t]);
 
   const handleSearch = useCallback(
     (filter: PlayerFilter) => {
@@ -643,7 +661,17 @@ export default function ScoutDashboardContent() {
             onChange={(e) => setNameQuery(e.target.value)}
             autoComplete="off"
             disabled={remainingSec !== null}
+            aria-controls="search-results"
+            aria-expanded={nameQuery.length > 0 && !loading}
           />
+          <div
+            id="search-results"
+            role="status"
+            aria-live="polite"
+            className="sr-only"
+          >
+            {searchAnnouncement}
+          </div>
           {remainingSec !== null && (
             <p className="text-sm text-orange-400">
               Rate limited. Try again in {remainingSec}s.

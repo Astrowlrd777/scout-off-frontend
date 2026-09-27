@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useValidatorPendingQueue } from '@/hooks/useValidatorPendingQueue';
 import { useApprovedPlayers } from '@/hooks/useApprovedPlayers';
 import { useValidator } from '@/hooks/useValidator';
@@ -75,6 +76,7 @@ export default function PendingMilestoneQueue({
   const { approveMilestone } = useValidator(validatorAddress);
   const { signAndSubmit } = useWallet();
   const isPaused = useIsPaused();
+  const tContractStatus = useTranslations('contract_status');
 
   const [sortOrder, setSortOrder] = useState<SortOrder>('oldest');
   const [playerFilter, setPlayerFilter] = useState<PlayerFilter>('all');
@@ -371,10 +373,9 @@ export default function PendingMilestoneQueue({
                 disabled={
                   selectedCount === 0 ||
                   bulkRunning ||
-                  isPaused ||
                   !validatorAddress
                 }
-                title={isPaused ? 'Contract is currently paused' : undefined}
+                disabledReason={isPaused ? tContractStatus('paused_hint') : undefined}
               >
                 {bulkRunning
                   ? `Approving ${selectedCount}…`
