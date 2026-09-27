@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyMediaUrlSignature } from '@/lib/mediaUrlSigning';
 import { createRequestLogger } from '@/lib/logger';
 import { fetchMediaFromGateways } from '@/lib/mediaProxyGateway';
+import { getClientIp } from '@/lib/clientIp';
 
 /**
  * GET /api/media/[cid]
@@ -52,12 +53,6 @@ const RATE_LIMIT_PER_WINDOW = 120;
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 type RateEntry = { count: number; firstSeen: number };
 const rateMap = new Map<string, RateEntry>();
-
-function getClientIp(req: NextRequest): string {
-  const forwarded = req.headers.get('x-forwarded-for');
-  if (forwarded) return forwarded.split(',')[0].trim();
-  return req.headers.get('x-real-ip') ?? 'unknown';
-}
 
 function isRateLimited(ip: string): boolean {
   const now = Date.now();
