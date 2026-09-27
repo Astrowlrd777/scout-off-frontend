@@ -1,11 +1,12 @@
 import chatApi from './chatApi';
+import { READ_RECEIPTS_ENABLED_KEY } from '@/lib/storageKeys';
 
 /**
  * Read-receipt helpers layered on top of the chat API. Read state is only
  * broadcast to the sender when the recipient has not opted out via the
  * notification-preferences panel (see NOTIFICATION_PREF_READ_RECEIPTS_KEY).
  */
-export const NOTIFICATION_PREF_READ_RECEIPTS_KEY = 'read_receipts_enabled';
+export const NOTIFICATION_PREF_READ_RECEIPTS_KEY = READ_RECEIPTS_ENABLED_KEY;
 
 export function readReceiptsEnabled(): boolean {
   if (typeof window === 'undefined') return true;

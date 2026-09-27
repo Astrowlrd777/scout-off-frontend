@@ -1,4 +1,5 @@
 import chatApi from './chatApi';
+import { BLOCKED_USERS_KEY } from '@/lib/storageKeys';
 
 /**
  * Report/block actions for direct messaging threads. Reports route to a
@@ -9,8 +10,6 @@ export interface BlockedUser {
   userId: string;
   blockedAt: string;
 }
-
-const BLOCKED_USERS_KEY = 'scoutoff_blocked_users';
 
 export async function reportUser(
   threadId: string,

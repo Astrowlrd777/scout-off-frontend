@@ -9,10 +9,10 @@ import Navbar from './Navbar';
 import enMessages from '@/messages/en.json';
 import frMessages from '@/messages/fr.json';
 import swMessages from '@/messages/sw.json';
+import { WALLET_SESSION_KEY } from '@/lib/storageKeys';
 
 const DEMO_WALLET =
   'GABCDEFGHIJKLMNOPQRSTUVWX234567890123456789012345678901234';
-const WALLET_SESSION_KEY = 'wallet_session';
 
 const messages = {
   en: enMessages,

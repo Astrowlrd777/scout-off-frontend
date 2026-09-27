@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { CURRENCY_PREFERENCE_KEY } from '@/lib/storageKeys';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -22,7 +23,7 @@ export type CurrencyCode = (typeof SUPPORTED_CURRENCIES)[number]['code'];
 
 const DEFAULT_CURRENCY: CurrencyCode = 'USD';
 
-const STORAGE_KEY = 'scoutoff_currency_preference';
+const STORAGE_KEY = CURRENCY_PREFERENCE_KEY;
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 

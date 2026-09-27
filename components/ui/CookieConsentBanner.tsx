@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { ShieldCheck, X } from 'lucide-react';
+import { COOKIE_CONSENT_KEY } from '@/lib/storageKeys';
 
-const CONSENT_STORAGE_KEY = 'scoutoff:cookie-consent';
+const CONSENT_STORAGE_KEY = COOKIE_CONSENT_KEY;
 const CONSENT_ACCEPTED = 'accepted';
 const CONSENT_DECLINED = 'declined';
 

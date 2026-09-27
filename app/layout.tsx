@@ -17,6 +17,7 @@ import { getMessages } from 'next-intl/server';
 import { validateConfig } from '@/lib/config';
 import { locales, defaultLocale } from '@/lib/locales';
 import { getTextDirection } from '@/lib/rtl';
+import { buildThemeBootstrapScript } from '@/lib/themeBootstrap';
 
 // Analytics and Web Vitals reporting are disabled in tests to avoid
 // polluting real analytics data and to keep jsdom-based test runs from
@@ -100,14 +101,14 @@ export default async function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
         {/*
           No-flash theme script: resolves stored-preference-or-system-preference
-          and applies the `dark` class to <html> before first paint. Must stay
-          in sync with the STORAGE_KEY and resolution logic in
-          context/ThemeContext.tsx (ThemeProvider re-applies the same result
-          on mount, so this is purely to avoid a flash of the wrong theme).
+          and applies the `dark` class to <html> before first paint. Built in
+          lib/themeBootstrap.ts from the same storage key ThemeContext uses
+          (ThemeProvider re-applies the same result on mount, so this is
+          purely to avoid a flash of the wrong theme).
         */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var k='scoutoff_theme_preference';var s=localStorage.getItem(k);var d=s==='light'||s==='dark'?s==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;if(d)document.documentElement.classList.add('dark');}catch(e){}})();`,
+            __html: buildThemeBootstrapScript(),
           }}
         />
       </head>
