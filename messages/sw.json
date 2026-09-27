@@ -188,6 +188,9 @@
   "contract_status": {
     "paused_hint": "Haipatikani kwa muda — jukwaa limepumzishwa kwa matengenezo"
   },
+  "dispute_modal": {
+    "character_count": "{count} ya {max} herufi"
+  },
   "actions": {
     "refresh": "Refresh",
     "export": "TODO: Machine-translated - Hamisha nje",

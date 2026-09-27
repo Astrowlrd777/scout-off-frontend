@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import { useTranslations } from 'next-intl';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
+import { TEXT_FIELD_LIMITS } from '@/lib/inputValidation';
 
-const MIN_REASON_LENGTH = 10;
+const { min: MIN_REASON_LENGTH, max: MAX_REASON_LENGTH } = TEXT_FIELD_LIMITS.disputeReason;
 
 interface DisputeMilestoneModalProps {
   isOpen: boolean;
@@ -27,6 +29,7 @@ export default function DisputeMilestoneModal({
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const t = useTranslations('dispute_modal');
 
   function handleClose() {
     setReason('');
@@ -42,6 +45,12 @@ export default function DisputeMilestoneModal({
       );
       return;
     }
+    if (reason.trim().length > MAX_REASON_LENGTH) {
+      setError(
+        `Please describe your dispute in at most ${MAX_REASON_LENGTH} characters.`,
+      );
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -53,6 +62,9 @@ export default function DisputeMilestoneModal({
       setSubmitting(false);
     }
   }
+
+  const currentLength = reason.length;
+  const isNearLimit = currentLength >= MAX_REASON_LENGTH * 0.9;
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Dispute milestone">
@@ -77,10 +89,17 @@ export default function DisputeMilestoneModal({
             onChange={(e) => setReason(e.target.value)}
             rows={4}
             required
+            maxLength={MAX_REASON_LENGTH}
             minLength={MIN_REASON_LENGTH}
             className="w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-brand-green focus:outline-none"
             placeholder="e.g. This milestone was rejected without an explanation, but I submitted matching evidence…"
           />
+          <p
+            className="text-xs text-gray-400 mt-1 text-right"
+            aria-live={isNearLimit ? 'polite' : undefined}
+          >
+            {t('character_count', { count: currentLength, max: MAX_REASON_LENGTH })}
+          </p>
         </div>
 
         {error && (
