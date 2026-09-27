@@ -20,6 +20,14 @@ NEXT_PUBLIC_VERCEL_ANALYTICS_ID=<your-vercel-analytics-id>
 
 If you are deploying to Vercel, also set `NEXT_PUBLIC_VERCEL_ANALYTICS_ID` in your project environment variables.
 
+### Indexer
+
+```env
+INDEXER_API_URL_INTERNAL=http://indexer.internal:3001
+```
+
+`INDEXER_API_URL_INTERNAL` is a server-only URL for the event indexer (`packages/indexer`). Browsers never call the indexer directly. They go through the same-origin proxy at `/api/indexer/*`, which forwards only the allow-listed query routes, rate-limits per IP and adds a short `Cache-Control` to public GETs. The indexer can therefore stay on a private network with no CORS configuration. `NEXT_PUBLIC_INDEXER_API_URL` is still read as a fallback but is deprecated.
+
 ## Notes
 
 - Do not include wallet addresses in any custom analytics events.

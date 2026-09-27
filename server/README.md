@@ -22,7 +22,7 @@ chat helpers (`fetchChatHistory`/`postChatMessage`).
 ```bash
 cd server
 npm install
-cp .env.example .env   # adjust PORT / CORS_ORIGIN / DB_PATH if needed
+cp .env.example .env   # adjust PORT / CORS_ORIGINS / DB_PATH if needed
 npm start              # or `npm run dev` for auto-restart on file changes
 ```
 
@@ -32,6 +32,23 @@ run — the `data/` directory is gitignored, same as the frontend's `.data/`.
 
 Point the frontend at it by setting `NEXT_PUBLIC_API_URL=http://localhost:4000`
 in the frontend's `.env.local` (see the root `DEVELOPMENT.md`).
+
+## HTTP hardening
+
+Every response carries `helmet`'s security headers (CSP is off, since this is
+a JSON API) and no `X-Powered-By`. The rest is configured through env vars
+(see `.env.example`):
+
+| Variable                                                               | Default                 | Purpose                                                                                                                                    |
+| ---------------------------------------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `CORS_ORIGINS`                                                         | `http://localhost:3000` | Comma-separated origin allow-list. `CORS_ORIGIN` (a single origin) is still read for backward compatibility.                               |
+| `CORS_ORIGIN_PATTERN`                                                  | none                    | Regex for extra allowed origins, such as Vercel preview deployments.                                                                       |
+| `TRUST_PROXY_HOPS`                                                     | `0`                     | Number of reverse proxies in front of the server, so `req.ip` is the client's address.                                                     |
+| `JSON_BODY_LIMIT`                                                      | `100kb`                 | Max JSON body size. Larger bodies get `413 {"error":"Request body too large"}`.                                                            |
+| `RATE_LIMIT_WINDOW_MS`                                                 | `60000`                 | Rate-limit window.                                                                                                                         |
+| `RATE_LIMIT_MAX` / `RATE_LIMIT_WRITE_MAX` / `RATE_LIMIT_TURNSTILE_MAX` | `300` / `30` / `10`     | Per-IP limits for all requests, for write methods (POST/PUT/PATCH/DELETE) and for Turnstile-protected routes. Exceeding one returns `429`. |
+| `REDIS_URL`                                                            | none                    | When set, rate-limit counters are shared through Redis instead of kept in process memory.                                                  |
+| `REQUEST_TIMEOUT_MS`                                                   | `30000`                 | `server.requestTimeout`: how long a client may take to send a full request.                                                                |
 
 ## Running tests
 

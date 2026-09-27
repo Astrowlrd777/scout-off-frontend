@@ -221,6 +221,31 @@ export function isRetentionWindowError(err: unknown): boolean {
   );
 }
 
+const MAX_ERROR_LENGTH = 200;
+
+let lastPollError: string | null = null;
+
+/**
+ * Most recent poll-cycle error message, or null once a cycle succeeds.
+ * URLs are redacted (an RPC URL can embed an API key) and the message is
+ * truncated, so it's safe to expose on /health.
+ */
+export function getLastPollError(): string | null {
+  return lastPollError;
+}
+
+function recordPollError(err: unknown): void {
+  const message = err instanceof Error ? err.message : String(err);
+  lastPollError = message
+    .replace(/[a-z][a-z0-9+.-]*:\/\/\S+/gi, '<url>')
+    .slice(0, MAX_ERROR_LENGTH);
+}
+
+/** Clears the last poll error. Use ONLY in tests. */
+export function resetLastPollError(): void {
+  lastPollError = null;
+}
+
 /**
  * Fetches and processes one batch of events starting at `cursorLedger`
  * (or the current network tip, if `cursorLedger` is 0 — START_LEDGER's
@@ -281,6 +306,7 @@ export async function pollOnce(
         return skipTo;
       }
       // Ordinary transient RPC failure — retry the same range next cycle.
+      recordPollError(getEventsErr);
       metrics.recordFailure(Date.now() - cycleStart);
       metrics.reportCursor(cursorLedger);
       return cursorLedger;
@@ -288,38 +314,46 @@ export async function pollOnce(
 
     let nextCursor = cursorLedger > 0 ? cursorLedger : effectiveStart;
 
-    for (const raw of res.events) {
-      const eventStart = Date.now();
-      try {
-        const decoded = decodeEvent(raw);
-        store.insertEvent(decoded);
-        metrics.recordSuccess(
-          decoded.type,
-          Date.now() - eventStart,
-          JSON.stringify(decoded.data).length,
-        );
-      } catch {
-        // Malformed or unrecognized event from our own contract — a real
-        // processing failure, not a transient RPC error, but still must
-        // not stop the loop from advancing past it.
-        metrics.recordFailure(Date.now() - eventStart);
-      }
+    // The whole batch is written in one SQLite transaction (issue #1333),
+    // so a hard kill mid-batch leaves either all of it or none of it on
+    // disk. Inserts are idempotent on eventId, so re-polling the same range
+    // after a restart can't produce duplicates either.
+    store.transaction(() => {
+      for (const raw of res.events) {
+        const eventStart = Date.now();
+        try {
+          const decoded = decodeEvent(raw);
+          store.insertEvent(decoded);
+          metrics.recordSuccess(
+            decoded.type,
+            Date.now() - eventStart,
+            JSON.stringify(decoded.data).length,
+          );
+        } catch {
+          // Malformed or unrecognized event from our own contract — a real
+          // processing failure, not a transient RPC error, but still must
+          // not stop the loop from advancing past it.
+          metrics.recordFailure(Date.now() - eventStart);
+        }
 
-      if (raw.ledger >= nextCursor) {
-        nextCursor = raw.ledger + 1;
+        if (raw.ledger >= nextCursor) {
+          nextCursor = raw.ledger + 1;
+        }
       }
-    }
+    });
 
     if (res.events.length === 0) {
       nextCursor = Math.max(nextCursor, res.latestLedger + 1);
     }
 
     updateLastLedger(Math.max(nextCursor - 1, 0));
+    lastPollError = null;
     metrics.markHealthy();
     metrics.reportCursor(nextCursor);
     return nextCursor;
-  } catch {
+  } catch (err) {
     // RPC-level failure on getLatestLedger — retry the same range next cycle.
+    recordPollError(err);
     metrics.recordFailure(Date.now() - cycleStart);
     metrics.reportCursor(cursorLedger);
     return cursorLedger;
@@ -327,7 +361,10 @@ export async function pollOnce(
 }
 
 export interface EventPollerHandle {
-  stop(): void;
+  /** Cancels the next cycle and resolves once the in-flight one settles. */
+  stop(): Promise<void>;
+  /** False once stop() has been called. */
+  isRunning(): boolean;
 }
 
 /**
@@ -344,20 +381,27 @@ export function startEventPolling(
   let cursor = config.startLedger;
   let stopped = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
+  let inFlight: Promise<void> = Promise.resolve();
 
-  async function tick(): Promise<void> {
-    cursor = await pollOnce(config, rpc, metrics, cursor, store);
-    if (!stopped) {
-      timer = setTimeout(tick, config.pollIntervalMs);
-    }
+  function tick(): void {
+    inFlight = (async () => {
+      cursor = await pollOnce(config, rpc, metrics, cursor, store);
+      if (!stopped) {
+        timer = setTimeout(tick, config.pollIntervalMs);
+      }
+    })();
   }
 
   tick();
 
   return {
-    stop(): void {
+    async stop(): Promise<void> {
       stopped = true;
       if (timer) clearTimeout(timer);
+      await inFlight;
+    },
+    isRunning(): boolean {
+      return !stopped;
     },
   };
 }

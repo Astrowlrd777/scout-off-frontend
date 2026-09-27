@@ -16,18 +16,28 @@ const ADMIN_ADDRESS = process.env.NEXT_PUBLIC_ADMIN_ADDRESS;
 // so every section of this page refreshes on a consistent cadence.
 const REFRESH_INTERVAL_MS = 60_000;
 
-type CheckStatus = 'ok' | 'degraded' | 'unreachable' | 'loading';
+type CheckStatus =
+  | 'ok'
+  | 'starting'
+  | 'degraded'
+  | 'unhealthy'
+  | 'unreachable'
+  | 'loading';
 
 const STATUS_LABEL: Record<CheckStatus, string> = {
   ok: 'Healthy',
+  starting: 'Starting',
   degraded: 'Degraded',
+  unhealthy: 'Unhealthy',
   unreachable: 'Unreachable',
   loading: 'Checking…',
 };
 
 const STATUS_CLASS: Record<CheckStatus, string> = {
   ok: 'text-brand-green',
+  starting: 'text-gray-300',
   degraded: 'text-yellow-400',
+  unhealthy: 'text-red-400',
   unreachable: 'text-red-400',
   loading: 'text-gray-400',
 };
@@ -200,6 +210,30 @@ function HealthDashboardContent() {
                 <dt>Uptime</dt>
                 <dd className="text-gray-200">
                   {String(indexerDetail.uptime)}s
+                </dd>
+              </>
+            )}
+            {typeof indexerDetail.ledgerLag !== 'undefined' && (
+              <>
+                <dt>Ledger lag</dt>
+                <dd className="text-gray-200">
+                  {String(indexerDetail.ledgerLag)}
+                </dd>
+              </>
+            )}
+            {typeof indexerDetail.pollerRunning === 'boolean' && (
+              <>
+                <dt>Poller</dt>
+                <dd className="text-gray-200">
+                  {indexerDetail.pollerRunning ? 'Running' : 'Stopped'}
+                </dd>
+              </>
+            )}
+            {typeof indexerDetail.lastError === 'string' && (
+              <>
+                <dt>Last error</dt>
+                <dd className="break-words text-red-300">
+                  {indexerDetail.lastError}
                 </dd>
               </>
             )}

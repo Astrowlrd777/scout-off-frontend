@@ -487,9 +487,56 @@ describe('startEventPolling', () => {
     await jest.advanceTimersByTimeAsync(1000);
     expect(rpc.getEvents).toHaveBeenCalledTimes(3);
 
-    handle.stop();
+    await handle.stop();
     await jest.advanceTimersByTimeAsync(5000);
     expect(rpc.getEvents).toHaveBeenCalledTimes(3);
+    expect(handle.isRunning()).toBe(false);
+  });
+
+  it('stop() waits for the in-flight batch, and a restart leaves no gaps or duplicates', async () => {
+    const events = [1000, 1001, 1002].map((ledger) =>
+      makeRawEvent(
+        'player_contacted',
+        { scout: 'G1', player_id: `p${ledger}` },
+        { ledger },
+      ),
+    );
+    let releaseBatch!: () => void;
+    const batchGate = new Promise<void>((resolve) => (releaseBatch = resolve));
+    const rpc: jest.Mocked<RpcClient> = {
+      getLatestLedger: jest.fn().mockResolvedValue({ sequence: 1002 }),
+      getEvents: jest.fn().mockImplementation(async () => {
+        await batchGate;
+        return { latestLedger: 1002, events };
+      }),
+    };
+    const metrics = IndexerMetrics.getInstance();
+
+    const handle = startEventPolling(
+      baseConfig({ startLedger: 1000 }),
+      rpc,
+      metrics,
+      store,
+    );
+
+    // SIGTERM arrives mid-poll: stop() must not resolve before the batch.
+    let stopped = false;
+    const stopping = handle.stop().then(() => (stopped = true));
+    await Promise.resolve();
+    expect(stopped).toBe(false);
+
+    releaseBatch();
+    await stopping;
+    expect(store.getEvents().events).toHaveLength(3);
+
+    // Restart from the same START_LEDGER (the cursor is in-memory) and
+    // re-ingest the overlapping range: idempotent inserts, no duplicates.
+    await pollOnce(baseConfig(), rpc, metrics, 1000, store);
+    const ledgers = store
+      .getEvents()
+      .events.map((e) => e.ledger)
+      .sort();
+    expect(ledgers).toEqual([1000, 1001, 1002]);
   });
 });
 
