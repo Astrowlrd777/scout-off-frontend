@@ -158,7 +158,10 @@ const nextConfig = {
       "base-uri 'self'",
       "form-action 'self'",
       "frame-ancestors 'none'",
+      // report-to is used by browsers that support the Reporting API;
+      // report-uri is kept as a fallback for older browsers.
       'report-uri /api/csp-report',
+      'report-to csp-endpoint',
     ].join('; ');
 
     return [
@@ -168,6 +171,10 @@ const nextConfig = {
           {
             key: 'Content-Security-Policy',
             value: cspHeader,
+          },
+          {
+            key: 'Reporting-Endpoints',
+            value: 'csp-endpoint="/api/csp-report"',
           },
           {
             key: 'X-Content-Type-Options',

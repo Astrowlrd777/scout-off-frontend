@@ -23,32 +23,24 @@ import { getTextDirection } from '@/lib/rtl';
 // touching PerformanceObserver APIs it doesn't fully implement.
 const isTestEnv = process.env.NODE_ENV === 'test';
 
+// Every relative metadata URL (OG images, canonical links) resolves against
+// NEXT_PUBLIC_APP_URL, so previews work on staging and preview deployments.
+// Localized title/description/Open Graph fields live in
+// app/[locale]/layout.tsx; these English values are only the fallback for
+// routes outside the [locale] segment.
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
+  ),
   title: 'ScoutOff — Decentralized Football Scouting',
   description:
     'Tamper-proof player profiles, verifiable milestones, and direct scout-to-player connections — powered by Stellar Soroban smart contracts.',
   openGraph: {
-    title: 'ScoutOff — Decentralized Football Scouting',
-    description:
-      'Tamper-proof player profiles, verifiable milestones, and direct scout-to-player connections — powered by Stellar Soroban smart contracts.',
-    url: 'https://scoutoff.app',
     siteName: 'ScoutOff',
     type: 'website',
-    images: [
-      {
-        url: 'https://scoutoff.app/og-image.svg',
-        width: 1200,
-        height: 630,
-        alt: 'ScoutOff — Decentralized Football Scouting on Stellar',
-      },
-    ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'ScoutOff — Decentralized Football Scouting',
-    description:
-      'Tamper-proof player profiles, verifiable milestones, and direct scout-to-player connections — powered by Stellar Soroban smart contracts.',
-    images: ['https://scoutoff.app/og-image.svg'],
   },
 };
 

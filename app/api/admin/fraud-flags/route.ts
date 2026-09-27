@@ -1,10 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { requireAdminWallet } from '@/lib/adminAuth';
 import { runFraudFlagEvaluation } from '@/lib/fraudFlagsRunner';
 import { FraudFlagsStore } from '@/lib/fraudFlagsStore';
 import { FraudFlagDismissalStore } from '@/lib/fraudFlagDismissalStore';
 import { computeFraudFlagDismissalKey } from '@/lib/fraudDetection';
 import type { FraudFlag } from '@/types';
+import { privateJson } from '@/lib/httpResponses';
 
 const DEFAULT_FRAUD_FLAGS_MIN_INTERVAL_MS = 30_000;
 
@@ -12,7 +13,7 @@ export async function GET(req: NextRequest) {
   const sessionWallet = requireAdminWallet(req);
 
   if (!sessionWallet) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return privateJson({ error: 'Forbidden' }, { status: 403 });
   }
 
   const dismissedKeys =
@@ -37,7 +38,7 @@ export async function GET(req: NextRequest) {
     latestRun &&
     Date.now() - latestRun.evaluatedAt < minIntervalMs
   ) {
-    return NextResponse.json({
+    return privateJson({
       flags: filterVisibleFlags(latestRun.flags),
       warnings: [
         ...latestRun.warnings,
@@ -62,7 +63,7 @@ export async function GET(req: NextRequest) {
     evaluatedAt,
   );
 
-  return NextResponse.json({
+  return privateJson({
     flags: filterVisibleFlags(flags),
     warnings,
     evaluatedAt,

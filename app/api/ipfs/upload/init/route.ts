@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { initSession } from '@/lib/chunkedUploadStore';
 import { getSessionWallet } from '@/lib/session';
 import { getClientIp, createRateLimiter } from '@/lib/uploadRateLimit';
+import { privateJson } from '@/lib/httpResponses';
 
 export const runtime = 'nodejs';
 
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
   const rl = checkRateLimit(ip);
   if (rl.limited) {
     const retryAfter = rl.retryAfterSec ?? 60;
-    return NextResponse.json(
+    return privateJson(
       { error: 'Too many requests' },
       { status: 429, headers: { 'Retry-After': String(retryAfter) } },
     );
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    return privateJson({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
   const { filename, fileType, fileSize, totalChunks } = (body ?? {}) as Record<
@@ -48,10 +49,7 @@ export async function POST(req: NextRequest) {
   >;
 
   if (typeof filename !== 'string' || !filename.trim()) {
-    return NextResponse.json(
-      { error: 'filename is required' },
-      { status: 400 },
-    );
+    return privateJson({ error: 'filename is required' }, { status: 400 });
   }
 
   if (
@@ -60,7 +58,7 @@ export async function POST(req: NextRequest) {
       fileType.toLowerCase().startsWith(prefix),
     )
   ) {
-    return NextResponse.json(
+    return privateJson(
       {
         error: `File type "${fileType}" is not allowed. Only image/* and video/* files are accepted.`,
       },
@@ -73,14 +71,14 @@ export async function POST(req: NextRequest) {
     !Number.isFinite(fileSize) ||
     fileSize <= 0
   ) {
-    return NextResponse.json(
+    return privateJson(
       { error: 'fileSize must be a positive number' },
       { status: 400 },
     );
   }
 
   if (fileSize > MAX_FILE_SIZE_BYTES) {
-    return NextResponse.json(
+    return privateJson(
       {
         error: `File exceeds the 100 MB size limit (received ${(fileSize / 1024 / 1024).toFixed(1)} MB)`,
       },
@@ -93,21 +91,21 @@ export async function POST(req: NextRequest) {
     !Number.isInteger(totalChunks) ||
     totalChunks <= 0
   ) {
-    return NextResponse.json(
+    return privateJson(
       { error: 'totalChunks must be a positive integer' },
       { status: 400 },
     );
   }
 
   if (totalChunks > MAX_CHUNKS) {
-    return NextResponse.json(
+    return privateJson(
       { error: 'totalChunks is unreasonably high' },
       { status: 400 },
     );
   }
 
   if (totalChunks > 1 && fileSize / totalChunks < MIN_CHUNK_SIZE_BYTES) {
-    return NextResponse.json(
+    return privateJson(
       { error: 'Chunk count too high for the given file size' },
       { status: 400 },
     );
@@ -120,5 +118,5 @@ export async function POST(req: NextRequest) {
     totalChunks,
     ownerWallet: getSessionWallet(req),
   });
-  return NextResponse.json({ sessionId }, { status: 201 });
+  return privateJson({ sessionId }, { status: 201 });
 }

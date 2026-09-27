@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getSessionWallet } from '@/lib/session';
+import { privateJson } from '@/lib/httpResponses';
 
 // better-sqlite3 (via lib/session.ts's SessionStore lookup) is a native
 // addon and needs the Node.js runtime, not edge.
@@ -78,7 +79,7 @@ export async function GET(req: NextRequest) {
   if (rl.limited) {
     console.warn(`[session rate limit] Too many requests from IP: ${ip}`);
     const retryAfter = rl.retryAfterSec ?? Math.ceil(WINDOW_MS / 1000);
-    return NextResponse.json(
+    return privateJson(
       { error: 'Too many requests. Please slow down.' },
       { status: 429, headers: { 'Retry-After': String(retryAfter) } },
     );
@@ -87,10 +88,10 @@ export async function GET(req: NextRequest) {
   const wallet = getSessionWallet(req);
 
   if (!wallet) {
-    return NextResponse.json({ authenticated: false }, { status: 401 });
+    return privateJson({ authenticated: false }, { status: 401 });
   }
 
-  return NextResponse.json({
+  return privateJson({
     authenticated: true,
     publicKey: wallet,
   });

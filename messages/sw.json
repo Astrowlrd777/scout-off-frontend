@@ -391,5 +391,10 @@
     "accept": "Kubali",
     "decline": "Kataa",
     "privacy_link": "Sera ya Faragha"
+  },
+  "meta": {
+    "title": "ScoutOff — Utafutaji wa Vipaji vya Soka Uliogatuliwa",
+    "description": "Wasifu wa wachezaji usioweza kughushiwa, hatua zinazothibitishwa, na miunganisho ya moja kwa moja kati ya wasaka vipaji na wachezaji — inayoendeshwa na mikataba mahiri ya Stellar Soroban.",
+    "og_image_alt": "ScoutOff — Utafutaji wa Vipaji vya Soka Uliogatuliwa kwenye Stellar"
   }
 }

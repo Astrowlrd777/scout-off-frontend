@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getSessionWallet } from '@/lib/session';
 import { SavedSearchStore } from '@/lib/savedSearchStore';
 import { createRequestLogger } from '@/lib/logger';
 import { sanitizeTextInput } from '@/lib/inputValidation';
 import type { PlayerFilter } from '@/types';
+import { privateJson } from '@/lib/httpResponses';
 
 // Saved-search name is a short user-authored label — cap at 100 characters.
 const SAVED_SEARCH_NAME_MAX = 100;
@@ -18,18 +19,18 @@ export const runtime = 'nodejs';
 export async function GET(req: NextRequest) {
   const scoutWallet = getSessionWallet(req);
   if (!scoutWallet) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return privateJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const log = createRequestLogger(req);
   try {
     const entries = SavedSearchStore.getInstance().list(scoutWallet);
-    return NextResponse.json(entries);
+    return privateJson(entries);
   } catch (err) {
     log.error('Failed to list saved searches', {
       reason: err instanceof Error ? err.message : String(err),
     });
-    return NextResponse.json(
+    return privateJson(
       { error: 'Failed to load saved searches' },
       { status: 500 },
     );
@@ -44,32 +45,29 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const scoutWallet = getSessionWallet(req);
   if (!scoutWallet) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return privateJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const log = createRequestLogger(req);
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== 'object') {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    return privateJson({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
   const { name, filter } = body as Record<string, unknown>;
   if (typeof name !== 'string' || name.trim().length === 0) {
-    return NextResponse.json(
+    return privateJson(
       { error: 'name must be a non-empty string' },
       { status: 400 },
     );
   }
   if (!filter || typeof filter !== 'object') {
-    return NextResponse.json(
-      { error: 'filter must be an object' },
-      { status: 400 },
-    );
+    return privateJson({ error: 'filter must be an object' }, { status: 400 });
   }
 
   const sanitizedName = sanitizeTextInput(name);
   if (sanitizedName.length > SAVED_SEARCH_NAME_MAX) {
-    return NextResponse.json(
+    return privateJson(
       { error: `name must be at most ${SAVED_SEARCH_NAME_MAX} characters` },
       { status: 400 },
     );
@@ -81,15 +79,12 @@ export async function POST(req: NextRequest) {
       sanitizedName,
       filter as PlayerFilter,
     );
-    return NextResponse.json(entry, { status: 201 });
+    return privateJson(entry, { status: 201 });
   } catch (err) {
     log.error('Failed to save search', {
       reason: err instanceof Error ? err.message : String(err),
     });
-    return NextResponse.json(
-      { error: 'Failed to save search' },
-      { status: 500 },
-    );
+    return privateJson({ error: 'Failed to save search' }, { status: 500 });
   }
 }
 
@@ -104,21 +99,21 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const scoutWallet = getSessionWallet(req);
   if (!scoutWallet) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return privateJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const log = createRequestLogger(req);
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== 'object') {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    return privateJson({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
   const { id, name, markViewed } = body as Record<string, unknown>;
   if (typeof id !== 'number') {
-    return NextResponse.json({ error: 'id must be a number' }, { status: 400 });
+    return privateJson({ error: 'id must be a number' }, { status: 400 });
   }
   if (name === undefined && markViewed === undefined) {
-    return NextResponse.json(
+    return privateJson(
       { error: 'name or markViewed must be provided' },
       { status: 400 },
     );
@@ -130,14 +125,14 @@ export async function PATCH(req: NextRequest) {
 
     if (name !== undefined) {
       if (typeof name !== 'string' || name.trim().length === 0) {
-        return NextResponse.json(
+        return privateJson(
           { error: 'name must be a non-empty string' },
           { status: 400 },
         );
       }
       const sanitizedName = sanitizeTextInput(name);
       if (sanitizedName.length > SAVED_SEARCH_NAME_MAX) {
-        return NextResponse.json(
+        return privateJson(
           {
             error: `name must be at most ${SAVED_SEARCH_NAME_MAX} characters`,
           },
@@ -146,7 +141,7 @@ export async function PATCH(req: NextRequest) {
       }
       updated = store.rename(scoutWallet, id, sanitizedName);
       if (!updated) {
-        return NextResponse.json(
+        return privateJson(
           { error: 'Saved search not found' },
           { status: 404 },
         );
@@ -156,19 +151,19 @@ export async function PATCH(req: NextRequest) {
     if (markViewed === true) {
       updated = store.markViewed(scoutWallet, id);
       if (!updated) {
-        return NextResponse.json(
+        return privateJson(
           { error: 'Saved search not found' },
           { status: 404 },
         );
       }
     }
 
-    return NextResponse.json(updated);
+    return privateJson(updated);
   } catch (err) {
     log.error('Failed to update saved search', {
       reason: err instanceof Error ? err.message : String(err),
     });
-    return NextResponse.json(
+    return privateJson(
       { error: 'Failed to update saved search' },
       { status: 500 },
     );
@@ -183,34 +178,31 @@ export async function PATCH(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const scoutWallet = getSessionWallet(req);
   if (!scoutWallet) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return privateJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const log = createRequestLogger(req);
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== 'object') {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    return privateJson({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
   const { id } = body as Record<string, unknown>;
   if (typeof id !== 'number') {
-    return NextResponse.json({ error: 'id must be a number' }, { status: 400 });
+    return privateJson({ error: 'id must be a number' }, { status: 400 });
   }
 
   try {
     const removed = SavedSearchStore.getInstance().remove(scoutWallet, id);
     if (!removed) {
-      return NextResponse.json(
-        { error: 'Saved search not found' },
-        { status: 404 },
-      );
+      return privateJson({ error: 'Saved search not found' }, { status: 404 });
     }
-    return NextResponse.json({ success: true });
+    return privateJson({ success: true });
   } catch (err) {
     log.error('Failed to remove saved search', {
       reason: err instanceof Error ? err.message : String(err),
     });
-    return NextResponse.json(
+    return privateJson(
       { error: 'Failed to remove saved search' },
       { status: 500 },
     );

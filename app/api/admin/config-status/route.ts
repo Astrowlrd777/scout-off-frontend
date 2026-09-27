@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { privateJson } from '@/lib/httpResponses';
 
 // Define the list of environment variables we care about
 type ConfigVar = {
@@ -39,5 +39,5 @@ export async function GET() {
     return { name: v.name, required: v.required, present };
   });
 
-  return NextResponse.json(result);
+  return privateJson(result);
 }

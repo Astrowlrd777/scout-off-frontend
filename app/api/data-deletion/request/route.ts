@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getSessionWallet } from '@/lib/session';
 import { deleteUserData } from '@/lib/offChainDataCollection';
 import { createRequestLogger } from '@/lib/logger';
+import { privateJson } from '@/lib/httpResponses';
 
 export const runtime = 'nodejs';
 
@@ -29,19 +30,19 @@ export const runtime = 'nodejs';
 export async function POST(req: NextRequest) {
   const wallet = getSessionWallet(req);
   if (!wallet) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return privateJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const log = createRequestLogger(req);
   try {
     const { removed, anonymized } = await deleteUserData(wallet);
     log.info('Processed data deletion request', { removed, anonymized });
-    return NextResponse.json({ success: true, removed, anonymized });
+    return privateJson({ success: true, removed, anonymized });
   } catch (err) {
     log.error('Failed to process data deletion request', {
       reason: err instanceof Error ? err.message : String(err),
     });
-    return NextResponse.json(
+    return privateJson(
       { error: 'Failed to process data deletion request' },
       { status: 500 },
     );

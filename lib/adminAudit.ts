@@ -53,6 +53,8 @@ export interface AdminAuditQueryFilter {
   to?: number;
   /** Keyset cursor: only entries with id strictly less than this. */
   before?: number;
+  /** Only entries whose `data.userId` equals this value. */
+  dataUserId?: string;
   limit?: number;
 }
 

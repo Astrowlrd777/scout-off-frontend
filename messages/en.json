@@ -391,5 +391,10 @@
     "accept": "Accept",
     "decline": "Decline",
     "privacy_link": "Privacy Policy"
+  },
+  "meta": {
+    "title": "ScoutOff — Decentralized Football Scouting",
+    "description": "Tamper-proof player profiles, verifiable milestones, and direct scout-to-player connections — powered by Stellar Soroban smart contracts.",
+    "og_image_alt": "ScoutOff — Decentralized Football Scouting on Stellar"
   }
 }

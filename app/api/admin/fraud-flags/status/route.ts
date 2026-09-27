@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { requireAdminWallet } from '@/lib/adminAuth';
 import { FraudFlagsStore } from '@/lib/fraudFlagsStore';
+import { privateJson } from '@/lib/httpResponses';
 
 /**
  * Lightweight companion to GET /api/admin/fraud-flags: returns the most
@@ -15,20 +16,20 @@ export async function GET(req: NextRequest) {
   const sessionWallet = requireAdminWallet(req);
 
   if (!sessionWallet) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return privateJson({ error: 'Forbidden' }, { status: 403 });
   }
 
   const latest = FraudFlagsStore.getInstance().getLatestRun();
 
   if (!latest) {
-    return NextResponse.json({
+    return privateJson({
       evaluatedAt: null,
       highSeverityCount: 0,
       trigger: null,
     });
   }
 
-  return NextResponse.json({
+  return privateJson({
     evaluatedAt: latest.evaluatedAt,
     highSeverityCount: latest.highSeverityCount,
     trigger: latest.trigger,

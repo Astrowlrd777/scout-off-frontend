@@ -218,7 +218,13 @@ describe('RootLayout', () => {
 
   it('exposes SEO metadata for the app', () => {
     expect(metadata.title).toBe('ScoutOff — Decentralized Football Scouting');
-    expect(metadata.openGraph?.url).toBe('https://scoutoff.app');
+    expect(metadata.metadataBase).toBeInstanceOf(URL);
+    expect(metadata.openGraph).toEqual({
+      siteName: 'ScoutOff',
+      type: 'website',
+    });
+    // No hard-coded production origin or SVG OG image in the root metadata.
+    expect(JSON.stringify(metadata)).not.toMatch(/scoutoff\.app|\.svg/);
   });
 
   it('renders ConfigWarningBanner when config is invalid', async () => {
@@ -300,7 +306,6 @@ describe('RootLayout', () => {
     try {
       jest.resetModules();
       jest.doMock('react', () => actualReact);
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
       ProductionRootLayout = require('@/app/layout').default;
 
       const element = await ProductionRootLayout({

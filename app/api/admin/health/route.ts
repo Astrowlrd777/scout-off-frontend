@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { privateJson } from '@/lib/httpResponses';
 
 // Proxies the indexer's and backend API's own /health endpoints server-side
 // (see packages/indexer/src/server.ts's handleHealth, server/src/app.js's
@@ -96,5 +96,5 @@ export async function GET() {
     checkedAt: Date.now(),
   };
 
-  return NextResponse.json(response);
+  return privateJson(response);
 }
