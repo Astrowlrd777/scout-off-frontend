@@ -463,7 +463,7 @@ Test coverage targets:
 
 ## Support
 
-- [GitHub Issues](https://github.com/your-org/scout-off-frontend/issues)
+- [GitHub Issues](https://github.com/scout-off/scout-off-frontend/issues) — the project's task tracker (filter by `easy`, `medium`, `hard`, `good first issue`)
 - [Stellar Discord](https://discord.gg/stellar)
 - [Stellar Developers](https://developers.stellar.org)
 

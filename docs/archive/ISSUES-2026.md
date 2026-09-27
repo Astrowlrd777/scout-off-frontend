@@ -1,3 +1,5 @@
+> **Historical archive.** This was an early-project task list and is no longer maintained. Items marked open here (e.g. #26, #27) have since been resolved. The live tracker is [GitHub Issues](https://github.com/scout-off/scout-off-frontend/issues).
+
 # ScoutOff Frontend — GitHub Issues
 
 30 issues covering key gaps in the frontend. Ready to copy into GitHub Issues.

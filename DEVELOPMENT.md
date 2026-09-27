@@ -241,7 +241,7 @@ Open **http://localhost:3000** in your browser.
 ## Common Errors
 
 A reference for the errors new contributors hit most often — the
-pages in this section also map to the ISSUES.md backlog. Run `npm test`,
+pages in this section also map to the archived `docs/archive/ISSUES-2026.md` backlog. Run `npm test`,
 `npm run lint`, and `npm run type-check` after any of the resolutions
 below; the broader regression tests are the cheapest way to confirm
 nothing else broke while fixing the local symptom.

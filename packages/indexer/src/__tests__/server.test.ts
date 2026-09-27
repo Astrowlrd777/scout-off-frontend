@@ -362,3 +362,34 @@ describe('unknown routes', () => {
     expect(status).toBe(404);
   });
 });
+
+describe('malformed path encoding (issue #1331)', () => {
+  it.each(['/players/%E0%A4%A/events', '/validators/%E0%A4%A/events'])(
+    'returns 400 for %s and keeps the server listening',
+    async (path) => {
+      const { status, body } = await request(path);
+      expect(status).toBe(400);
+      expect(JSON.parse(body)).toEqual({ error: 'invalid path encoding' });
+
+      expect(server.listening).toBe(true);
+      const health = await request('/health');
+      expect(health.status).toBe(200);
+    },
+  );
+
+  it('returns 500 without crashing when a handler throws unexpectedly', async () => {
+    const spy = jest
+      .spyOn(EventStore, 'getInstance')
+      .mockImplementationOnce(() => {
+        throw new Error('boom');
+      });
+    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    const { status } = await request('/players/player-1/events');
+    expect(status).toBe(500);
+    expect(server.listening).toBe(true);
+
+    spy.mockRestore();
+    errSpy.mockRestore();
+  });
+});
