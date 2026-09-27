@@ -51,7 +51,7 @@ describe('POST /api/ipfs/upload/chunk', () => {
     const { sessionId } = await initSession({
       filename: 'clip.mp4',
       fileType: 'video/mp4',
-      fileSize: 10,
+      fileSize: 1,
       totalChunks: 1,
     });
     const form = new FormData();
@@ -67,7 +67,7 @@ describe('POST /api/ipfs/upload/chunk', () => {
     const { sessionId } = await initSession({
       filename: 'clip.mp4',
       fileType: 'video/mp4',
-      fileSize: 10,
+      fileSize: 1,
       totalChunks: 1,
     });
     const form = new FormData();
@@ -92,7 +92,7 @@ describe('POST /api/ipfs/upload/chunk', () => {
     const { sessionId } = await initSession({
       filename: 'clip.mp4',
       fileType: 'video/mp4',
-      fileSize: 10,
+      fileSize: 20,
       totalChunks: 1,
     });
 

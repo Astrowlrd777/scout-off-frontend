@@ -82,6 +82,8 @@ describe('POST /api/ipfs/upload/complete', () => {
       fileSize: 20,
       totalChunks: 2,
     });
+    // 10 bytes against a 20-byte declared size: total check passes (10 ≤ 20)
+    // so the session stays incomplete rather than rejected.
     await writeChunk(sessionId, 0, Buffer.from(new Uint8Array(10)));
 
     const res = await POST(makeRequest({ sessionId }, 'ip-incomplete'));

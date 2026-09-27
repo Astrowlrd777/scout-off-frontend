@@ -20,6 +20,12 @@ export const runtime = 'nodejs';
  * the same single `pinFileToIPFS` call app/api/ipfs/upload's POST does.
  * Chunking only changes the browser<->this-app leg; Pinata still receives
  * one complete file in one request.
+ *
+ * Issue #1294: assembleFile() also asserts the assembled byte length equals
+ * the declared fileSize — a mismatch (bytes stored out-of-band or under an
+ * older unenforced write path) returns 400 here, and assembleFile() already
+ * deleted the poisoned session so it can't be retried into another giant
+ * buffering attempt.
  */
 const checkRateLimit = createRateLimiter(20, 60 * 1000);
 
