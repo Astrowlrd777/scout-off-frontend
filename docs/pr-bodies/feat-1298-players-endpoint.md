@@ -53,7 +53,14 @@ No Rust/Cargo contract changes are involved.
 
 ## Related Issue
 
-References: #1298
+References: #1298 (follows #1297)
+
+**Stacked branch — read before reviewing the diff.** This branch is cut from `9092429`, the
+`issue-1297` trusted-proxy fix that is still open as PR #1449, because the #1298 work builds on it.
+Until #1449 merges, any diff taken against `main` also contains that unrelated commit — 47 files /
+3 commits instead of this PR's 2 commits (36 files, +2760 / −225 measured against `9092429`). No
+rebase is needed afterwards: `9092429` simply becomes an ancestor of `main` and the diff collapses
+to this PR's own two commits and 34-file feature scope.
 
 ## Files changed
 
