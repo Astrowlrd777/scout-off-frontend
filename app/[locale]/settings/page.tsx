@@ -11,8 +11,10 @@ import {
   Download,
   LogOut,
   Laptop,
+  Mail,
 } from 'lucide-react';
 import DataDeletionModal from '@/components/player/DataDeletionModal';
+import ContactDetailsPanel from '@/components/player/ContactDetailsPanel';
 import NotificationPreferencesPanel from '@/components/NotificationPreferencesPanel';
 import ActiveSessions from '@/components/ActiveSessions';
 import { useWallet } from '@/hooks/useWallet';
@@ -145,6 +147,28 @@ export default function SettingsPage({
               </p>
               <div className="mt-4">
                 <NotificationPreferencesPanel />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Contact details section (issue #1301) */}
+      <section className="px-1 sm:px-0">
+        <div className="rounded-2xl border border-gray-800 bg-brand-card/70 p-6 sm:p-8">
+          <div className="flex items-start gap-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-green/10 text-brand-green">
+              <Mail size={18} aria-hidden="true" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg font-semibold text-white">
+                {t('contact.section_title')}
+              </h2>
+              <p className="mt-1 max-w-lg text-sm leading-relaxed text-gray-400">
+                {t('contact.section_description')}
+              </p>
+              <div className="mt-5">
+                <ContactDetailsPanel />
               </div>
             </div>
           </div>
