@@ -16,6 +16,7 @@ import { EventStore } from './db/eventStore';
 
 export const EVENT_TYPES: readonly EventType[] = [
   'player_registered',
+  'profile_updated',
   'milestone_approved',
   'milestone_revoked',
   'scout_subscribed',
@@ -114,7 +115,7 @@ export function createRpcClient(config: PollerConfig): RpcClient {
 }
 
 /**
- * Decodes a raw Soroban contract event into one of the 7 documented event
+ * Decodes a raw Soroban contract event into one of the 8 documented event
  * types (README.md's "Indexed Event Schema").
  *
  * ASSUMPTION — no Rust contract source lives in this repository to confirm
@@ -123,7 +124,7 @@ export function createRpcClient(config: PollerConfig): RpcClient {
  * and `value` is a Map/struct ScVal holding the event's other documented
  * fields. `ledger`/`timestamp` come from the RPC envelope rather than the
  * decoded payload, since the README lists identical `ledger`/`timestamp`
- * fields across all 7 event types — those are naturally available from
+ * fields across all 8 event types — those are naturally available from
  * every event's envelope regardless of what the contract encodes.
  *
  * If the actual contract encodes events differently, only this function
